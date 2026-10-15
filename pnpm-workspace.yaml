@@ -21,7 +21,7 @@ catalog:
 
   # Why: CI のイメージのタグ（ci.yml の container:）と同じバージョンにする（ADR-0013 の決定）
   # RemoveWhen: ADR-0013「見直す条件」で、イメージのタグを手で直さなくてよくなったとき
-  '@playwright/test': ^1.63.0
+  '@playwright/test': ^1.64.0
 
   '@storybook/addon-a11y': ^10.6.1
   '@storybook/addon-docs': ^10.6.1
@@ -43,7 +43,7 @@ catalog:
 
   # Why: CI のイメージのタグ（ci.yml の container:）と同じバージョンにする（ADR-0013 の決定）
   # RemoveWhen: ADR-0013「見直す条件」で、イメージのタグを手で直さなくてよくなったとき
-  playwright: ^1.63.0
+  playwright: ^1.64.0
 
   react: ^19.3.0
   react-dom: ^19.3.0
