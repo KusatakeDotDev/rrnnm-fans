@@ -54,5 +54,5 @@ catalog:
   # RemoveWhen: ADR-0003「TypeScript は 6 系に留める」の見直しの条件を満たしたとき
   typescript: ^6.0.3
 
-  vitest: ^4.1.11
+  vitest: ^5.0.4
   wrangler: ^4.149.0
