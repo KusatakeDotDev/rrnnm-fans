@@ -37,7 +37,7 @@ catalog:
   # RemoveWhen: addon-vitest が @vitest/browser/context を読み込まなくなるか、依存として持つようになったとき
   '@vitest/browser': ^4.1.11
 
-  '@vitest/browser-playwright': ^4.1.11
+  '@vitest/browser-playwright': ^5.0.4
   astro: ^7.3.8
   fast-check: ^4.10.2
 
