@@ -1,0 +1,39 @@
+/* =============================================================================
+   Zen Maru Gothic を読み込むまで（font-display: swap）に描く端末の書体（docs/adr/0024-zen-maru-gothic-webfont.md）
+   -----------------------------------------------------------------------------
+   webfont の @font-face（src/styles/fonts.css）は描画を止めないように後から読むので、それまではこの面で描く。
+   縦のメトリクスを Zen Maru Gothic（unitsPerEm 1000・hhea と OS/2 の win がどちらも ascent 1160・descent 288・
+   lineGap 0）に合わせ、差し替わったときに行の位置が動かないようにする。かなと漢字はどちらも 1em なので、
+   size-adjust は掛けない。local() はファミリー名ではなく、フルネームか PostScript 名で照合される。
+   ============================================================================= */
+@font-face {
+  font-family: 'Zen Maru Gothic Fallback';
+  font-style: normal;
+  font-weight: 400;
+  src:
+    local('Hiragino Maru Gothic ProN W4'), local('HiraMaruProN-W4'),
+    local('Yu Gothic UI Regular'), local('YuGothicUI-Regular'),
+    local('Meiryo'),
+    local('Noto Sans CJK JP Regular'), local('NotoSansCJKjp-Regular'),
+    local('Noto Sans JP Regular'), local('NotoSansJP-Regular');
+  ascent-override: 116%;
+  descent-override: 28.8%;
+  line-gap-override: 0%;
+}
+
+/* 太字は太字の面を当てる。通常の面だけだと、ブラウザは通常の面を太く見せかけて描く。
+   ヒラギノ丸ゴは W4 しか無いので、太字は角ゴの W6。900 の字もこの面で描く。 */
+@font-face {
+  font-family: 'Zen Maru Gothic Fallback';
+  font-style: normal;
+  font-weight: 700;
+  src:
+    local('Hiragino Sans W6'), local('HiraginoSans-W6'),
+    local('Yu Gothic UI Bold'), local('YuGothicUI-Bold'),
+    local('Meiryo Bold'), local('Meiryo-Bold'),
+    local('Noto Sans CJK JP Bold'), local('NotoSansCJKjp-Bold'),
+    local('Noto Sans JP Bold'), local('NotoSansJP-Bold');
+  ascent-override: 116%;
+  descent-override: 28.8%;
+  line-gap-override: 0%;
+}

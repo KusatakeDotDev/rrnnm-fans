@@ -1,0 +1,77 @@
+name: リリース
+
+# 本番へ出る唯一の経路。GitHub の Release が**正式リリースになったとき**だけ走る。
+#
+# タグを打っただけでは出ない。「タグ = 本番」にすると、打ち直しや打ち間違いが
+# そのまま公開になる。Release の操作は人が押すものなので、ここを境界にする。
+#
+# **`published` ではなく `released`。** `published` は**プレリリースの publish でも飛ぶ**ので、
+# 「Set as a pre-release」のチェックを外し忘れただけで本番に出てしまう。ここで避けたかった
+# 「押し間違いがそのまま公開になる」と同じ事故が、チェックボックスの形で戻ってくる。
+# `released` なら、非プレリリースの publish と、プレリリースを正式リリースへ昇格したときだけ。
+#
+# Cloudflare 側の Workers Builds はブランチへの push しか検知できず、タグも Release も
+# 見えない。したがって「main はプレビュー / リリースで本番」の分岐は Actions でしか書けない。
+on:
+  release:
+    types: [released]
+
+# 本番デプロイは取り消さない。cancel-in-progress: true にすると、
+# 連続リリース時に途中まで上がったバージョンで止まりうる。
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: 本番デプロイ
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+    defaults:
+      run:
+        shell: bash
+    # ジョブには timeout-minutes を置かない。ジョブの上限で切れると、取り消しと同じく、デプロイのステップも途中で
+    # 止められるため（上の concurrency のコメント）。詰まりうるミューテーションテストには、ステップに上限を置く。
+    steps:
+      # Release の ref（タグの指すコミット）をそのまま取る。
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - uses: pnpm/setup@v3
+        with:
+          cache: true
+      # 本番に出す前に、Release のコミットでミューテーションテストを全部回し、落ちたらデプロイしない。CI は前の回の結果を
+      # 使い回すので、テストが読むほかのファイルが変わってずれた結果は、全部回すまで直らない（docs/adr/0003-testing-and-ci.md
+      # 「ミューテーションテストを nightly に逃がさない」）。--incremental を付けないので、前の回の結果は読まず、残しもしない。
+      # ci.yml（Playwright のイメージの中）では2分半ほどで、ここでも同じイメージを使う。上限は ci.yml の同じ
+      # ステップと同じ8分。
+      # HTML のレポートは成果物に上げない。clear-text のレポーターが、生き残ったミュータントを差分つきでログに書く。
+      - name: ミューテーションテスト
+        timeout-minutes: 8
+        run: pnpm test:mutation
+      # 花の株の素材を重ねる（RRNNM-44）。ミューテーションテストは CI と同じく重ねないで回すので、その後に置く。
+      - uses: ./.github/actions/private-assets
+        with:
+          ssh-key: ${{ secrets.ASSETS_DEPLOY_KEY }}
+      # SHOW_UNRELEASED は渡さない。未公開のもの（src/unreleased/）を本番に出さないため（ADR-0018 の決定）。
+      - name: 実データで配布成果物を1回だけ作る
+        timeout-minutes: 5
+        run: pnpm build
+      - name: 実画像の取得と配布成果物の規約テスト
+        timeout-minutes: 10
+        run: pnpm test:release
+        env:
+          WRANGLER_SEND_METRICS: 'false'
+          # 素材を重ねずに本番へ出すと、株が黙って消えるので止める（tests/artifact/field-bundle.spec.ts）。
+          REQUIRE_PRIVATE_ASSETS: '1'
+      # **`pnpm deploy` と書かないこと。** pnpm には同名の組み込みコマンド（workspace 用）が
+      # あり、pnpm-workspace.yaml がある以上そちらが走る。`run` を挟んで scripts を呼ぶ。
+      - run: pnpm run deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER_SEND_METRICS: 'false'

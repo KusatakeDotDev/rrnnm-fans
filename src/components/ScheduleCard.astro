@@ -1,0 +1,15 @@
+---
+/**
+ * ScheduleCard.tsx のラッパー（ADR-0004「サムネイル表示の可否についての判断」、ADR-0011「スクリプトの扱い」）。
+ * ビルド時に配信予定を取って渡すだけ。
+ *
+ * ラッパーにするのは、React のコンポーネントは async にできず、ビルド時の fetch を中で待てないため。
+ * ページがここを読むので、取り忘れて描くことは無い。
+ */
+import { getSchedule } from './scheduleData';
+import ScheduleCard from './ScheduleCard.tsx';
+
+const schedule = await getSchedule();
+---
+
+<ScheduleCard schedule={schedule} />

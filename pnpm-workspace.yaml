@@ -1,0 +1,58 @@
+packages:
+  - .
+
+allowBuilds:
+  esbuild: true
+  workerd: true
+
+# 新しい依存を pnpm add で足したとき、範囲ではなく catalog: で書かせる（ADR-0017「`catalog:` で指すことを守らせる」）
+# 下の一覧のうち catalog にも同じ名前があるものは、pnpm add・pnpm --filter … update で上げると止まる（ADR-0017「払うもの」）
+catalogMode: strict
+
+# 何を書くかは docs/adr/0017-dependency-notes-in-catalog.md。
+# catalog に入れず、package.json に直接書くもの（tests/unit/catalog-specifiers.test.ts がこの一覧を読む）:
+# （今は無い）
+catalog:
+  '@astrojs/check': ^0.9.10
+  '@astrojs/react': ^7.0.1
+  '@astrojs/sitemap': ^3.7.4
+  '@axe-core/playwright': ^4.13.0
+  '@fontsource/zen-maru-gothic': ^5.3.1
+
+  # Why: CI のイメージのタグ（ci.yml の container:）と同じバージョンにする（ADR-0013 の決定）
+  # RemoveWhen: ADR-0013「見直す条件」で、イメージのタグを手で直さなくてよくなったとき
+  '@playwright/test': ^1.63.0
+
+  '@storybook/addon-a11y': ^10.6.1
+  '@storybook/addon-docs': ^10.6.1
+  '@storybook/addon-vitest': ^10.6.1
+  '@storybook/react-vite': ^10.6.1
+  '@stryker-mutator/core': ^10.0.0
+  '@stryker-mutator/vitest-runner': ^10.0.0
+  '@types/node': ^26.6.5
+  '@types/react': ^19.3.0
+  '@types/react-dom': ^19.3.0
+
+  # Why: addon-vitest が optional peer として読み込むので、直接持つ（ADR-0003「導入した依存」）
+  # RemoveWhen: addon-vitest が @vitest/browser/context を読み込まなくなるか、依存として持つようになったとき
+  '@vitest/browser': ^4.1.11
+
+  '@vitest/browser-playwright': ^4.1.11
+  astro: ^7.3.8
+  fast-check: ^4.10.2
+
+  # Why: CI のイメージのタグ（ci.yml の container:）と同じバージョンにする（ADR-0013 の決定）
+  # RemoveWhen: ADR-0013「見直す条件」で、イメージのタグを手で直さなくてよくなったとき
+  playwright: ^1.63.0
+
+  react: ^19.3.0
+  react-dom: ^19.3.0
+  sharp: ^0.35.5
+  storybook: ^10.6.1
+
+  # Why: メジャーを 6 に留める（.github/dependabot.yml の ignore。ADR-0003「TypeScript は 6 系に留める」）
+  # RemoveWhen: ADR-0003「TypeScript は 6 系に留める」の見直しの条件を満たしたとき
+  typescript: ^6.0.3
+
+  vitest: ^4.1.11
+  wrangler: ^4.149.0

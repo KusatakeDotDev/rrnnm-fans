@@ -1,0 +1,8 @@
+.label {
+  margin-block: 0 0.5rem;
+  color: var(--color-accent);
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}

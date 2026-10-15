@@ -1,0 +1,38 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
+  /* サムネイルの縁。カードの中で大きく見せる画像なので、再生リストのタイルの細い線より太くし、
+     押し込んだステッカーと同じ 2px の影を添える（YouTubeThumbnail.module.css が読む）。 */
+  --thumb-border: var(--border-sticker);
+  --thumb-shadow: 2px 2px 0 var(--color-outline);
+}
+
+/* 地の上のリンクは下線で区別する規約（docs/DESIGN.md §4）だが、このカードは画像が主役なので
+   下線は引かない。 */
+.schedule {
+  display: block;
+  width: 100%;
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+/* 出典表記なので、本文より一段静かな見た目にする（キャプション的な扱い）。 */
+.caption {
+  color: var(--color-text-muted);
+  font-size: var(--text-small);
+  line-height: var(--leading-heading);
+  text-align: right;
+}
+.captionTitle {
+  color: var(--color-link);
+  font-weight: 600;
+  font-style: italic;
+}
+
+.fallback {
+  color: var(--color-link-on-paper);
+  text-decoration: underline;
+}

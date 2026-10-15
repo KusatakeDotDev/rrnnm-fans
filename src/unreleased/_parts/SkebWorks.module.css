@@ -1,0 +1,669 @@
+.root {
+  display: contents;
+}
+
+/* display を指定した要素でも、スクリプトが外すまでの hidden を効かせる。 */
+.root [hidden] {
+  display: none;
+}
+
+.pickup,
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.125rem;
+  border: var(--border-sticker) solid var(--color-outline);
+  border-radius: var(--radius-tile);
+  padding: clamp(1.25rem, 3vw, 2rem);
+  box-shadow: var(--offset-tile) var(--offset-tile) 0 var(--color-outline);
+}
+
+/* ---------------------------------------------------------------------------
+   今日のピックアップ
+   ------------------------------------------------------------------------- */
+.pickupHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+
+.pickupTitle {
+  margin: 0;
+  border: var(--border-thumb) solid var(--color-outline);
+  border-radius: var(--radius-pill);
+  padding: 0.125rem 1rem;
+  background-color: var(--color-fill-pale);
+  color: var(--color-text);
+  box-shadow: 2px 2px 0 var(--color-outline);
+  font-size: var(--text-small);
+  font-weight: 700;
+  transform: rotate(-1deg);
+}
+
+/* 絵文字と記号は飾り。読み上げに入れない（対応していないブラウザでは前の content が残る）。 */
+.pickupTitle::before {
+  content: '✨ ';
+  content: '✨ ' / '';
+}
+
+.pickupNote {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-small);
+  font-weight: 700;
+}
+
+.draw {
+  min-height: 2.75rem;
+  margin-inline-start: auto;
+  border: var(--border-thumb) solid var(--color-outline);
+  border-radius: var(--radius-pill);
+  padding: 0 1rem;
+  background-color: color-mix(in srgb, var(--color-fill-amber) 12%, var(--color-surface));
+  color: var(--color-text);
+  box-shadow: var(--offset-button) var(--offset-button) 0 var(--color-outline);
+  font: inherit;
+  font-size: var(--text-small);
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease,
+    background-color 0.15s ease;
+}
+
+.dice {
+  display: inline-block;
+  margin-inline-end: 0.375rem;
+}
+
+.draw:hover {
+  background-color: color-mix(in srgb, var(--color-fill-amber) 25%, var(--color-surface));
+  box-shadow: 2px 2px 0 var(--color-outline);
+  transform: translate(2px, 2px);
+}
+
+/* ---------------------------------------------------------------------------
+   作品一覧の見出しの行
+   ------------------------------------------------------------------------- */
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+  border-bottom: 2px solid var(--color-outline);
+  padding-bottom: 0.75rem;
+}
+
+.head h2 {
+  margin: 0;
+  font-size: var(--text-h3);
+}
+
+.count {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-small);
+  font-weight: 700;
+}
+
+.sort {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-inline-start: auto;
+}
+
+/* 見える「並び順」と ▼ は飾り。名前は中の .sr-only が持つ（対応していないブラウザでは前の content が残る）。 */
+.sort::before {
+  content: '並び順';
+  content: '並び順' / '';
+  color: var(--color-text-muted);
+  font-size: var(--text-small);
+  font-weight: 700;
+}
+
+.sort::after {
+  content: '▼';
+  content: '▼' / '';
+  position: absolute;
+  top: 50%;
+  right: 0.875rem;
+  color: var(--color-text);
+  font-size: 0.625rem;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.sort select {
+  min-height: 2.75rem;
+  border: var(--border-thumb) solid var(--color-outline);
+  border-radius: var(--radius-pill);
+  padding: 0 2.25rem 0 1rem;
+  appearance: none;
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 2px 2px 0 var(--color-outline);
+  font: inherit;
+  font-size: var(--text-small);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* ---------------------------------------------------------------------------
+   タグの絞り込み
+   ------------------------------------------------------------------------- */
+.filter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* position: relative は、ボタンの中の .sr-only（position: absolute）をこの横スクロールの中に閉じ込めるため。
+   無いと、はみ出したボタンの .sr-only がページの幅を押し広げ、狭い画面でページごと横にスクロールする。 */
+.filterTags {
+  position: relative;
+  display: flex;
+  flex: 1;
+  gap: 0.5rem;
+  min-width: 0;
+  overflow-x: auto;
+  /* フォーカスの枠（global.css の :focus-visible）が、横スクロールの枠で切れないだけの余白。 */
+  padding: 0.25rem;
+  scrollbar-width: none;
+}
+
+.filterTags::-webkit-scrollbar {
+  display: none;
+}
+
+.filter:global(.is-wrapped) .filterTags {
+  flex-wrap: wrap;
+  overflow-x: visible;
+}
+
+.filterTags button {
+  flex: none;
+  min-height: 2.75rem;
+  border: var(--border-thumb) solid var(--color-outline);
+  border-radius: var(--radius-pill);
+  padding: 0 0.875rem;
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-small);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.filterTags button:hover {
+  background-color: var(--color-fill-pale);
+}
+
+.filterTags button[aria-pressed='true'] {
+  background-color: var(--color-fill-ink);
+  color: var(--color-text-on-fill);
+  box-shadow: 2px 2px 0 var(--color-decor-petal);
+}
+
+.tally {
+  margin-inline-start: 0.375rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.expand {
+  flex: none;
+  min-height: 2.75rem;
+  border: 0;
+  padding: 0 0.25rem;
+  background: none;
+  color: var(--color-link);
+  font: inherit;
+  font-size: var(--text-small);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+
+/* ---------------------------------------------------------------------------
+   作品のカード
+   ------------------------------------------------------------------------- */
+.works {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 24rem), 1fr));
+  gap: 1.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  border: var(--border-thumb) solid var(--color-outline);
+  border-radius: var(--radius-thumb);
+  padding: 1.25rem;
+  background-color: var(--color-surface);
+  box-shadow: 4px 4px 0 color-mix(in srgb, var(--color-outline) 20%, transparent);
+  overflow-wrap: anywhere;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.card:hover {
+  box-shadow: 5px 6px 0 var(--color-outline);
+  transform: translateY(-3px);
+}
+
+.featured {
+  border-color: var(--color-frame);
+  border-radius: var(--radius-thumb-lg);
+  padding: 1.25rem 1.5rem;
+  background-color: color-mix(in srgb, var(--color-fill-pale) 20%, var(--color-surface));
+  box-shadow: none;
+}
+
+.featured:hover {
+  box-shadow: none;
+  transform: none;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem 0.75rem;
+}
+
+.title {
+  margin: 0;
+  border-radius: var(--radius-pill);
+  padding: 0.125rem 0.75rem;
+  background-color: var(--color-fill-pale);
+  color: var(--color-figure);
+  font-size: var(--text-small);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.featured .title {
+  background-color: var(--color-fill-blue-deep);
+  color: var(--color-text-on-fill);
+}
+
+.featured .title::before {
+  content: '🎙️ ';
+  content: '🎙️ ' / '';
+}
+
+.scope {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-small);
+}
+
+.extras {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+}
+
+.xPost a {
+  display: inline-flex;
+  align-items: center;
+  column-gap: 0.25rem;
+  border: 1px solid var(--color-fill-pink);
+  border-radius: var(--radius-pill);
+  padding: 0 0.75rem;
+  background-color: var(--color-fill-pink-soft);
+  color: var(--color-figure);
+  font-size: var(--text-small);
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.xPost a::before {
+  content: '🎬';
+  content: '🎬' / '';
+}
+
+.xPost a:hover {
+  background-color: var(--color-fill-pink);
+  color: var(--color-text);
+}
+
+/* 吹き出しの枠としっぽは blockquote の外側に持つ。blockquote の ::before・::after は括弧に使い、中にはセリフの文字だけを置くため。
+   面は単色にする。背景画像（グラデーション）があると、axe が文字のコントラストを確かめられない（src/styles/global.css）。 */
+.bubble {
+  --bubble-edge: color-mix(in srgb, var(--color-figure) 28%, var(--color-frame));
+  --bubble-face: color-mix(in srgb, var(--color-fill-pale) 55%, var(--color-surface));
+  --bubble-tail: 0.875rem;
+
+  position: relative;
+  margin-bottom: 0.375rem;
+  border: var(--border-thumb) solid var(--bubble-edge);
+  border-radius: 1.125rem;
+  padding: 1rem 1.25rem;
+  background-color: var(--bubble-face);
+}
+
+.bubble::after {
+  content: '';
+  position: absolute;
+  bottom: calc(var(--bubble-tail) / -2 - var(--border-thumb) / 2);
+  left: 1.5rem;
+  width: var(--bubble-tail);
+  height: var(--bubble-tail);
+  border-right: var(--border-thumb) solid var(--bubble-edge);
+  border-bottom: var(--border-thumb) solid var(--bubble-edge);
+  background-color: var(--bubble-face);
+  transform: rotate(45deg);
+}
+
+.featured .bubble {
+  --bubble-edge: var(--color-outline);
+  --bubble-face: color-mix(in srgb, var(--color-fill-pale) 45%, var(--color-surface));
+  --bubble-tail: 1.125rem;
+
+  padding: 1.25rem 1.5rem;
+}
+
+.quote {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 1.0625rem;
+  font-weight: 700;
+  line-height: 1.75;
+}
+
+.featured .quote {
+  font-size: clamp(1.125rem, 2.2vw, 1.375rem);
+}
+
+.quote::before,
+.quote::after {
+  color: var(--color-decor-petal);
+  font-size: 1.4em;
+  line-height: 0;
+}
+
+.quote::before {
+  content: '“';
+  content: '“' / '';
+  margin-inline-end: 0.125rem;
+}
+
+.quote::after {
+  content: '”';
+  content: '”' / '';
+  margin-inline-start: 0.125rem;
+}
+
+.topic {
+  margin: 0;
+  padding-inline-start: 0.25rem;
+  color: var(--color-text-muted);
+  font-size: var(--text-small);
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.topic::before {
+  content: '──';
+  content: '──' / '';
+  margin-inline-end: 0.375rem;
+  color: var(--color-decor-petal);
+  font-weight: 900;
+}
+
+.foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: auto;
+}
+
+.topic + .foot {
+  border-top: 2px dashed var(--color-fill-pale);
+  padding-top: 0.75rem;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-small);
+}
+
+.tags li {
+  border-radius: var(--radius-pill);
+  padding: 0 0.625rem;
+  background-color: color-mix(in srgb, var(--color-fill-pale) 70%, var(--color-surface));
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+/* 押せる範囲をピルいっぱいにする（ボタンは SkebWorks.astro のスクリプトが作る）。 */
+.tags li:has(> button) {
+  padding: 0;
+}
+
+.tags li:has(> button)::before {
+  content: none;
+}
+
+.tags button {
+  border: 0;
+  border-radius: var(--radius-pill);
+  padding: 0 0.625rem;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.tags button::before {
+  content: '#';
+  content: '#' / '';
+}
+
+.tags button:hover {
+  background-color: var(--color-fill-pale);
+}
+
+.tags button[aria-pressed='true'] {
+  background-color: var(--color-fill-ink);
+  color: var(--color-text-on-fill);
+}
+
+.hashTag::before {
+  content: '#';
+  content: '#' / '';
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-inline-start: auto;
+}
+
+.youtube {
+  display: inline-flex;
+  align-items: center;
+  column-gap: 0.375rem;
+  min-height: 2.75rem;
+  border: var(--border-thumb) solid var(--color-outline);
+  border-radius: var(--radius-pill);
+  padding: 0 1rem;
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--text-small);
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.youtube::before {
+  content: '▶';
+  content: '▶' / '';
+}
+
+.youtube:hover {
+  background-color: var(--color-fill-pale);
+}
+
+.listen {
+  display: inline-flex;
+  align-items: center;
+  column-gap: 0.25rem;
+  min-height: 2.75rem;
+  border: var(--border-thumb) solid var(--color-fill-blue-deep);
+  border-radius: var(--radius-pill);
+  padding: 0 1rem;
+  background-color: var(--color-surface);
+  color: var(--color-fill-blue-deep);
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--color-outline) 20%, transparent);
+  font-size: var(--text-small);
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.listen::before {
+  content: '🎧';
+  content: '🎧' / '';
+}
+
+.wave {
+  display: none;
+  align-items: center;
+  gap: 2px;
+  height: 0.75rem;
+  margin-inline-start: 0.125rem;
+}
+
+.wave span {
+  width: 3px;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background-color: currentColor;
+  transform: scaleY(0.6);
+}
+
+.wave span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.wave span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.featured .wave {
+  display: inline-flex;
+}
+
+/* 短縮形にしない。短縮形は上の animation-delay を 0 に戻す。 */
+.featured .listen:hover .wave span {
+  animation-name: wave;
+  animation-duration: 0.6s;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+@keyframes wave {
+  0%,
+  100% {
+    transform: scaleY(0.5);
+  }
+  50% {
+    transform: scaleY(1.3);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .featured .listen:hover .wave span {
+    animation-name: none;
+  }
+}
+
+.listen:hover {
+  background-color: var(--color-fill-blue-deep);
+  color: var(--color-text-on-fill);
+}
+
+.featured .listen {
+  border-color: var(--color-outline);
+  background-color: var(--color-fill-blue-deep);
+  color: var(--color-text-on-fill);
+  box-shadow: var(--offset-button) var(--offset-button) 0 var(--color-outline);
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+.featured .listen:hover {
+  box-shadow: 2px 2px 0 var(--color-outline);
+  transform: translate(2px, 2px);
+}
+
+/* ---------------------------------------------------------------------------
+   出典と注記
+   ------------------------------------------------------------------------- */
+.notes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-top: 1rem;
+  border-top: 2px dashed var(--color-frame);
+  padding-top: 1rem;
+  color: var(--color-text-muted);
+  font-size: var(--text-small);
+}
+
+.notes p {
+  margin: 0;
+}
+
+.date {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+@media (max-width: 40rem) {
+  .pickup,
+  .section {
+    padding: 1.25rem 1rem;
+  }
+
+  .card,
+  .featured {
+    padding: 1rem;
+  }
+
+  .bubble,
+  .featured .bubble {
+    padding: 0.875rem 1rem;
+  }
+
+  .sort::before {
+    display: none;
+  }
+}

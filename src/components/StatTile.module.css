@@ -1,0 +1,25 @@
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  border-radius: var(--radius-tile);
+  padding: 1rem 1.15rem;
+}
+
+.label {
+  color: var(--color-text-muted);
+  font-size: var(--text-small);
+}
+
+.value {
+  color: var(--color-figure);
+  font-family: var(--font-display);
+  font-size: var(--text-figure);
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.note {
+  font-size: var(--text-small);
+  font-weight: 700;
+}

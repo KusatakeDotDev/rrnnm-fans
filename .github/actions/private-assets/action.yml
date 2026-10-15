@@ -1,0 +1,35 @@
+name: 非公開の素材を重ねる
+description: scripts/private-assets.json の素材のリポジトリを、固定したコミットで取ってきて、同じパスに重ねる（RRNNM-44）
+inputs:
+  ssh-key:
+    description: 素材のリポジトリの読み取り専用の deploy key
+    required: true
+runs:
+  using: composite
+  steps:
+    # actions/checkout は deploy key を ssh で使う。Playwright のイメージと ubuntu-slim に ssh があるとは限らない。
+    - name: ssh を用意する
+      shell: bash
+      run: |
+        command -v ssh > /dev/null && exit 0
+        SUDO=$([ "$(id -u)" = 0 ] || echo sudo)
+        $SUDO apt-get update -qq
+        $SUDO apt-get install -y -qq --no-install-recommends openssh-client
+    - name: 取ってくるコミットを読む
+      id: source
+      shell: bash
+      run: |
+        for key in repository ref; do
+          echo "$key=$(sed -n "s/.*\"$key\": *\"\([^\"]*\)\".*/\1/p" scripts/private-assets.json)" >> "$GITHUB_OUTPUT"
+        done
+    - uses: actions/checkout@v7
+      with:
+        repository: ${{ steps.source.outputs.repository }}
+        ref: ${{ steps.source.outputs.ref }}
+        ssh-key: ${{ inputs.ssh-key }}
+        path: .private/assets
+        persist-credentials: false
+    # node は pnpm が用意したものを使うので、pnpm/setup の後に呼ぶ。
+    - name: 重ねる
+      shell: bash
+      run: pnpm assets:overlay

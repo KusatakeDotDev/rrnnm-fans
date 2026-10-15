@@ -1,0 +1,46 @@
+name: 再生リストの存在確認
+
+# トップのカルーセルに出す再生リスト（src/components/playlists.ts）が、本家にまだあるかを見る監視。
+# 方針は docs/adr/0008-playlist-carousel.md「名前と表紙は、ブラウザで取る」の「払うもの」と docs/OPERATIONS.md §6。
+#
+# 名前と表紙はブラウザで取るので、本家で再生リストが消えてもビルドも規約テストも落ちない。
+# それを補うのがここ。**コードの仕様のテストではなく、外部の状態の監視**。
+#
+# **ci.yml に入れない（ci-ok の needs にも入れない）。** 再生リストが消えるのはコミットと無関係に
+# 起きるので、PR の CI では次に誰かが PR を出すまで気付けない。しかも ci-ok に入れると、
+# YouTube 側の都合で関係ない PR と Dependabot の自動マージ（docs/adr/0003-testing-and-ci.md §8）が止まる。
+# ここは赤くなって知らせるだけで、マージは止めない。
+#
+# 定期実行の失敗は GitHub がメールで知らせる。宛先は、このファイルの cron を最後に変えた人。
+
+on:
+  schedule:
+    # 毎週月曜 09:17（JST）。cron は UTC で書く。
+    # 正時を避けるのは、GitHub の定期実行が正時に集中して遅れやすいため。
+    - cron: '17 0 * * 1'
+  pull_request:
+    # 足した ID の打ち間違いを、その PR の中で見つける。
+    paths:
+      - src/components/playlists.ts
+      - scripts/check-playlists.mjs
+      - .github/workflows/playlists-check.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: 再生リストが本家にある
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      # Node のバージョンは package.json の devEngines.runtime から決まる（ci.yml と同じ）。
+      # スクリプトは .ts をそのまま import するので、型を剥がせる Node 26 が要る。
+      - uses: pnpm/setup@v3
+        with:
+          cache: true
+      - run: pnpm run playlists:check

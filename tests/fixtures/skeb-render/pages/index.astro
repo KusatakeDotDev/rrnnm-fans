@@ -1,0 +1,19 @@
+---
+import SkebWorks from '../../../../src/unreleased/_parts/SkebWorks.tsx';
+import { SKEB_WORKS } from '../../../../src/content/skeb';
+import '../../../../src/styles/tokens.css';
+import '../../../../src/styles/global.css';
+const data = { version: 2, works: SKEB_WORKS.map((work, index) => ({
+  url: work.url,
+  inputHash: index < 5 ? 'a'.repeat(64) : null,
+  status: ['approved', 'approved', 'pending', 'failed', 'awaiting-review'][index] ?? 'missing',
+  ...(index < 2 ? { summary: {
+    heading: index === 0 ? '合成データの見出し' : 'タグなしの合成見出し',
+    quote: { text: '架空の「引用」&"セリフ"の表示テストです。'.repeat(3), url: work.url, retrieved: '2026-10-13', ...(index === 0 ? { provenance: 'user-provided' } : {}) },
+    tags: index === 0 ? ['合成タグ', '表示確認'] : [],
+  } } : {}),
+})) };
+---
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8" /><title>合成データ表示テスト</title></head>
+<body><main><h1>表示テスト</h1><div class="container"><SkebWorks works={SKEB_WORKS} data={data} /></div></main></body></html>

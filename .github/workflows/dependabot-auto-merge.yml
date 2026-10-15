@@ -1,0 +1,46 @@
+name: Dependabot 自動マージ
+
+# 何をするワークフローか:
+#   dependabot の PR に「自動マージ」を**予約**するだけ。マージするのは GitHub 側で、
+#   必須チェック（CI ワークフローの ci-ok）が緑になった瞬間に初めて実行される。
+#   つまりこのワークフローは CI の結果を見ない。見るのは GitHub のマージキュー側。
+#
+# 動かすのに必要なリポジトリ設定（ファイルでは指定できない。手で入れる）:
+#   1. Settings → General → Pull Requests → **Allow auto-merge** を有効化
+#   2. main のルールセット（またはブランチ保護）で **ci-ok を必須チェック**にする
+#   どちらか欠けると `gh pr merge --auto` が失敗するか、チェックを待たずに入る。
+
+on: pull_request
+
+# dependabot 起点の run では GITHUB_TOKEN が既定で読み取り専用になる。
+# ここで明示した権限だけが渡る。
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    name: 自動マージを予約する
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    # 1コアのランナー。1分の単価が ubuntu-latest の 1/3（rurino-nemo-fansite#156・docs/adr/0003-testing-and-ci.md「CI の形」）。
+    runs-on: ubuntu-slim
+    steps:
+      - name: PR のメタデータを取る
+        id: meta
+        uses: dependabot/fetch-metadata@v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # メジャーは人が見る。破壊的変更は CI が緑でも通していい理由にならない。
+      # グループ PR の場合、update-type にはグループ内で最大の変化が入る。
+      - name: patch と minor だけ予約する
+        if: steps.meta.outputs.update-type != 'version-update:semver-major'
+        run: gh pr merge --auto --merge "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: メジャーは予約しない理由を残す
+        if: steps.meta.outputs.update-type == 'version-update:semver-major'
+        run: |
+          echo "メジャー更新なので自動マージしない: ${{ steps.meta.outputs.dependency-names }}" >> "$GITHUB_STEP_SUMMARY"

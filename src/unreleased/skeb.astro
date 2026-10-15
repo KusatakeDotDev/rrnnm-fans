@@ -1,0 +1,462 @@
+---
+// 納品のポストは、押したときだけ X の公式の埋め込みをダイアログで出す（ADR-0022 の決定。許すポストは tests/helpers/x-embed.ts）。
+// X を読むコードはこのページの is:inline に書く。バンドルする JS に X の語があると tests/artifact/build-output.spec.ts が落とすため。
+import Butterfly from '../components/Butterfly.tsx';
+import { SKEB_PROFILE_URL, SKEB_WORKS } from '../content/skeb';
+import summaryData from '../content/skeb-summaries.json';
+import SkebWorks from './_parts/SkebWorks.astro';
+import Base from '../layouts/Base.astro';
+---
+
+<Base title="Skeb ボイス作品紹介" description="ファンからの依頼を受けて瑠璃野ねもさんが演じた、Skeb のボイス作品のアーカイブ案内です。">
+  <Fragment slot="head">
+    <div class="title-block">
+      <div>
+        <p class="eyebrow">VOICE ARCHIVE</p>
+        {/* 句ごとに <span> で包み、狭い画面ではこの境目で2行に分ける。 */}
+        <h1><span>Skeb</span> <span>ボイス作品紹介</span></h1>
+      </div>
+      <p class="tagline">ネモフィラの妖精・瑠璃野ねもさんのリクエストボイス案内</p>
+    </div>
+  </Fragment>
+
+  <div class="skeb-layout">
+    <section class="intro on-paper" aria-labelledby="skeb-profile">
+      <div class="intro-head">
+        <h2 id="skeb-profile" class="intro-badge"><Butterfly size="1.375rem" className="badge-butterfly" />瑠璃野ねもさんのボイス作品</h2>
+        <p class="total">全 {SKEB_WORKS.length} 作品アーカイブ</p>
+      </div>
+
+      <p>
+        ファンからの依頼を受けて、瑠璃野ねもさんが演じた<strong>Skeb のボイス作品</strong>のアーカイブ案内です。ヤンデレな部活の後輩、メイド喫茶の塩対応、切ない独白まで——多彩な「声の表現」が詰まっています。気になるセリフから、ぜひ<strong>Skeb の作品ページ</strong>へ。
+      </p>
+
+      <div class="profile-banner">
+        <div class="profile-banner-text">
+          <p class="profile-banner-title">フル音声は Skeb 本家ページにて公開中！</p>
+          <p class="profile-banner-sub">各作品の「Skeb で聴く」ボタンから、実際のボイス作品を再生できます。「X で試聴」からは、ご本人の納品ポストの試聴動画も見られます。</p>
+        </div>
+        <a class="profile-cta" href={SKEB_PROFILE_URL} target="_blank" rel="noopener noreferrer">
+          Skeb でプロフィールを見る&nbsp;↗<span class="sr-only">（外部サイトを新しいタブで開く）</span>
+        </a>
+      </div>
+    </section>
+
+    <SkebWorks works={SKEB_WORKS} data={summaryData} />
+  </div>
+
+  <dialog class="x-dialog on-paper" aria-labelledby="x-dialog-title" data-skeb-x-dialog>
+    <div class="x-dialog-body">
+      <div class="x-dialog-head">
+        <h2 id="x-dialog-title" data-skeb-x-title>納品ポスト</h2>
+        <button type="button" class="x-dialog-x" data-skeb-x-close><span aria-hidden="true">✕</span><span class="sr-only">閉じる</span></button>
+      </div>
+      <div class="x-dialog-post" data-skeb-x-embed></div>
+      <div class="x-dialog-foot">
+        <button type="button" class="x-dialog-close" data-skeb-x-close>閉じる</button>
+      </div>
+    </div>
+  </dialog>
+
+  {/* 納品のポストのリンクを押したら、ダイアログを開いてから X を読む。ページを開いただけでは X に何も伝えないため（ADR-0022 の決定）。
+      - 修飾キー・中ボタンで押したときは横取りせず、リンクのまま X を開く
+      - oEmbed の頼み方（dnt・Cookie もリファラも送らない・no-store・5秒で諦める）と、blockquote で始まる HTML だけを入れるのは、
+        src/pages/references.astro と同じ。取れなかったときは、ダイアログの中のポストへのリンクのまま残す
+      - hide_thread: 同じ日の納品はスレッドになっていて、付けないと前の作品のポストが上に出る
+      - 閉じたら中身を消す。埋め込みの動画が、閉じたあとも鳴り続けないため */}
+  <script is:inline>
+    (() => {
+      const dialog = document.querySelector('[data-skeb-x-dialog]');
+      if (!(dialog instanceof HTMLDialogElement) || typeof dialog.showModal !== 'function') return;
+      const title = dialog.querySelector('[data-skeb-x-title]');
+      const box = dialog.querySelector('[data-skeb-x-embed]');
+      if (!title || !box) return;
+
+      for (const note of document.querySelectorAll('[data-skeb-x-note]')) note.textContent = 'このページの中で開く';
+      for (const link of document.querySelectorAll('[data-x-post] a[href]')) link.setAttribute('aria-haspopup', 'dialog');
+
+      const fallback = (href) => {
+        const link = Object.assign(document.createElement('a'), { href, target: '_blank', rel: 'noopener noreferrer', textContent: 'X でポストを見る ↗' });
+        link.append(Object.assign(document.createElement('span'), { className: 'sr-only', textContent: '（外部サイトを新しいタブで開く）' }));
+        const line = document.createElement('p');
+        line.append(link);
+        return line;
+      };
+      const oembed = (href) => {
+        const api = new URL('https://publish.x.com/oembed');
+        api.searchParams.set('url', href);
+        api.searchParams.set('omit_script', 'true');
+        api.searchParams.set('dnt', 'true');
+        api.searchParams.set('lang', 'ja');
+        api.searchParams.set('hide_thread', 'true');
+        return fetch(api, { cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer', signal: AbortSignal.timeout(5000) })
+          .then((res) => (res.ok ? res.json() : null))
+          .then((body) => {
+            const html = body && body.html;
+            return typeof html === 'string' && /^\s*<blockquote\b/i.test(html) ? html : null;
+          })
+          .catch(() => null);
+      };
+
+      const embeds = new Map();
+      let widgets = false;
+      let shown = 0;
+      document.addEventListener('click', (event) => {
+        if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        const link = event.target instanceof Element ? event.target.closest('[data-x-post] a[href]') : null;
+        if (!link) return;
+        event.preventDefault();
+        const href = link.href;
+        const work = link.closest('[data-skeb-work], [data-skeb-pickup-slot]')?.querySelector('h3')?.textContent ?? '';
+        title.textContent = `${work} の納品ポスト`;
+        box.replaceChildren(fallback(href));
+        const current = ++shown;
+        dialog.showModal();
+        if (!widgets) {
+          widgets = true;
+          const script = Object.assign(document.createElement('script'), { async: true, src: 'https://platform.x.com/widgets.js' });
+          // 読めなかったら、次に押したときに読み直す。読めないままだと、差し込んだ引用が描かれないまま残るため。
+          script.addEventListener('error', () => {
+            widgets = false;
+            script.remove();
+          });
+          document.head.append(script);
+        }
+        if (!embeds.has(href)) embeds.set(href, oembed(href));
+        embeds.get(href).then((html) => {
+          if (html === null) embeds.delete(href);
+          if (html === null || current !== shown) return;
+          box.innerHTML = html;
+          window.twttr?.widgets?.load?.(box);
+        });
+      });
+      dialog.addEventListener('close', () => {
+        shown++;
+        box.replaceChildren();
+      });
+      dialog.addEventListener('click', (event) => {
+        if (event.target === dialog || (event.target instanceof Element && event.target.closest('[data-skeb-x-close]'))) dialog.close();
+      });
+    })();
+  </script>
+</Base>
+
+<style>
+  h1 {
+    margin: 0;
+  }
+
+  .title-block {
+    display: flex;
+    flex-wrap: wrap;
+    align-self: stretch;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 0.5rem 1.5rem;
+  }
+
+  .eyebrow {
+    display: inline-block;
+    margin: 0 0 0.5rem;
+    border-radius: var(--radius-pill);
+    padding: 0.125rem 0.75rem;
+    background-color: var(--color-fill-pale);
+    color: var(--color-figure);
+    font-size: var(--text-small);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+  }
+
+  /* 絵文字は飾り。読み上げに入れない（対応していないブラウザでは前の content が残る）。 */
+  .eyebrow::before {
+    content: '🎧 ';
+    content: '🎧 ' / '';
+  }
+
+  h1 span {
+    display: inline-block;
+  }
+
+  .tagline {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: var(--text-small);
+    font-weight: 700;
+  }
+
+  /* 導入・ピックアップ・作品一覧の3枚のステッカーを地の上に並べる。ピックアップと作品一覧は SkebWorks.module.css。 */
+  .skeb-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    width: 100%;
+    max-width: 60rem;
+    margin: 3rem auto 0;
+    word-break: auto-phrase;
+  }
+
+  .intro {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    border: var(--border-sticker) solid var(--color-outline);
+    border-radius: var(--radius-tile);
+    padding: clamp(1.25rem, 3vw, 2rem);
+    box-shadow: var(--offset-tile) var(--offset-tile) 0 var(--color-outline);
+  }
+
+  .intro::before {
+    content: '';
+    position: absolute;
+    top: -0.75rem;
+    right: 2rem;
+    width: 6rem;
+    height: 1.625rem;
+    border-inline: 2px dashed color-mix(in srgb, var(--color-surface) 70%, transparent);
+    background-color: color-mix(in srgb, var(--color-fill-lavender) 78%, transparent);
+    transform: rotate(3deg);
+    pointer-events: none;
+  }
+
+  .intro p {
+    margin: 0;
+  }
+
+  .intro-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .intro-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin: 0;
+    border: var(--border-thumb) solid var(--color-outline);
+    border-radius: var(--radius-pill);
+    padding: 0.25rem 1rem;
+    background-color: var(--color-fill-pink-soft);
+    box-shadow: 2px 2px 0 var(--color-outline);
+    font-size: var(--text-base);
+    font-weight: 700;
+    transform: rotate(-1deg);
+  }
+
+  /* 子のコンポーネントの root には、このページのスコープが当たらない。 */
+  .intro-badge :global(.badge-butterfly) {
+    flex: none;
+    color: var(--color-decor-pink);
+  }
+
+  .total {
+    border: var(--border-thumb) solid var(--color-outline);
+    border-radius: var(--radius-pill);
+    padding: 0.125rem 0.875rem;
+    background-color: var(--color-fill-pale);
+    font-size: var(--text-small);
+    font-weight: 700;
+  }
+
+  .total::before {
+    content: '🎙️ ';
+    content: '🎙️ ' / '';
+  }
+
+  .profile-banner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 0.25rem;
+    border: var(--border-thumb) solid var(--color-outline);
+    border-radius: var(--radius-thumb);
+    padding: 1rem 1.25rem;
+    background-color: color-mix(in srgb, var(--color-fill-pale) 40%, var(--color-surface));
+  }
+
+  .profile-banner-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .profile-banner-title {
+    font-weight: 700;
+  }
+
+  .profile-banner-title::before {
+    content: '🎧 ';
+    content: '🎧 ' / '';
+  }
+
+  .profile-banner-sub {
+    color: var(--color-text-muted);
+    font-size: var(--text-small);
+  }
+
+  .profile-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.75rem;
+    margin-inline-start: auto;
+    border: var(--border-thumb) solid var(--color-outline);
+    border-radius: var(--radius-pill);
+    padding: 0.25rem 1.25rem;
+    background-color: var(--color-fill-blue-deep);
+    color: var(--color-text-on-fill);
+    box-shadow: var(--offset-button) var(--offset-button) 0 var(--color-outline);
+    font-size: var(--text-small);
+    font-weight: 700;
+    line-height: 1.4;
+    text-align: center;
+    text-decoration: none;
+    transition:
+      transform 0.12s ease,
+      box-shadow 0.12s ease;
+  }
+
+  .profile-cta:hover {
+    box-shadow: 2px 2px 0 var(--color-outline);
+    transform: translate(2px, 2px);
+  }
+
+  /* ---------------------------------------------------------------------------
+     納品のポストのダイアログ
+     ------------------------------------------------------------------------- */
+  /* X の埋め込みは 250px より狭くならないので、320px の画面でも中が 250px を下回らない幅と余白にする。 */
+  .x-dialog {
+    width: min(34rem, calc(100% - 1rem));
+    max-width: calc(100% - 1rem);
+    max-height: calc(100svh - 2rem);
+    border: var(--border-sticker) solid var(--color-outline);
+    border-radius: var(--radius-tile);
+    padding: 0;
+    box-shadow: var(--offset-tile) var(--offset-tile) 0 var(--color-outline);
+    word-break: auto-phrase;
+  }
+
+  .x-dialog::backdrop {
+    background-color: color-mix(in srgb, var(--color-outline) 60%, transparent);
+  }
+
+  .x-dialog-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.25rem;
+  }
+
+  .x-dialog-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    border-bottom: 2px solid var(--color-fill-pale);
+    padding-bottom: 0.75rem;
+  }
+
+  .x-dialog-head h2 {
+    margin: 0;
+    font-size: var(--text-base);
+  }
+
+  .x-dialog-head h2::before {
+    content: '🎬 ';
+    content: '🎬 ' / '';
+  }
+
+  .x-dialog-x {
+    flex: none;
+    width: 2.75rem;
+    height: 2.75rem;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-fill-pale);
+    color: var(--color-text);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .x-dialog-x:hover {
+    background-color: var(--color-fill-pink-soft);
+  }
+
+  .x-dialog-post {
+    min-height: 6rem;
+  }
+
+  /* 中身はスクリプトが入れるので、このページのスコープが当たらない。 */
+  .x-dialog-post :global(p) {
+    margin: 0;
+  }
+
+  .x-dialog-post :global(blockquote) {
+    margin: 0;
+    border: var(--border-thumb) solid var(--color-frame);
+    border-radius: var(--radius-thumb);
+    padding: 1rem;
+    overflow-wrap: anywhere;
+  }
+
+  .x-dialog-post :global(blockquote p) {
+    margin: 0 0 0.5rem;
+  }
+
+  .x-dialog-foot {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .x-dialog-close {
+    min-height: 2.75rem;
+    border: var(--border-thumb) solid var(--color-outline);
+    border-radius: var(--radius-pill);
+    padding: 0 1.25rem;
+    background-color: var(--color-fill-blue-deep);
+    color: var(--color-text-on-fill);
+    box-shadow: var(--offset-button) var(--offset-button) 0 var(--color-outline);
+    font: inherit;
+    font-size: var(--text-small);
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .x-dialog-close:hover {
+    box-shadow: 2px 2px 0 var(--color-outline);
+    transform: translate(2px, 2px);
+  }
+
+  @media (max-width: 40rem) {
+    .skeb-layout {
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+
+    .intro {
+      padding: 1.25rem 1rem;
+    }
+
+    .intro::before {
+      display: none;
+    }
+
+    .profile-banner {
+      padding: 0.875rem 1rem;
+    }
+
+    .profile-cta {
+      flex-grow: 1;
+    }
+
+    .x-dialog-body {
+      padding: 1rem 0.75rem;
+    }
+  }
+</style>

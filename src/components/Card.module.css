@@ -1,0 +1,14 @@
+.card {
+  border: var(--border-card) solid var(--color-outline);
+  border-radius: var(--radius-card);
+  padding: clamp(1.25rem, 4vw, 2.25rem);
+  box-shadow: var(--offset-card) var(--offset-card) 0 var(--color-outline);
+}
+
+@media (max-width: 40rem) {
+  .card {
+    border-width: var(--border-sticker);
+    border-radius: var(--radius-tile);
+    box-shadow: var(--offset-tile) var(--offset-tile) 0 var(--color-outline);
+  }
+}

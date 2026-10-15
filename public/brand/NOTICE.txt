@@ -1,0 +1,52 @@
+このフォルダのファイルについて
+
+これはフッターの公式アカウントへのリンク（src/components/SiteFooter.tsx）に使っている、
+各サービスの公式アイコン・ロゴです。どれも各社の商標で、このサイト（リポジトリ）の
+LICENSE は、このフォルダのファイルには及びません。
+このサイトは各サービスの運営元とも関係がありません。
+
+取得日: 2026-09-30。利用条件の詳細は docs/BRAND_ASSETS.md。
+
+youtube-icon-red.svg
+  YouTube Icon（Digital / Red）。Google LLC の商標。
+  配布元: https://brand.youtube/youtube-icon/ の「Core YouTube icon」
+          （https://www.gstatic.com/marketing-cms/78/29/3e68a1414bb28d0b7e47b44c3c91/youtube-icon.zip）
+  変更: YouTube_Icon/Digital/01 Red/yt_icon_red_digital.ai（PDF 互換）を SVG に形式だけ変換した。
+        形・色・余白（アートボード）は変えていない。変換は MuPDF 1.28.1、描画に効かない
+        編集用のレイヤー属性とアートボード全体を囲むだけのクリップを外した。
+        同梱の yt_icon_red_digital.png と同じ大きさで描いて比べ、差が輪郭のアンチエイリアス
+        （2px 以内）にしか無いことを確かめた（2026-09-30）。
+
+x-logo-white.svg
+  X logo（白）。X Corp の商標。
+  配布元: https://about.x.com/ja/who-we-are/brand-toolkit の「X logo」
+          （https://about.x.com/content/dam/about-twitter/x/brand-toolkit/x-logo.zip の logo.svg）
+  変更: なし（ファイル名のみ）。
+
+marshmallow-logo.svg
+  マシュマロ（飛んでいるマシュマロちゃん）。Diver Down Inc. のロゴ。
+  配布元: https://help.marshmallow-qa.com/ロゴ画像の利用について-66e2538617c946001d347fd3
+          （https://help.marshmallow-qa.com/assets/66e25823b7d9d4001c898d9e.svg）
+  変更: なし（ファイル名のみ）。
+
+booth-logo-icon.svg
+  BOOTH ロゴ（アイコン単体・赤）。pixiv Inc. の商標。
+  配布元: pixiv Inc. の素材フォルダ
+          https://pixiv1.app.box.com/s/yj9ymvhbnpcbj22vfkkzctugzv46cnos/folder/122424961473 の SVG/logo_icon.svg
+  変更: なし（ファイル名のみ）。
+
+これらのファイルを取り出して、ほかの用途に使ったり配ったりしないでください。
+使いたい場合は、上の配布元から入手し、各社のガイドラインに従ってください。
+
+このサイトのデザインのためだけに、非公開のデザインツール（Claude Design のプロジェクト）へ
+複製している（.design-sync/site-assets.ts）。そこでもフッター（SiteFooter）の中でだけ使い、
+色や形は変えない。
+
+About the files in this folder:
+These are the official icons/logos of YouTube (Google LLC), X (X Corp), Marshmallow
+(Diver Down Inc.) and BOOTH (pixiv Inc.), obtained from each service's brand resources
+and used unmodified (the YouTube icon is only converted from the distributed .ai to SVG) to link to the
+official accounts in the site footer. They are trademarks of their respective owners and are
+NOT covered by this repository's LICENSE. This site is not affiliated with these services.
+For designing this site only, copies are also placed in a private design tool (a Claude Design
+project), where they are likewise used only in the site footer and are not modified.

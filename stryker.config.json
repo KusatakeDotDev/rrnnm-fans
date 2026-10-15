@@ -1,0 +1,27 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "_comment": "ミューテーションテスト。→ docs/adr/0003-testing-and-ci.md §4。対象は src/lib（純関数）だけ。UI と glue に掛けても生き残りが読めないノイズしか出ない。",
+  "packageManager": "pnpm",
+  "testRunner": "vitest",
+  "mutate": [
+    "src/lib/**/*.ts"
+  ],
+  "reporters": [
+    "html",
+    "clear-text",
+    "progress"
+  ],
+  "coverageAnalysis": "perTest",
+  "thresholds": {
+    "high": 95,
+    "low": 85,
+    "break": 80
+  },
+  "tempDirName": ".stryker-tmp",
+  "plugins": [
+    "@stryker-mutator/vitest-runner"
+  ],
+  "vitest": {
+    "configFile": "vitest.stryker.config.ts"
+  }
+}

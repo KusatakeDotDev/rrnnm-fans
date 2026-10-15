@@ -1,0 +1,68 @@
+# build output
+dist/
+/.local/
+# generated types
+.astro/
+
+# dependencies
+node_modules/
+
+# wrangler
+.wrangler/
+
+# logs
+npm-debug.log*
+pnpm-debug.log*
+
+# environment variables
+.env
+.env.production
+.dev.vars
+
+# macOS-specific files
+.DS_Store
+
+# jetbrains setting folder
+.idea/
+
+# Storybook（pnpm build-storybook の出力・ログ）
+storybook-static/
+*storybook.log
+
+# test output
+playwright-report/
+blob-report/
+test-results/
+reports/
+.stryker-tmp/
+
+# Playwright MCP（ブラウザ操作のスナップショット・スクリーンショット・一時スクリプト）
+.playwright-mcp/
+
+# 旧レビューのローカル履歴が誤って公開されないよう、停止後も除外する。
+/review-threads.local.md
+
+# /design-sync（どれもリポジトリ直下にだけできる。src/types/ などを巻き込まないよう / で直下に絞る）
+/.ds-sync/
+/ds-bundle/
+/.design-sync/.cache/
+/.design-sync/sb-reference/
+/.design-sync/learnings/
+/.design-sync/node_modules
+/types/
+
+.test-dist/
+*.receipt.json
+dist.verified.json
+
+# 非公開の素材（scripts/private-assets.json）。pnpm assets:pull が .private/assets に取ってきて、下のパスに重ねる（RRNNM-44）
+/.private/
+/public/field/
+/src/lib/fieldBundle.ts
+/src/lib/fieldBundleFormat.ts
+/scripts/pack-field-bundle.mjs
+/scripts/generate-field-assets.mjs
+/tests/unit/field-bundle.test.ts
+
+# 非公開の設計資料（rrnnm-fans-docs）。pnpm docs:pull が置く（RRNNM-45）
+/docs/

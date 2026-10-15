@@ -1,0 +1,39 @@
+.subpage-paper {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+  width: 100%;
+  max-width: 40rem;
+  margin: 3rem auto 0;
+  border: var(--border-card) solid var(--color-outline);
+  border-radius: var(--radius-card);
+  padding: 2.5rem 3rem;
+  word-break: auto-phrase;
+}
+
+.subpage-paper > section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.subpage-paper > section > h2 {
+  margin: 0;
+  border-bottom: 2px solid var(--color-outline);
+  padding-bottom: 0.5rem;
+  font-size: var(--text-h3);
+}
+
+.subpage-paper p {
+  margin: 0;
+}
+
+@media (max-width: 40rem) {
+  .subpage-paper {
+    gap: 2rem;
+    margin-top: 2rem;
+    border-width: var(--border-sticker);
+    border-radius: var(--radius-tile);
+    padding: 1.75rem 1.25rem;
+  }
+}

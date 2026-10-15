@@ -1,0 +1,8 @@
+# 一般公開（Issue rurino-nemo-fansite#31）。全クローラに全パスを許す。
+User-agent: *
+Disallow:
+
+# サイトマップは @astrojs/sitemap がビルドのときに書き出す（astro.config.mjs）。この robots.txt は手で書いている。
+# コードで書き出すと、静的ファイル1枚で済むものにコードが増えるため。そのぶん、オリジンは astro.config.mjs の
+# `site` と手でそろえる（ずれは tests/artifact/sitemap.spec.ts が落とす）。
+Sitemap: https://rrnnm.fans/sitemap-index.xml

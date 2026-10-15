@@ -1,0 +1,40 @@
+import { Meta, Unstyled } from '@storybook/addon-docs/blocks';
+
+import Card from '../src/components/Card.tsx';
+import SectionLabel from '../src/components/SectionLabel.tsx';
+import { ColorRoles, Palette, TypeAndMetrics } from './tokens/TokenTables.tsx';
+
+<Meta title="Foundations/Tokens" />
+
+# デザイントークン
+
+コンポーネントの素になる値。正は `src/styles/tokens.css` で、下の表はそのファイルを読んで組み立てている（値を書き写していない）。
+配色の決まりは `docs/DESIGN.md` §4。
+
+{/*
+  表はサイトの見た目で描く。docs のページは中の table・p・code などに自前のスタイルを当てるので、Unstyled で外す。
+  Card の中の文は markdown にしない。markdown の段落とコードは docs のコンポーネント（地のスタイル付き）に置き換わり、
+  Unstyled では外れない。JSX の <p> の中身を別の行に書くと markdown の段落として <p> がもう1つ入るので、1行に書く。
+  このページは pnpm test:storybook（axe）に掛からない（回るのは story だけ）。足さないのは、トークンの組み合わせの
+  コントラストを tests/unit/palette.test.ts が見ていて、このページは公開もしないため。
+*/}
+
+<Unstyled>
+  <div className="on-ground" style={{ display: 'grid', gap: '1.5rem', padding: '1.5rem' }}>
+    <Card>
+      <SectionLabel>パレット — 色の literal はここにしか無い</SectionLabel>
+      <p>出どころごとに組で持つ（<code>docs/DESIGN.md</code> §4）。</p>
+      <Palette />
+    </Card>
+    <Card>
+      <SectionLabel>役割 — コンポーネントが参照するのはこちら</SectionLabel>
+      <p>「どの地の上で何に使ってよいか」を名前にしたもの。役割トークンはパレットしか参照しないので、ダークモード（RRNNM-28）はパレットを差し替えるだけで済む。</p>
+      <ColorRoles />
+    </Card>
+    <Card>
+      <SectionLabel>書体と寸法</SectionLabel>
+      <p>サイトは Zen Maru Gothic を webfont で配る（<code>docs/adr/0024-zen-maru-gothic-webfont.md</code>）。Storybook は webfont（<code>src/styles/fonts.css</code>）を読まないので、ここでは <code>--font-sans</code> の後ろに並べた端末の書体で描かれる。</p>
+      <TypeAndMetrics />
+    </Card>
+  </div>
+</Unstyled>

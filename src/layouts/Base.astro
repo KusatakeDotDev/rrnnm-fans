@@ -1,0 +1,170 @@
+---
+// 全ページ共通のレイアウト。ページから見て、ヘッダー・フッターと、全ページに効くスタイルシート（下の import の4つ。
+// .storybook/preview.ts も tokens.css と global.css を読む）はここにだけ置く。ページ側に書くと、後から足したページで漏れる。ページだけのスタイルは各ページの <style> に書く。
+// import の順は変えない。global.css の @media の :root（--dot-gap）は、詳細度が同じ tokens.css の値を、後に読まれることで上書きしている。
+// 非公式表記（Issue rurino-nemo-fansite#7）のうちヘッダー・フッターの2箇所も、ここが付けるので書き忘れられない。
+import SiteFooter from '../components/SiteFooter.tsx';
+import SiteHeader from '../components/SiteHeader.tsx';
+import { PAGE_LINKS } from '../content/siteNavigation';
+import { isRouteVisible } from 'virtual:site-routes';
+import { OG_IMAGE } from './og-image';
+import '../styles/tokens.css';
+import '../styles/global.css';
+import '../styles/font-fallback.css';
+// webfont の @font-face は 3ウェイトで数百あり、描画を止める CSS に入れると最初の描画がそのぶん遅れる。
+// 別の CSS に出して後から読み、読み込むまでは font-fallback.css の面で描く（ADR-0024「描画を止めない」）。
+import webfontHref from '../styles/fonts.css?url';
+
+interface Props {
+  title?: string;
+  /**
+   * ページの説明。`<meta name="description">` と `og:description` に入る。
+   * **必須にしてある。** 省けると、後から足したページで SNS のカードの説明が空になっても気付けない
+   * （`astro check` が落とす）。
+   */
+  description: string;
+  /**
+   * ヘッダーを下の段（`hero` スロット）に重ねる。トップの畑だけ
+   * （docs/adr/0009-nemophila-field-hero.md）。
+   */
+  overlayHeader?: boolean;
+  // 下層ページの見出しは head スロットで渡す（下の hasHead）。overlayHeader と両方は渡さない
+  // （畑の上に見出しの帯が出る。SiteHeader は overlay を採って白い帯を付けない）。
+}
+
+// サイト名（docs/CONCEPT.md §2）。ヘッダー・フッター・OGP の画像のロゴの alt は、ロゴの中の文字のまま
+// `rrnnm.fans（非公式）` で、ここと揃えない（alt は画像に書いてあることを言う）。
+const SITE_NAME = 'rrnnm.fans 瑠璃野ねも 非公式ファンサイト';
+const { title, description, overlayHeader = false } = Astro.props;
+const pageTitle = title ? `${title} | ${SITE_NAME}` : SITE_NAME;
+
+/* OGP（SNS に貼られたときのカード）。非公式表記4箇所のうちの1つ（Issue rurino-nemo-fansite#7）。
+   og:site_name と og:title の両方に「非公式」が入る（SITE_NAME から組むので、ページ側で外せない）。
+   画像の中にも「非公式」がある（ロゴのラベル）。X のカードは画像が主役で、タイトルが目立たない形があるため。
+   og:url と og:image は絶対 URL でないと SNS が読めない。起点は astro.config.mjs の `site`。 */
+const pageUrl = new URL(Astro.url.pathname, Astro.site);
+const ogImageUrl = new URL(OG_IMAGE.path, Astro.site);
+
+/* 下層ページの見出し（`head` スロット）。渡されたら、ヘッダーとこの見出しを白い帯にして、濃紺の線1本で本文と区切る
+   （docs/DESIGN.md §3「レイアウト方針」）。トップは渡さない（畑がその役）。 */
+const hasHead = Astro.slots.has('head');
+/* 単独のページへのリンクはフッターにだけ渡す。ヘッダーのナビは大きな区画を並べる場所（docs/DESIGN.md「導線」）。 */
+const pageLinks = PAGE_LINKS.filter((link) => isRouteVisible(link.href));
+---
+
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    {/* viewport-fit=cover は付けない。
+        Android の Chrome（135 から。それより前にも出ることがある）は、ジェスチャーバーの上のバー（chin）がスクロールで引っ込むと、
+        画面より長いページでもフッターの下に地が細く覗く。フッターの box-shadow では埋まらなかった（rurino-nemo-fansite#204 で実機で確認）。
+        cover なら chin は出ないが、ノッチ・ホームバー・ジェスチャーバーの下にも描くので、画面の端に寄るもの（.container・フッター・
+        畑の上のピルとボタンなど）の余白を env(safe-area-inset-*) で見直し、実機で確かめることになる（Playwright では chin もノッチも出ない）。
+        覗くのは地だけで中身は隠れないので、全ページの余白を変えるほうが影響が大きいとみて、付けない。
+        https://developer.chrome.com/docs/css-ui/edge-to-edge */}
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{pageTitle}</title>
+    <meta name="description" content={description} />
+    <meta property="og:site_name" content={SITE_NAME} />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={pageUrl.href} />
+    <meta property="og:locale" content="ja_JP" />
+    <meta property="og:image" content={ogImageUrl.href} />
+    <meta property="og:image:width" content={String(OG_IMAGE.width)} />
+    <meta property="og:image:height" content={String(OG_IMAGE.height)} />
+    <meta property="og:image:alt" content="rrnnm.fans（非公式）" />
+    {/* カードの種類（大きい画像）は twitter:card で指定する。og:* には種類を指定する項目が無い。 */}
+    <meta name="twitter:card" content="summary_large_image" />
+    {/* ファビコン。SVG を読めるブラウザは SVG を、読めないブラウザは ICO（中身は 16/32/48 の PNG）を使う。
+        ICO の sizes="32x32" は、Chrome が SVG より ICO を選んでしまうのを避けるための書き方。
+        パスは変えない。Google の検索結果のファビコンも、ここから選ばれる（docs/OPERATIONS.md §7「検索結果のファビコン」）。 */}
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" crossorigin="use-credentials" />
+    {/* ページが <head> で先に取りに行かせたいもの（`preload` スロット）。トップが予定のサムネイルを渡す
+        （src/components/ScheduleCard.tsx の preloadThumbnailScript）。CSS の <link> より前に出るので、
+        ここに置いたインラインのスクリプトは CSS を待たずに走る。 */}
+    <slot name="preload" />
+    {/* media="print" のあいだは描画を止めず、読み終えてから全部の画面に当てる。JS が無ければ noscript の側で読む。 */}
+    <link rel="stylesheet" href={webfontHref} media="print" onload="this.media='all'" />
+    <noscript><link rel="stylesheet" href={webfontHref} /></noscript>
+  </head>
+  <body>
+    <SiteHeader overlay={overlayHeader} paper={hasHead} />
+    <main>
+      {/* h1 は main の中に置くので、白い帯はヘッダーとここの2つに分けて、続けて見せる。 */}
+      {
+        hasHead && (
+          <div class="page-head on-paper">
+            <div class="container page-head-inner">
+              <slot name="head" />
+            </div>
+          </div>
+        )
+      }
+      {/* 横幅のコンテナ（.container）の外。画面の端から端まで使う段（トップの畑）。 */}
+      <slot name="hero" />
+      <div class="container content">
+        <slot />
+      </div>
+    </main>
+    <SiteFooter pageLinks={pageLinks} />
+  </body>
+</html>
+
+<style>
+  /* フッターを画面の下端に置く。中身が短いページでも、フッターの下に地を残さない。body を縦の flex にし、main が余りを埋める。
+     ヘッダー（.container）が中身の幅に縮まないのは、.container の width: 100% による（src/styles/global.css）。
+     global.css に書かないのは、Storybook と Claude Design への同期も global.css を読むため（どちらもこのレイアウトを使わない）。
+
+     高さは svh（スマートフォンでアドレスバーが出ているときのビューポートの高さ）。
+     vh はバーを隠したときの高さで、バーが出ているあいだは画面より長く、フッターの下端が画面の外に出る。
+     dvh はバーの出し入れに合わせて変わり、文書の高さもそれについて変わるので、スクロールの途中でスクロールできる長さが変わる。
+     svh では、中身の高さが svh と vh のあいだのページで、スクロールしてバーが隠れると、フッターの下にバーの高さまでの地が残る。
+     画面より長いページで、Android の Chrome の chin が引っ込んだときに覗く地は別の話（上の viewport の meta のコメント）。
+     読めないブラウザ（Safari 15.4・Chrome 108 より前）向けに vh を手前に書くことはしない。そこではフッターが中身のすぐ下に来るだけ。
+     印刷向けにも分けない（flex も高さも）。サイトは印刷を見込んでおらず、印刷向けのスタイルも無い。
+     Chrome で A4 の PDF にすると、今のページはどれも2枚以上になり、高さは効かない。 */
+  :global(body) {
+    display: flex;
+    flex-direction: column;
+    min-height: 100svh;
+  }
+
+  main {
+    flex-grow: 1;
+  }
+
+  /* 色は書かない。地は body が持つ。横幅は .container が持つ（src/styles/global.css）。 */
+  .content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  /* 下層ページの見出しの帯。上のヘッダーの白い帯（SiteHeader の paper）と続けて見せ、本文との区切りの線を引く。
+     上の余白は持たない（ヘッダーの下の余白がそのまま見出しとの間になる）。 */
+  .page-head {
+    border-bottom: var(--border-card) solid var(--color-outline);
+    padding-bottom: 1.75rem;
+  }
+
+  .page-head-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  @media (max-width: 40rem) {
+    .page-head {
+      border-bottom-width: var(--border-sticker);
+      padding-bottom: 1.25rem;
+    }
+  }
+</style>

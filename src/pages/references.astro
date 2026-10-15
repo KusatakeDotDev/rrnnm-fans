@@ -1,0 +1,155 @@
+---
+// 推し活の資料（docs/DESIGN.md §1 の /references。ADR-0014 の決定）。
+// TODO(RRNNM-11): 入口を作る。ナビ・トップの入口・フッターの一覧から入る形にする（docs/adr/0015-minigame-pages-and-site-navigation.md の決定）。
+//
+// 見た目は /about と同じ下層ページの形（docs/DESIGN.md §3「レイアウト方針」）。
+//
+// **埋め込んでよいのは、ぴよ汰。様が自分で公開したポストだけ**（ADR-0014 の決定。許すポストは tests/helpers/x-embed.ts に書き、
+// tests/conformance/x-embed.spec.ts が見る。widgets.js を読むページは tests/artifact/build-output.spec.ts が見る）。
+// ポストの本文も X の表示名もページに書かない（ADR-0014「埋め込みのコードは、ブラウザで oEmbed から取る」）。
+// 紹介文の「ぴよ汰。」はクレジットの名前で、X の表示名（告知が入って変わる）とは別なので書く。
+// 「二次創作」の語を使わず、使い道もサイトから言わない。理由は ADR-0014「「推し活の資料」と呼ぶ」。
+//
+// 紹介文は、ぴよ汰。様に公開していただいているものとして、感謝の言い方にする（主の判断。rurino-nemo-fansite#169）。何を公開して
+// いただいているかは、すぐ上の見出し（キービジュアルと三面図）が受ける。
+// 紹介文は誰が公開しているかの1文にし、どなたかは名前で始めない注記に分ける（主の判断。rurino-nemo-fansite#213）。
+// 1文に詰めると読み取りにくく、同じ名前が上下に並ぶとくどく見えるため。
+// ぴよ汰。様の敬称は「さま」（主の判断。rurino-nemo-fansite#213）。クリエイターを敬って呼ぶファンに合わせるため。
+// ぴよ汰。様の役割（「Live2D モデル制作者」）の出どころは、チャンネル概要欄のクレジット「illust & modeling」
+// （docs/FACTS.md §2）。イラストも手がけているが、書かない（主の判断。rurino-nemo-fansite#169。キービジュアルの報告のポストを
+// 載せるページなので、絵を手がけたことは読めば分かる、とした）。
+// 名前は lit.link（ぴよ汰。様が活動のリンクをまとめているページ。FACTS §2）へリンクする（主の判断。rurino-nemo-fansite#169）。
+// X のアカウントは、すぐ下の埋め込みが名前とフォローボタンで出すので、名前を X にリンクすると同じ行き先が2つ並ぶ。
+// リンクに「さま」は入れない。どこまでが名前か分かりにくくなるため（主の判断。rurino-nemo-fansite#213）。読み上げの補足は、
+// リンクだけをたどるときに名前と一緒に読まれるよう、リンクの中に置く。
+//
+// 文は1行に書く。文字と文字の間で改行すると、日本語の間に空白が1つ入る（about.astro と同じ）。
+import Base from '../layouts/Base.astro';
+import '../styles/subpage.css';
+---
+
+<Base
+  title="推し活の資料"
+  description="瑠璃野ねもさんの Live2D モデルを手がけたぴよ汰。さまが、X で公開してくださっているキービジュアルと三面図です。"
+>
+  <Fragment slot="head">
+    <h1>推し活の資料</h1>
+  </Fragment>
+
+  <div class="subpage-paper on-paper">
+    <section aria-labelledby="key-visual">
+      <h2 id="key-visual">キービジュアルと三面図</h2>
+      <p class="lead"><a href="https://lit.link/piyotamaru" target="_blank" rel="noopener noreferrer">ぴよ汰。<span class="sr-only">（lit.link。外部サイトを新しいタブで開く）</span></a>さまが X で公開してくださっています！</p>
+      <p class="note">Live2D モデル制作者さまです</p>
+      {/* data-x-post の中身は、下のスクリプトが oEmbed の埋め込みのコードに差し替える。ポストの URL は、このリンクの1か所にだけ書く。
+          リンクの文字に X の表示名を入れない（告知が入って変わる）。日付は変わらないので入れる。 */}
+      <div class="x-post" data-x-post>
+        <p><a href="https://x.com/nori_tama00/status/1484737271933071361" target="_blank" rel="noopener noreferrer">X でポストを見る（2022年1月22日の投稿）<span class="sr-only">（外部サイトを新しいタブで開く）</span></a></p>
+      </div>
+    </section>
+  </div>
+
+  {/* ポストの埋め込みのコードを、X の oEmbed から取って差し込む（ADR-0014「埋め込みのコードは、ブラウザで oEmbed から取る」）。
+      - dnt: X に、この埋め込みをおすすめや広告の個人向けの調整に使わせない（返ってくる blockquote に data-dnt が付く）。
+        訪問が X に伝わること自体は止まらない（ADR-0014「払うもの」）
+      - theme は付けない（既定のライト）。サイトはまだライトだけ（docs/DESIGN.md §4「ダークモード（Issue #8）」）
+      - widgets.js が先に読み終わっていたら、差し込んだあとに描かせ直す（twttr.widgets.load）。まだなら、widgets.js が
+        読み終わったときにページを見て描く
+      - 取れなかったとき（通信断・ポストの削除・広告ブロッカー・5秒を過ぎた）は、リンクのまま残す
+      - Cookie もリファラも送らない（再生リストの表紙と同じ。プレビューのホスト名を X に渡さない）
+      - ブラウザのキャッシュを使わない（no-store）。publish.x.com は、頼んだオリジンをそのまま CORS の許可に入れて、
+        約100年持ってよいという応答を返す（Vary: Origin も付けない。2026-10-10 に確かめた）。キャッシュを使うと、同じサイトの
+        別のオリジン（プレビューの URL どうし）では、前のオリジンの許可が返って読めなくなり、表示名や本文も古いまま残る
+      規約テストでは oEmbed も widgets.js も読ませない（playwright.config.ts の BLOCK_EXTERNAL_EMBEDS）。 */}
+  <script is:inline>
+    (() => {
+      for (const box of document.querySelectorAll('[data-x-post]')) {
+        const link = box.querySelector('a[href]');
+        if (!link) continue;
+        const api = new URL('https://publish.x.com/oembed');
+        api.searchParams.set('url', link.href);
+        api.searchParams.set('omit_script', 'true');
+        api.searchParams.set('dnt', 'true');
+        api.searchParams.set('lang', 'ja');
+        fetch(api, {
+          cache: 'no-store',
+          credentials: 'omit',
+          referrerPolicy: 'no-referrer',
+          signal: AbortSignal.timeout(5000),
+        })
+          .then((res) => (res.ok ? res.json() : null))
+          .then((body) => {
+            const html = body && body.html;
+            if (typeof html !== 'string' || !/^\s*<blockquote\b/i.test(html)) return;
+            box.innerHTML = html;
+            window.twttr?.widgets?.load?.(box);
+          })
+          .catch(() => {});
+      }
+    })();
+  </script>
+
+  {/* ページに書く第三者スクリプト（docs/CONCEPT.md §3）。
+      許可するホストは tests/artifact/build-output.spec.ts、性能予算から名指しで外したことは
+      tests/artifact/performance-budget.spec.ts が持つ。 */}
+  <script is:inline async src="https://platform.x.com/widgets.js"></script>
+</Base>
+
+<style>
+  /* 地とリンク色は書かない（.on-paper が持つ。src/styles/global.css）。 */
+
+  h1 {
+    margin: 0;
+  }
+
+  /* 公開していただいているうれしさが伝わるように目立たせる。 */
+  .lead {
+    font-size: 1.125rem;
+    font-weight: 700;
+  }
+  /* 注記は紹介文と役割が違う短い文なので、補助文の色にする（白い面の上でだけ使える。ここは紙の上）。
+     文字は小さくしない（本文の下限 16px。docs/DESIGN.md）。 */
+  .note {
+    border-inline-start: var(--border-sticker) solid var(--color-frame);
+    padding-inline-start: 0.75rem;
+    color: var(--color-text-muted);
+  }
+
+  /* 埋め込みの置き場所。oEmbed が返るまでと、取れなかったときはリンクだけ、返ったら X の引用、widgets.js が描いたら X の iframe。
+     引用が出たときと iframe が出たときの2回、背が高くなり、フッターが押し下がる。高さを取っておかないのは、
+     高さが幅と X の描き方で変わり、出なかったときに空いた場所だけが残るため。 */
+  .x-post {
+    margin-top: 0.5rem;
+  }
+  /* oEmbed の引用（widgets.js が描く前）。差し込んだ要素にはスコープのクラスが付かないので :global で当てる。
+     枠で囲むのは、すぐ上の注記の左の線と見分けるため。widgets.js は blockquote を div に置き換えるので、描いたあとは当たらない。 */
+  .x-post :global(blockquote.twitter-tweet) {
+    margin: 0;
+    border: var(--border-thumb) solid var(--color-frame);
+    border-radius: var(--radius-thumb);
+    padding: 1.25rem;
+  }
+  .x-post :global(blockquote.twitter-tweet p) {
+    margin: 0 0 0.5rem;
+  }
+  /* 日付のリンクが「2022年／1月22日」と2行に分かれないように、行に入る幅のうちはまとめて次の行へ送る。
+     nowrap にしないのは about.astro の .account と同じ理由（入らないときにはみ出す）。 */
+  /* pic.twitter.com の URL は折り返す場所が無く、狭い画面ではカードの枠を越えるので、どこででも折り返せるようにする。 */
+  .x-post :global(blockquote.twitter-tweet a) {
+    display: inline-block;
+    overflow-wrap: anywhere;
+  }
+
+  /* X の埋め込みは 250px より狭くならない。上の余白のままだと紙の中は「画面の幅 − 78px」で、
+     328px より狭い画面（320px の iPhone SE など）では埋め込みが紙の右の枠に重なる。そこで左右の余白を詰める。
+     詰めたあとの紙の中は「画面の幅 − 62px」で、320px のスマートフォン（スクロールバーが幅を取らない）では 258px に収まる。
+     詰め始めは 328px ではなく 22rem（352px）。スクロールバーが幅を取るデスクトップでは、紙の中がさらに 15px ほど狭くなるため。
+     そこでは 320px の幅で紙の中が 243px になり、埋め込みは紙の右の余白に 7px かかるが、枠には重ならない
+     （Chromium で、スクロールバーのある 320px の幅で確かめた）。328〜352px の画面では /about より紙の余白が狭くなる。
+     280px（折りたたみ端末の外の画面など）では詰めても入らないが、そこまでは追わない。 */
+  @media (max-width: 22rem) {
+    .subpage-paper {
+      padding-inline: 0.75rem;
+    }
+  }
+</style>

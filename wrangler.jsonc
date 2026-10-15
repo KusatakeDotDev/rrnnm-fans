@@ -1,0 +1,31 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // 名前を変えると Cloudflare 上では**別の Worker** になる。Access は Worker 単位なので
+  // 旧名（nemost-archive）の設定は引き継がれない。新しい Worker に Access を掛けてから変える。
+  "name": "rrnnm-fans",
+  "compatibility_date": "2026-09-06",
+  // 純静的サイトなので "main" は置かない。Worker スクリプトは1行も書かない。
+  // ADR-0002（AIに聞く）が採択されたら "main" と ASSETS バインディングを足すだけで移行できる。
+  "assets": {
+    "directory": "./dist"
+  },
+  // プレビューURL（`<エイリアスまたはバージョン>-<Worker名>.<subdomain>.workers.dev`）を有効にする。
+  // main へのマージはここへ出る（→ docs/OPERATIONS.md §7）。書かないと wrangler は値を送らず、
+  // Cloudflare 側の今の値（Worker を作り直したなら Cloudflare の既定）に任される。
+  // **デプロイ経路の前提を、ダッシュボードにも既定値にも預けない。**
+  // この値を Cloudflare に送るのは `wrangler deploy`（＝Release）のとき。`versions upload`
+  // （main・PR のプレビュー）は送らず、Cloudflare 側の今の値を読むだけ（wrangler 4.145.0 で確かめた。
+  // ほかに送るのは、このリポジトリでは使っていない `wrangler preview` だけ）。
+  // 保護は Cloudflare Access（→ docs/adr/0001-tech-stack.md）。
+  "preview_urls": true,
+  // 本番を workers.dev（`rrnnm-fans.<subdomain>.workers.dev`）では配らない。本番は下の
+  // rrnnm.fans だけ。routes があると既定でも false だが、routes を外したときに黙って開くので明示する。
+  // 上のプレビューURLは preview_urls で別に有効にしてあるので、これでは止まらない。
+  "workers_dev": false,
+  // 本番のドメイン（Issue rurino-nemo-fansite#3）。**効くのは `wrangler deploy`（＝Release）のときだけ。**
+  // `wrangler versions upload`（main・PR のプレビュー）では割り当ては動かない。
+  // 本番に Access を掛けるときは、プレビューと別に掛ける（自動では掛からない。今掛けているかは
+  // → docs/OPERATIONS.md §7）。
+  // CI のトークンには Zone > Workers Routes > Edit（rrnnm.fans）が要る（→ docs/OPERATIONS.md §7）。
+  "routes": [{ "pattern": "rrnnm.fans", "custom_domain": true }]
+}

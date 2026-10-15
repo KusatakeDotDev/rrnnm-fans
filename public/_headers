@@ -1,0 +1,11 @@
+# workers.dev のホスト（プレビューURLの main・PR と、配っていない本番の workers.dev）だけ検索に載せない。
+# 本番の rrnnm.fans には付かない。書き方は Cloudflare のドキュメントの例（Workers > Static Assets > Headers）。
+# プレビューは Access でも守っている。これは Access の掛け漏れがあっても、検索に重複が載らないための保険（Issue rurino-nemo-fansite#31）。
+https://:version.:subdomain.workers.dev/*
+  X-Robots-Tag: noindex
+
+# _astro/ のファイルは名前に中身のハッシュが入り、中身が変われば URL も変わる。1年キャッシュさせて、確かめ直させない。
+# 既定（max-age=0, must-revalidate）では、ページを開くたびに webfont のチャンクを確かめ直し、そのあいだ端末の書体で描く
+# （docs/adr/0024-zen-maru-gothic-webfont.md「`_astro/` を長くキャッシュする」）。
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable

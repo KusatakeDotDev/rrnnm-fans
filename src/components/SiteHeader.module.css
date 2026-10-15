@@ -1,0 +1,83 @@
+/* 横幅と左右の余白は .container が持つ（src/styles/global.css）。 */
+.header {
+  display: flex;
+  align-items: center;
+  padding-block: 1rem;
+}
+
+.brand {
+  display: flex;
+}
+
+/* 幅は画像の縦横比から決まる。width/height 属性（SiteHeader.tsx）は読み込み前の場所取り用。 */
+.logo {
+  display: block;
+  width: auto;
+  height: 2.5rem;
+}
+
+/* 白抜き版は夜の畑の上でだけ出す（下の「夜の畑」）。 */
+.logoWhite {
+  display: none;
+}
+
+/* 白い帯に置く（下層ページ）。地とリンク色は .on-paper が持つ（SiteHeader.tsx が付ける）。
+   ヘッダーは .container（横幅のコンテナ）なので、白を画面の端まで伸ばす。border-image の外側への張り出し（outset）は
+   描くだけで、横スクロールを生まない。 */
+.header[data-paper] {
+  border-image: conic-gradient(var(--color-surface) 0 0) fill 0 / 0 / 0 100vw;
+}
+
+/* 強制カラー（Windows のハイコントラスト）では背景色はシステムの色になるが、border-image は描かれたまま残り、
+   ヘッダーだけが白く残る（下の見出しの帯はシステムの色になる。Chromium の強制カラーの再現で確かめた）。
+   白を消して、背景色（.on-paper）と同じくシステムの色に任せる。 */
+@media (forced-colors: active) {
+  .header[data-paper] {
+    /* `border-image: none` と書かない。ビルドの圧縮で `border-image:`（値が空）になり、ブラウザに捨てられた
+       （dist の CSS で確かめた）。描くもの（source）だけを消す。 */
+    border-image-source: none;
+  }
+}
+
+/* 下の段に重ねる（トップの畑）。高さを持たず、畑の上端に乗るだけ。 */
+.header[data-overlay] {
+  position: absolute;
+  z-index: 10;
+  inset-inline: 0;
+  top: 0;
+  padding-block: 1.25rem;
+}
+
+@media (max-width: 40rem) {
+  .logo {
+    height: 2.125rem;
+  }
+}
+
+/* 夜の畑。ロゴを白抜き版にする。 */
+:global(body:has([data-field][data-state='live'])) .header[data-overlay] .logo {
+  display: none;
+}
+:global(body:has([data-field][data-state='live'])) .header[data-overlay] .logoWhite {
+  display: block;
+}
+
+.nav {
+  margin-inline-start: auto;
+  padding-inline-start: 1rem;
+  font-weight: 700;
+}
+
+.nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  /* 押せる高さを確保しつつ、白い帯の高さはロゴに合わせる。 */
+  margin-block: -0.125rem;
+}
+
+@media (max-width: 40rem) {
+  .nav a {
+    margin-block: -0.3125rem;
+  }
+}

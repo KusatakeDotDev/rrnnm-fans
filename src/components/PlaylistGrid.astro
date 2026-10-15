@@ -1,0 +1,128 @@
+---
+/**
+ * PlaylistGrid.tsx のラッパー。**見た目は .tsx、振る舞いはここ**
+ * （docs/adr/0011-react-components-for-design-sync.md「スクリプトの扱い」）。
+ * コンポーネントの説明は PlaylistGrid.tsx にある。`class` を受けないのは ADR-0011「スコープをクラスで付ける」。
+ *
+ * **名前と表紙はビルド時に取らず、ブラウザで oEmbed から取る**（ADR-0008「名前と表紙は、ブラウザで取る」）。
+ *
+ * 表紙の直リンクは ADR-0008 の例外（「例外の縛り方 — 成果物ではなく、スクリプトと純関数で」）。
+ * **ビルド成果物に出ないので層3の検査には映らず、
+ * 縛りはこのスクリプトが持つ** — 画像を作るのは playlists.ts から描いたタイルの枠の中だけ、
+ * 受け入れる URL は `https://i.ytimg.com` の画像だけ（src/lib/youtube.ts。層1で検査）。
+ *
+ * 見出しは `heading` スロットで受け、そのまま .tsx の `heading` に渡す
+ * （Astro は名前付きスロットを、同じ名前の props として React のコンポーネントに渡す）。
+ */
+import PlaylistGrid from './PlaylistGrid.tsx';
+
+interface Props {
+  /** 読み上げでのこの一覧の名前。 */
+  label?: string;
+}
+
+const { label } = Astro.props;
+---
+
+<PlaylistGrid label={label}><slot name="heading" slot="heading" /></PlaylistGrid>
+
+<script>
+  import { shuffle } from '../lib/shuffle';
+  import { isOEmbed, isYouTubeThumbnail, oembedUrl } from '../lib/youtube';
+
+  /* 名前と表紙を取る通信の上限。詰まったら諦めて、手書きの名前と花のまま置く。 */
+  const LOAD_TIMEOUT_MS = 5_000;
+
+  for (const root of document.querySelectorAll<HTMLElement>('[data-playlists]')) {
+    enhance(root);
+    loadWhenNear(root);
+  }
+
+  function enhance(root: HTMLElement): void {
+    const list = root.querySelector<HTMLElement>('[data-playlists-list]');
+    const more = root.querySelector<HTMLButtonElement>('[data-playlists-more]');
+    if (!list) return;
+
+    /* 表示順は訪問ごとに変える。固定だと、先頭の数件ばかりが見られる。
+       チャンネルへのタイルは最後に残す（混ぜるのは再生リストだけ）。 */
+    const items = [...list.querySelectorAll<HTMLElement>('[data-playlists-item]')];
+    list.prepend(...shuffle(items, Math.random));
+
+    if (!more) return;
+    /* 畳むかどうか（狭い画面かどうか）は CSS が決める。スクリプトは印を付けるだけ。 */
+    root.classList.add('is-collapsible');
+    more.hidden = false;
+    more.addEventListener('click', () => {
+      root.classList.add('is-expanded');
+      more.setAttribute('aria-expanded', 'true');
+      more.hidden = true;
+      /* 押したボタンが消えるので、フォーカスを畳まれていた先頭（7件目。CSS の :nth-child(n + 7) と対）へ移す。 */
+      list.querySelectorAll<HTMLAnchorElement>('[data-playlists-tile]')[6]?.focus();
+    });
+  }
+
+  /**
+   * 名前と表紙を、本家の今の値で埋める（ADR-0008「名前と表紙は、ブラウザで取る」）。
+   * 見られないかもしれないうちから11往復させないよう、格子が1画面分手前まで
+   * 近づいてから1回だけ取る。
+   */
+  function loadWhenNear(root: HTMLElement): void {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        observer.disconnect();
+        for (const card of root.querySelectorAll<HTMLAnchorElement>('[data-playlists-item] [data-playlists-tile]')) {
+          void load(card);
+        }
+      },
+      { rootMargin: '100% 0px' },
+    );
+    observer.observe(root);
+  }
+
+  async function load(card: HTMLAnchorElement): Promise<void> {
+    try {
+      /* Cookie もリファラも送らない。プレビューのホスト名を YouTube に渡さない。 */
+      const res = await fetch(oembedUrl(card.href), {
+        credentials: 'omit',
+        referrerPolicy: 'no-referrer',
+        signal: AbortSignal.timeout(LOAD_TIMEOUT_MS),
+      });
+      if (!res.ok) return;
+      const body: unknown = await res.json();
+      if (!isOEmbed(body)) return;
+
+      const title = card.querySelector('[data-playlists-title]');
+      if (title) title.textContent = body.title;
+
+      /* 表紙は ADR-0008 の例外（「例外の縛り方 — 成果物ではなく、スクリプトと純関数で」）で、
+         ビルド成果物に出ないので**ここが縛りそのもの**（上の説明）。 */
+      const frame = card.querySelector('[data-youtube-thumbnail]');
+      if (!frame || !isYouTubeThumbnail(body.thumbnail_url)) return;
+
+      const img = document.createElement('img');
+      /* 名前はタイルの文字で見えているので、読み上げは不要。 */
+      img.alt = '';
+      img.decoding = 'async';
+      /* src より先に付ける。畳まれているタイルの表紙は、開くまで読まない。 */
+      img.loading = 'lazy';
+      /* 読み終えて、デコードまで済んでから花の上にフェードで出す（YouTubeThumbnail.tsx の
+         data-loading）。デコードの前に透明度を上げ始めると、途中から急に現れて見えることがある。
+         **同じ手順が ScheduleCard.tsx の LOAD_THUMBNAIL にもある**（予定のサムネイルの側）。片方を直したら、もう片方も合わせる。
+         違うのは、失敗したとき（こちらは足した画像を外して花に戻す。あちらはクエリ無しの URL に戻す）と、
+         src を替えるかどうか（こちらは替えない。あちらは替えるので、decode() を load の中で呼ぶことが欠かせない。
+         その理由は LOAD_THUMBNAIL の説明）。 */
+      img.dataset.loading = '';
+      const reveal = () => img.removeAttribute('data-loading');
+      img.addEventListener('load', () => img.decode().then(reveal, reveal), { once: true });
+      /* 読み込めなかったら、足した画像ごと外して花に戻す。透明のまま残すと、
+         見えない壊れた画像が枠に居座る。 */
+      img.addEventListener('error', () => img.remove(), { once: true });
+      img.src = body.thumbnail_url;
+      /* 前に足しても後ろに足しても見た目は同じ。画像は絶対配置なので、位置を持たない花より上に描かれる。 */
+      frame.prepend(img);
+    } catch {
+      /* CORS が閉じられた・通信断・タイムアウト。手書きの名前と花のまま置く。 */
+    }
+  }
+</script>

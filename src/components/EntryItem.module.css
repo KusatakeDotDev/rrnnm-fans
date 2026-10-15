@@ -1,0 +1,17 @@
+.entry {
+  display: flex;
+  gap: 0.8rem;
+  align-items: center;
+  padding-block: 0.7rem;
+  border-bottom: 2px dotted var(--color-frame);
+}
+
+.entry:last-child {
+  border-bottom: 0;
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+}

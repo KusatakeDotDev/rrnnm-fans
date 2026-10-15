@@ -1,0 +1,15 @@
+/* =============================================================================
+   Zen Maru Gothic の webfont（docs/adr/0024-zen-maru-gothic-webfont.md）
+   -----------------------------------------------------------------------------
+   Fontsource の CSS は、Google Fonts と同じ unicode-range の分割で @font-face を並べている。
+   ブラウザは、ページの字が当たるチャンクだけを取りに行く。読むウェイトは 400・700・900 だけ
+   （600 は 700 の面で描く）。ウェイトを足すと、同じ字のチャンクをウェイトの数だけ読む。
+
+   このファイルは、Base.astro が ?url で別の CSS として出し、描画を止めないように後から読む。
+   読み込むまでは src/styles/font-fallback.css の面で描く。
+
+   ライセンス: SIL Open Font License 1.1。本文は public/fonts/OFL.txt。
+   ============================================================================= */
+@import '@fontsource/zen-maru-gothic/400.css';
+@import '@fontsource/zen-maru-gothic/700.css';
+@import '@fontsource/zen-maru-gothic/900.css';
