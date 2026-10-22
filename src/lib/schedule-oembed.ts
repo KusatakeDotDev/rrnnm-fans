@@ -30,8 +30,8 @@ export interface ScheduleOEmbed {
   thumbnail: { url: string; width: number; height: number } | undefined;
 }
 
-// これから始まるライブ（待機所）の oEmbed は、title・author_name・thumbnail_* を返さず、題名は html の iframe にだけある
-// （RRNNM-106）。その属性値は &amp;・&#39; などでエスケープされている。
+// これから始まるライブ（待機所）の oEmbed は title などを返さず、題名は html の iframe にだけある（RRNNM-106）。
+// 属性値のエスケープ（&amp;・&#39; など）は1段で、1回戻すと title の項目と一致する。2回戻すと、題名に書かれた「&amp;」まで変わる。
 const IFRAME_TITLE = /<iframe\b[^>]*\stitle="([^"]+)"/;
 const NAMED_ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"' } as const;
 

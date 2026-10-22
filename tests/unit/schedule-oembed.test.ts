@@ -60,6 +60,10 @@ describe('予定の oEmbed の応答', () => {
     expect(oembedOf(withIframeTitle('&lt;A&gt; &amp; &quot;B&quot; Don&#39;t &#128160;'))?.title).toBe(`<A> & "B" Don't 💠`);
   });
 
+  it('エスケープは1回だけ戻し、題名に書かれた文字参照はそのまま残す', () => {
+    expect(oembedOf(withIframeTitle('AT&amp;amp;T &amp;#39;'))?.title).toBe('AT&amp;T &#39;');
+  });
+
   it('作者名の前後の空白は落とす', () => {
     expect(oembedOf({ ...OEMBED, author_name: ' テスト用チャンネル\n' })?.author_name).toBe('テスト用チャンネル');
   });
