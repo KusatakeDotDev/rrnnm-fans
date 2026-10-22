@@ -1,0 +1,183 @@
+/* =============================================================================
+   全ページ共通の素の見た目。ここには16進数を書かない。色は tokens.css の役割トークンを参照する（Issue rurino-nemo-fansite#5）。
+   ============================================================================= */
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--leading-body);
+  }
+
+  /* -----------------------------------------------------------------------------
+     青い地に敷く白いドット。色と opacity を分けるのは、色の literal をパレットの外に書かないため（Issue rurino-nemo-fansite#5）。
+
+     背景画像を body 自身に置かない。置くと axe がその要素の地の色を確定できなくなり、
+     コントラスト検査が violation ではなく incomplete に落ちて**素通りする**
+     （tests/conformance/routes.spec.ts の axe）。擬似要素なら body の背景色は単色のまま残る。
+     白いドットは地を**明るくする**方向にしか効かないので、濃い文字の実際の比は
+     axe が見る 7.55 より上がる。安全側。
+     -------------------------------------------------------------------------- */
+  body::before {
+    content: '';
+    position: fixed;
+    z-index: -1;
+    inset: 0;
+    background-image: radial-gradient(var(--color-decor) var(--dot-radius), transparent var(--dot-edge));
+    background-size: var(--dot-gap) var(--dot-gap);
+    opacity: var(--dot-opacity);
+    pointer-events: none;
+  }
+
+  /* トークン（tokens.css）はレイヤーの外にあり、レイヤーの中の :root では上書きできないので、body で上書きする。 */
+  @media (max-width: 40rem) {
+    body {
+      --dot-gap: 1.375rem; /* 22px */
+    }
+  }
+
+  /* -----------------------------------------------------------------------------
+     見出し
+     -------------------------------------------------------------------------- */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    margin-block: 0 0.5em;
+    font-family: var(--font-display);
+    line-height: var(--leading-heading);
+    color: var(--color-text);
+  }
+
+  h1 {
+    font-size: var(--text-h1);
+    color: var(--color-heading);
+    font-weight: 900;
+  }
+
+  h2 {
+    font-size: var(--text-h2);
+    color: var(--color-heading);
+  }
+
+  h3 {
+    font-size: var(--text-h3);
+  }
+
+  h4,
+  h5,
+  h6 {
+    font-size: var(--text-base);
+  }
+
+  p {
+    margin-block: 0 1em;
+  }
+
+  /* -----------------------------------------------------------------------------
+     リンク。色は --color-link 経由で、地を敷く側（.on-paper / .on-ground、濃い面のコンポーネント）が差し替える。
+     -------------------------------------------------------------------------- */
+  a {
+    color: var(--color-link);
+    text-underline-offset: 0.2em;
+  }
+
+  a:hover {
+    text-decoration-thickness: 2px;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-link);
+    outline-offset: 2px;
+  }
+
+  hr {
+    border: 0;
+    border-top: 1px solid var(--color-frame);
+  }
+}
+
+@layer layout {
+  /* -----------------------------------------------------------------------------
+     横幅のコンテナ。ヘッダー・本文・フッターが同じ左右の線に揃うよう、max-width をここにだけ書く。
+
+     width: 100% は、flex・grid の子に置いたとき用（ヘッダーは flex の body の子。src/layouts/Base.astro）。
+     書かないと、margin-inline: auto が横に伸ばす指定に勝ち、中身の幅まで縮んで中央に寄る。
+     -------------------------------------------------------------------------- */
+  .container {
+    width: 100%;
+    max-width: 67.5rem;
+    margin-inline: auto;
+    padding-inline: clamp(var(--space-4), 4vw, var(--space-8));
+  }
+}
+
+@layer utilities {
+  /* -----------------------------------------------------------------------------
+     白い面と地を切り替える口（濃い面のコンポーネントは --color-link を自分で差し替える。上の「リンク」）
+     地が変われば使える色も変わるので、背景とリンク色を必ず一緒に動かす。
+     ステッカーの形（枠・角丸・影）は当てない。それは各コンポーネントの領分。
+
+     **地に紐づく色は子孫セレクタで当てない。** カスタムプロパティに入れて渡す。
+     .on-paper a と .on-ground a はセレクタの強さが同じなので、
+     .on-paper > .on-ground > .on-paper と三重に入れ子にすると、実際の地ではなく
+     **ソース順で後に書いたほうが勝つ**。地と色が食い違っても誰も気付けない。
+     カスタムプロパティなら一番近い祖先の値が届くので、入れ子の深さに関係なく地と一致する。
+     -------------------------------------------------------------------------- */
+  .on-paper {
+    background-color: var(--color-surface);
+    color: var(--color-text);
+
+    --color-link: var(--color-link-on-paper);
+  }
+
+  /* 白い面の中で、もう一度ページの地に戻す口。**.on-paper が動かすものと同じ数だけ戻す。**
+     リンク色を戻し忘れると、白地用のロゴの青が青い地の上に残って比 4.28 まで落ちる。 */
+  .on-ground {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+
+    --color-link: var(--color-link-on-ground);
+  }
+
+  /* -----------------------------------------------------------------------------
+     数字は等幅（docs/DESIGN.md §4「書体」）。日付・尺・回数を出す箇所に付ける。
+     -------------------------------------------------------------------------- */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* -----------------------------------------------------------------------------
+     目には見せず、読み上げには残す。
+     clip の書き方を変えない。axe はこの形を「画面上は不可視」と判定してコントラスト
+     検査から外す。display:none や visibility:hidden にすると読み上げからも消える。
+     -------------------------------------------------------------------------- */
+  .sr-only {
+    position: absolute;
+    overflow: hidden;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    /* stylelint-disable-next-line plugin/use-baseline -- axe が「画面の上では見えない」と判定する形なので変えない */
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}

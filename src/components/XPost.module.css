@@ -1,0 +1,43 @@
+@layer components {
+  /* 中身は X が差し込む要素で、CSS Modules のクラスが付かないので :global で当てる。oEmbed が返るまでと、
+     取れなかったときは置く側のリンクだけ、返ったら X の引用、widgets.js が描いたら X の iframe になる。
+     引用が出たときと iframe が出たときの2回、背が高くなる。高さを取っておかないのは、高さが幅と X の描き方で変わり、
+     出なかったときに空いた場所だけが残るため。 */
+
+  /* oEmbed の引用（widgets.js が描く前）。枠で囲むのは、すぐ上の文と見分けるため。
+     widgets.js は blockquote を div に置き換えるので、描いたあとは当たらない。 */
+  .root :global(blockquote.twitter-tweet) {
+    margin: 0;
+    border: var(--border-thumb) solid var(--color-frame);
+    border-radius: var(--radius-thumb);
+    padding: var(--space-5);
+  }
+
+  .root :global(blockquote.twitter-tweet p) {
+    margin: 0 0 var(--space-2);
+  }
+
+  /* 日付のリンクが「2022年／1月22日」と2行に分かれないように、行に入る幅のうちはまとめて次の行へ送る。
+     nowrap にしないのは、入らないときにはみ出すため。pic.twitter.com の URL は折り返す場所が無く、
+     狭い画面では枠を越えるので、どこででも折り返せるようにする。 */
+  .root :global(blockquote.twitter-tweet a) {
+    display: inline-block;
+    overflow-wrap: anywhere;
+  }
+
+  /* 地の青の上では、白い面を敷いて、文字とリンクを白い面の色にする。 */
+  .ground :global(blockquote.twitter-tweet) {
+    --color-link: var(--color-link-on-paper);
+
+    border-color: var(--color-outline);
+    background-color: var(--color-surface);
+    color: var(--color-text);
+    font-size: var(--text-base);
+    text-align: start;
+  }
+
+  /* widgets.js が描いた埋め込みは左に寄る。 */
+  .centered :global(.twitter-tweet-rendered) {
+    margin-inline: auto;
+  }
+}

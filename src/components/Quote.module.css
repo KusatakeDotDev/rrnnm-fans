@@ -1,0 +1,21 @@
+@layer components {
+  .root {
+    margin: 0 0 var(--space-4);
+  }
+
+  /* 引いた文は**書かれたまま**出す。改行も字下げも直さない。 */
+  .text {
+    margin: 0;
+    border-inline-start: 3px solid var(--color-frame);
+    padding-inline-start: var(--space-4);
+    white-space: pre-wrap;
+  }
+
+  /* 出典は本文ではないので小さくてよい。白い面の上でしか使えない色
+     （青い地で 3.40）だが、引用はカードの中に置くものなので条件を満たす。 */
+  .source {
+    margin-block-start: var(--space-2);
+    color: var(--color-text-muted);
+    font-size: var(--text-small);
+  }
+}

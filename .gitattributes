@@ -1,0 +1,4 @@
+# line endings: LF everywhere, regardless of local core.autocrlf.
+# Binary files are not listed: text=auto leaves a file untouched if it has a NUL,
+# a lone CR or many control bytes anywhere in it.
+* text=auto eol=lf

@@ -1,0 +1,19 @@
+@layer components {
+  .root {
+    display: flex;
+    gap: var(--space-3);
+    align-items: center;
+    padding-block: var(--space-3);
+    border-bottom: 2px dotted var(--color-frame);
+  }
+
+  .root:last-child {
+    border-bottom: 0;
+  }
+
+  .title {
+    flex: 1;
+    min-width: 0;
+    font-weight: 700;
+  }
+}

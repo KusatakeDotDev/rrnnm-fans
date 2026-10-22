@@ -1,0 +1,448 @@
+name: CI
+
+# 方針は docs/adr/0003-testing-and-ci.md。ジョブの分け方とランナーは ADR-0026 の決定。
+# ブランチ保護の必須チェックには **ci-ok だけ** を指定する（ADR-0003「必須チェックは `ci-ok` 1本だけにする」）。
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  # 手で回す（気になったとき）。main への push と同じく、ミューテーションテストを前の回の結果を使わずに全部回す。
+  # main でだけ回し、ほかのブランチで回すと ci-ok で落とす。回し方は docs/OPERATIONS.md「ミューテーションテストを手で全部回す」。
+  workflow_dispatch:
+
+# 続けて push したら、前の run は取り消す（PR でも main でも）。main の preview のデプロイが取り消されても、途中の状態には
+# ならない。`wrangler versions upload --preview-alias` は、エイリアスを、バージョンを作るリクエストの中で一緒に送り、
+# エイリアスだけを張り替える別のリクエストは無いため（wrangler 4.145.0 の wrangler-dist/cli.js・rurino-nemo-fansite#157）。
+# **wrangler を上げたら、この作りが変わっていないかを確かめ直す。** バージョンを作るリクエストとエイリアスを張り替える
+# リクエストが分かれていたら、取り消しで途中の状態になりうる。
+# **main の古い run を手でやり直さない。** やり直した run は、そのときの main の先頭より古いコミットをプレビューに出す。
+# 手で回した run（workflow_dispatch）は、push の run と別のグループにする。同じグループだと、マージの直後に main で回したとき、
+# そのマージの run が取り消され、push のときだけ動く preview がデプロイされない。逆に、回しているあいだのマージが、全部回す
+# run を取り消す。
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+# コンテナの中では、run: の既定のシェルが bash ではなく sh になり、`set -o pipefail` で落ちる（PR rurino-nemo-fansite#166）。
+# bash を指定すると -o pipefail も付く（GitHub のドキュメント「Workflow syntax」の defaults.run.shell）。
+defaults:
+  run:
+    shell: bash
+
+# どのジョブにも timeout-minutes を置く。既定の上限（6時間）まで詰まると、気づくのが遅れる（rurino-nemo-fansite#157）。
+jobs:
+  check:
+    name: 型検査・単体テスト
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # 依存を入れるステップは composite にまとめない。Dependabot（directory: /）は .github/workflows とルートの action.yml しか見ず
+    # （「Dependabot options reference」）、まとめた中のアクションのバージョンが上がらなくなる。
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      # pnpm/setup は package.json の devEngines.runtime から Node を決めて入れる。Node のバージョンをここに書かない
+      # （.nvmrc を置くと正が2箇所になる → docs/adr/0003-testing-and-ci.md §6）。
+      #
+      # pnpm のストアは、pnpm/setup のキャッシュ（cache: true）ではなく actions/cache で持ち、ロックファイルが変わったとき
+      # だけ保存する。pnpm/setup のキャッシュは毎回キーを変えて保存し、zstd の無いコンテナでは gzip で固めるので遅い（PR rurino-nemo-fansite#166）。
+      # ストアの場所は pnpm が決めるので、pnpm を入れてから調べ、ストアを戻してから依存を入れる。
+      - uses: pnpm/setup@v3
+        with:
+          install: false
+      - name: pnpm のストアの場所を調べる
+        id: store
+        # 変数に受けてから書く。echo "path=$(…)" の形だと、pnpm store path が落ちても echo が通り、空の path で次に進む。
+        run: |
+          store=$(pnpm store path)
+          echo "path=${store}" >> "$GITHUB_OUTPUT"
+      # restore-keys は置かない。前のロックファイルのストアを戻すと、使わなくなったパッケージも一緒に保存し直し、ストアが
+      # 膨らみ続ける。その分、ロックファイルが変わるたびに、その PR と main で、それぞれ最初の回だけ全部を取りに行って保存する。
+      # キャッシュは PR ごと・ブランチごとに分かれ、PR で残したものを main は読めない。PR が rebase されてロックファイルが
+      # 変わったときも、その PR でもう一度外れる。
+      # キーは、コンテナの中で動く browser のジョブと分ける。ストアの場所も、固め方（コンテナに zstd が無い）も違う。
+      - name: pnpm のストアを戻す
+        id: store-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ steps.store.outputs.path }}
+          key: pnpm-store-host-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}
+      # Node は pnpm/setup が入れたので、devEngines.runtime から入れ直さない（--no-runtime。pnpm/setup が自分で入れるときと
+      # 同じ）。lockfile の固定は指定しない。pnpm は CI 環境では既定で --frozen-lockfile。
+      - name: 依存を入れる
+        id: setup
+        run: pnpm install --no-runtime
+      # 入れた直後に残す。actions/cache の後片付けで残すと、ジョブが通ったときだけになり（post-if: success()）、検査が落ちた回や
+      # 取り消された回は残らない。Playwright を上げる PR は、タグを直すまで単体テストで落ちる。
+      # 同じキーを残せるのは1つのジョブだけなので、ランナーの上ではこのジョブが残し、mutation は戻すだけにする。
+      - name: pnpm のストアを残す
+        if: ${{ steps.store-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ steps.store.outputs.path }}
+          key: ${{ steps.store-cache.outputs.cache-primary-key }}
+      # ここから下の検査は、1回の push で落ちた検査が全部見えるよう、前の検査が落ちても続けて回す（!cancelled()）。
+      # 依存が入らなかったときだけは、回しても同じ理由で落ちるだけなので回さない（steps.setup.outcome）。
+      #
+      # pnpm/setup は devEngines を範囲として読み、合う中で最新を入れる。範囲に戻ると
+      # 手元と CI のバージョンが黙ってずれる（→ docs/adr/0003-testing-and-ci.md §6）。
+      # 実際に動いているバージョンと package.json の値を突き合わせ、ずれたら落とす。
+      - name: Node と pnpm が package.json のバージョンで動いているか
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        run: |
+          set -euo pipefail
+          WANT_NODE=$(node -p "require('./package.json').devEngines.runtime.version")
+          WANT_PNPM=$(node -p "require('./package.json').devEngines.packageManager.version")
+          HAVE_NODE=$(node -v | sed 's/^v//')
+          HAVE_PNPM=$(pnpm -v)
+          echo "node: ${HAVE_NODE}（package.json: ${WANT_NODE}）"
+          echo "pnpm: ${HAVE_PNPM}（package.json: ${WANT_PNPM}）"
+          if [ "$HAVE_NODE" != "$WANT_NODE" ] || [ "$HAVE_PNPM" != "$WANT_PNPM" ]; then
+            echo "::error::動いている Node / pnpm が package.json の devEngines と一致しない。devEngines を1つのバージョンで書いているか確かめる"
+            exit 1
+          fi
+      - name: 型検査
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        run: pnpm typecheck
+      - name: 単体テスト
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        run: pnpm test
+      - name: CSS の lint
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        run: pnpm lint:css
+
+  mutation:
+    name: ミューテーションテスト
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # 依存の入れ方は check と同じ（理由はそちらのコメント）。
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - uses: pnpm/setup@v3
+        with:
+          install: false
+      - name: pnpm のストアの場所を調べる
+        id: store
+        run: |
+          store=$(pnpm store path)
+          echo "path=${store}" >> "$GITHUB_OUTPUT"
+      - name: pnpm のストアを戻す
+        id: store-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ steps.store.outputs.path }}
+          key: pnpm-store-host-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - name: 依存を入れる
+        id: setup
+        run: pnpm install --no-runtime
+      # 前の回の結果を使い回し、変わったコードとテストに掛かるミュータントだけを回す（Stryker の incremental）。
+      # incremental は、ミュータントを作るファイルとテストのファイルしか見比べず、依存・設定・テストが読むほかのファイルの
+      # 変化を見ない（Stryker のドキュメント「Incremental」）。依存（このファイルのアクションも）と設定のハッシュはキーに入れ、
+      # 変わったら戻す結果が無く全部回す（キーが前の値に戻ったときは、その値のときに残した結果を戻す）。
+      # テストが読むほかのファイル（src/styles/tokens.css など）は、キーに入れない。デザインの PR では
+      # push のたびに変わり、そのたびに全部回ることになるため（PR rurino-nemo-fansite#184）。
+      # それらの変化でずれるのは PR の中だけで、main への push と手で回した回は、前の回の結果を戻さずに全部回して残す
+      # （ADR-0003「ミューテーションテストを nightly に逃がさない」）。戻すときは、その PR の結果を先に探し、無ければ main のものを使う。
+      # このファイルはコメントだけ変えても全部回るが、変える PR は少ないので、アクションの行だけに絞ったハッシュにはしていない。
+      - name: 結果を残すキーを決める
+        id: incremental
+        run: echo "prefix=stryker-incremental-${{ hashFiles('pnpm-lock.yaml', 'package.json', 'pnpm-workspace.yaml', '.github/workflows/ci.yml', 'stryker.config.json', 'vitest.config.ts', 'vitest.stryker.config.ts', 'tsconfig.json') }}-" >> "$GITHUB_OUTPUT"
+      - name: 前の回の結果を戻す
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/cache/restore@v6
+        with:
+          path: reports/stryker-incremental.json
+          key: ${{ steps.incremental.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: ${{ steps.incremental.outputs.prefix }}
+      # 依存の更新でテストランナーが静かに壊れる事故は、ここのスコアが崩れることでしか見えないので、
+      # dependabot の PR でも必ず回す（ADR-0003「ミューテーションテストを nightly に逃がさない」）。
+      # レポーターの抑止は vitest.stryker.config.ts 側でやる（ADR-0003「CIのサマリーに嘘を書かせない」）。
+      # 結果は reports/stryker-incremental.json に書かれる（--incremental の既定の場所）。
+      - name: ミューテーションテスト
+        id: mutation
+        run: pnpm test:mutation --incremental
+      - name: 次の回のために結果を残す
+        uses: actions/cache/save@v6
+        with:
+          path: reports/stryker-incremental.json
+          key: ${{ steps.incremental.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+      # Stryker の閾値は全体のスコアにしか効かないので、ファイルごとの下限はスクリプトで見る（ADR-0003「閾値」）。
+      # 結果を残したあとに置く。下限を割った回も、次の回が使い回す結果は残すため。
+      - name: ファイルごとのミューテーションスコアの下限
+        run: pnpm test:mutation:floors
+      # レポートの保存に失敗してもジョブは落とさない。ここで落とすと ci-ok が赤くなり、
+      # **成果物のアップロードがマージを止める**という筋の通らない止まり方をする。
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() && steps.mutation.outcome != 'skipped' }}
+        continue-on-error: true
+        with:
+          name: mutation-report
+          path: reports/mutation/
+          retention-days: 7
+
+  browser:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    # コンテナのイメージの取得（Initialize containers）にはステップの上限が効かない（ADR-0013「見直す条件」）。
+    timeout-minutes: 15
+    # 実行時に apt もブラウザーのダウンロードもしないよう、Playwright の Docker イメージの中で動かす（ADR-0013 の決定）。
+    # イメージの行は1つにする。tests/repo/playwright-image.test.ts がワークフローごとに1件を見るので、ブラウザーを使う
+    # レッグは1つの matrix にまとめる。
+    #
+    # **タグは、pnpm-lock.yaml の Playwright と同じバージョンにする。** ずれると、Playwright がイメージのブラウザーを見つけられない
+    # （Playwright のドキュメント「Docker」）。tests/repo/playwright-image.test.ts が監視し、ずれると単体テストが落ちる。
+    # Dependabot はこのタグを上げない（ADR-0013「Playwright の更新は別の PR にし、人がタグを直すまで入らない」）。
+    # Playwright を上げる PR（Dependabot の npm の PR も）では、このタグを同じ PR で同じバージョンに直す。
+    #
+    # Playwright の Docker のドキュメントの例にある --user・--ipc=host は付けない。コンテナは root で動き（イメージがユーザーを
+    # 決めておらず、GitHub Actions も --user を付けない）、Playwright は Chromium をもともと --no-sandbox・--disable-dev-shm-usage
+    # で起動する（playwright-core 1.63.0 の chromiumSwitches と、chromiumSandbox が true でないときの分岐）。
+    # Node はイメージのもの（24）ではなく、pnpm/setup が入れる package.json のバージョンを使う（下の「Node と pnpm が
+    # package.json のバージョンで動いているか」で確かめる）。
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Chromium はコンテナのイメージに入っている（ジョブの container: のコメント）。
+          # story を1つずつ Chromium で描き、axe を回す（→ docs/adr/0003-testing-and-ci.md §2「層の定義」）。
+          # 公開ページに出てこない組み合わせ（バッジの tone の全色など）はここで見る。
+          - id: storybook
+            name: コンポーネントのテスト
+            run: pnpm test:storybook
+          # 固定応答の成果物は .test-dist にだけ作り、配布用の dist と分ける。
+          - id: e2e-on-1
+            name: 規約テスト（固定成功 1/3）
+            run: pnpm test:ci on --shard=1/3
+          - id: e2e-on-2
+            name: 規約テスト（固定成功 2/3）
+            run: pnpm test:ci on --shard=2/3
+          - id: e2e-on-3
+            name: 規約テスト（固定成功 3/3）
+            run: pnpm test:ci on --shard=3/3
+          # ブラウザーを使わないが、別のジョブにせず、例外としてイメージの中で動かす（ADR-0026「ブラウザーを使わないジョブは、イメージの外で動かす」）。
+          - id: e2e-off
+            name: 成果物の検査（固定成功・未公開オフ）
+            run: pnpm test:ci off
+    # 依存の入れ方は check と同じ（理由はそちらのコメント）。
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      # ストアの場所は固定しない。pnpm は、ハードリンクを張れるよう、プロジェクトと同じマウントにストアを置く（コンテナの中では
+      # /__w/.pnpm-store の下）。ハードリンクはマウントをまたげないので、固定するなら、ランナーがコンテナに作るマウント（/__w）の
+      # パスを書くことになる。
+      - uses: pnpm/setup@v3
+        with:
+          install: false
+      - name: pnpm のストアの場所を調べる
+        id: store
+        run: |
+          store=$(pnpm store path)
+          echo "path=${store}" >> "$GITHUB_OUTPUT"
+      - name: pnpm のストアを戻す
+        id: store-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ steps.store.outputs.path }}
+          key: pnpm-store-container-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - name: 依存を入れる
+        id: setup
+        run: pnpm install --no-runtime
+      # 残すのは storybook のレッグだけ。gzip で固める時間を、規約テストのレッグ（一番長い経路）に足さない。
+      - name: pnpm のストアを残す
+        if: ${{ matrix.id == 'storybook' && steps.store-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ steps.store.outputs.path }}
+          key: ${{ steps.store-cache.outputs.cache-primary-key }}
+      - name: Node と pnpm が package.json のバージョンで動いているか
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        run: |
+          set -euo pipefail
+          WANT_NODE=$(node -p "require('./package.json').devEngines.runtime.version")
+          WANT_PNPM=$(node -p "require('./package.json').devEngines.packageManager.version")
+          HAVE_NODE=$(node -v | sed 's/^v//')
+          HAVE_PNPM=$(pnpm -v)
+          echo "node: ${HAVE_NODE}（package.json: ${WANT_NODE}）"
+          echo "pnpm: ${HAVE_PNPM}（package.json: ${WANT_PNPM}）"
+          if [ "$HAVE_NODE" != "$WANT_NODE" ] || [ "$HAVE_PNPM" != "$WANT_PNPM" ]; then
+            echo "::error::動いている Node / pnpm が package.json の devEngines と一致しない。devEngines を1つのバージョンで書いているか確かめる"
+            exit 1
+          fi
+      - name: ${{ matrix.name }}
+        id: tests
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        # 詰まったときに trace を上げるよう、ジョブの上限より先に切る。ステップの上限ならそのステップの失敗になり、下の upload が回る
+        # （act で確かめた。PR rurino-nemo-fansite#158）。ジョブの上限だとジョブごと取り消され、!cancelled() の upload も飛ぶ。
+        timeout-minutes: 10
+        run: ${{ matrix.run }}
+        env:
+          WRANGLER_SEND_METRICS: 'false'
+      # artifact の名前はレッグごとに変える。同じ名前は2つ目から上げられず、continue-on-error で黙って消える。
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() && steps.tests.outcome == 'failure' && startsWith(matrix.id, 'e2e-') }}
+        continue-on-error: true
+        with:
+          name: playwright-report-${{ matrix.id }}
+          path: test-results/
+          retention-days: 7
+
+  # ブランチ保護と dependabot の自動マージが待つ、唯一の必須チェック。
+  # **name: を付けない。** 付けるとチェック名がジョブ名ではなく name: の値になり、
+  # 必須チェックに指定した `ci-ok` が永久に報告されない = 自動マージが待ち続ける。
+  # needs には検査のジョブを全部並べる。プレビューのジョブは入れない（プレビューが落ちてもマージは止めない）。
+  # 続けて push して取り消された run でも、`if: always()` なのでここは動き、取り消しを失敗として出す（そのコミットに赤い×が付く）。
+  # テストが落ちたのではない。`!cancelled()` にすると skipped になり、skipped の必須チェックは通過扱いになるので、変えない。
+  ci-ok:
+    if: always()
+    needs: [check, mutation, browser]
+    # 依存を入れず、結果を集めるだけなので、1コアのランナーで足りる。
+    runs-on: ubuntu-slim
+    # 集約は数秒で終わる。上限の理由は、jobs: の上のコメント。
+    timeout-minutes: 5
+    steps:
+      # 手で回すのは main だけ。ほかのブランチで回した run の ci-ok は、そのブランチの先頭のコミットに付き、そのブランチの
+      # PR の必須チェックの結果を上書きする（pull_request の回は main と合わせたコミットを、手で回した回はブランチの先頭を
+      # 見るので、結果が食い違いうる）。緑で上書きするよりは、PR を止めるほうへ倒す。検査のジョブを飛ばすだけでは、
+      # skipped を通す下の集約で緑になるので、ここで落とす。
+      - name: 手で回すのは main だけ
+        if: ${{ github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main' }}
+        run: |
+          echo "::error::workflow_dispatch は main でだけ回す（docs/OPERATIONS.md「ミューテーションテストを手で全部回す」）"
+          exit 1
+      - name: 全ジョブの結果を集約する
+        run: |
+          # skipped は通過扱いにする。paths フィルタ等でジョブが飛んだとき、
+          # ここで落とすと自動マージが永久に待ち続ける。
+          for result in ${{ join(needs.*.result, ' ') }}; do
+            case "$result" in
+              success|skipped) ;;
+              *) echo "落ちたジョブがある: $result"; exit 1 ;;
+            esac
+          done
+          echo "全ジョブ通過"
+
+  # main が緑になったときだけプレビューを更新する。ci-ok にぶら下げているので、
+  # 落ちたテストを踏み越えてプレビューへ出ることはない
+  # （if に status check function を書いていない = 暗黙の success() が効き、
+  #   ci-ok が赤なら skip される）。必須チェックは ci-ok のままでよく、
+  # ここを足してもブランチ保護の設定は触らなくていい。
+  preview:
+    name: プレビューデプロイ
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [ci-ok]
+    runs-on: ubuntu-latest
+    # ふだんは1〜2分。上限の理由は、jobs: の上のコメント。
+    timeout-minutes: 10
+    # ジョブに concurrency は付けない。ワークフローの取り消しを防げると確かめられず、切れても途中の状態にならないため
+    # （ワークフローの concurrency のコメント・rurino-nemo-fansite#157）。
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - uses: pnpm/setup@v3
+        with:
+          cache: true
+      # 本番と同じく、花の株の素材を重ねて配る。artifact を上げる検査のジョブでは重ねない（RRNNM-44）。
+      - uses: ./.github/actions/private-assets
+        with:
+          ssh-key: ${{ secrets.ASSETS_DEPLOY_KEY }}
+      # プレビューは Issue rurino-nemo-fansite#27 で人に渡す URL なので、公開用と同じ実データの build に、未公開のもの（src/unreleased/）も入れて
+      # 配る（ADR-0018 の決定）。
+      - run: pnpm build
+        env:
+          SHOW_UNRELEASED: '1'
+      # versions upload はバージョンを作るだけで、本番トラフィックは動かさない。
+      # 100% を切り替えるのはリリース時だけ（→ release.yml）。
+      # --preview-alias で URL が main-<worker名>.<subdomain>.workers.dev に固定されるので、
+      # マージのたびに渡し先の URL が変わらない。
+      # wrangler は devDependency をそのまま呼ぶ。cloudflare/wrangler-action を挟むと
+      # wrangler のバージョンの正が2箇所になる（→ docs/adr/0003-testing-and-ci.md §6）。
+      - run: pnpm run deploy:preview main
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER_SEND_METRICS: 'false'
+
+  # PR ごとにプレビューURLを出す。レビューで早く開けるよう、検査を待たずに並べて回す（ADR-0026「PR のプレビューは、検査を待たない」）。
+  # 検査が落ちたコミットも出る。
+  # --preview-alias を PR番号で分けるので、複数PRが同時に動いても URL が衝突しない
+  # （→ docs/OPERATIONS.md §7）。
+  preview-pr:
+    name: PRプレビューデプロイ
+    # Dependabot 起点の run とフォークからの PR には Actions secrets が渡らない（Dependabot に
+    # 渡るのは Dependabot secrets だけ）ので、動かしても CLOUDFLARE_API_TOKEN が空でこけるだけ。
+    if: >-
+      github.event_name == 'pull_request' && github.actor != 'dependabot[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    # ふだんは1分ほど。上限の理由は、jobs: の上のコメント。
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      # PR にコメントするために要る。workflow 既定の contents: read のままだと
+      # gh pr comment が 403 で落ちる。
+      pull-requests: write
+    # 同一PRへの連続 push は前のプレビューを取り消してよい（ワークフローの concurrency が run ごと取り消す）。
+    # 次の push で alias が上書きされるので、途中で切れても自然に直る。ジョブに concurrency は付けない。ワークフローの
+    # 取り消しと重なって何もしていなかったため（rurino-nemo-fansite#157）。
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - uses: pnpm/setup@v3
+        with:
+          cache: true
+      - uses: ./.github/actions/private-assets
+        with:
+          ssh-key: ${{ secrets.ASSETS_DEPLOY_KEY }}
+      # main のプレビューと同じ理由で、未公開のものも入れた pnpm build を配る。
+      - run: pnpm build
+        env:
+          SHOW_UNRELEASED: '1'
+      - name: プレビュー版をアップロードしてURLを取り出す
+        id: deploy
+        run: |
+          set -euo pipefail
+          OUTPUT=$(pnpm run deploy:preview "pr-${PR_NUMBER}" 2>&1 | tee /dev/stderr)
+          URL=$(printf '%s\n' "$OUTPUT" | grep -oP 'Version Preview Alias URL: \Khttps://\S+' || true)
+          if [ -z "$URL" ]; then
+            echo "wrangler の出力からプレビューURLが取れなかった"
+            exit 1
+          fi
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER_SEND_METRICS: 'false'
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+      # gh CLI はランナーに標準で入っている（dependabot-auto-merge.yml と同じ道具立て）。
+      # author だけでは同じ GITHUB_TOKEN 発の別コメントと区別できないため、
+      # マーカー文字列でこのジョブ自身のコメントだけを探す。
+      - name: PRにプレビューURLをコメントする
+        run: |
+          set -euo pipefail
+          MARKER='<!-- preview-pr -->'
+          SHA_SHORT="${SHA:0:7}"
+          BODY="${MARKER}
+          プレビュー: ${URL} (\`${SHA_SHORT}\`)"
+          COMMENTS=$(gh api "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" --paginate)
+          ID=$(printf '%s' "$COMMENTS" | jq -r --arg m "$MARKER" '[.[] | select(.body | contains($m))] | last | .id // empty')
+          if [ -n "$ID" ]; then
+            gh api --method PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/${ID}" -f body="$BODY"
+          else
+            gh pr comment "$PR_NUMBER" --body "$BODY"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          URL: ${{ steps.deploy.outputs.url }}
+          SHA: ${{ github.event.pull_request.head.sha }}

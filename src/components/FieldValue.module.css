@@ -1,0 +1,7 @@
+@layer components {
+  .root {
+    color: var(--color-figure);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+}

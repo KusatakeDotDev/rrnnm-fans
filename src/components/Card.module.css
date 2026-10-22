@@ -1,0 +1,24 @@
+@layer components {
+  .root {
+    border: var(--border-card) solid var(--color-outline);
+    border-radius: var(--radius-card);
+    padding: clamp(var(--space-5), 4vw, var(--space-9));
+    box-shadow: var(--offset-card) var(--offset-card) 0 var(--color-outline);
+  }
+
+  .headingOverlap {
+    padding: var(--space-13) var(--space-9) var(--space-7);
+  }
+
+  @media (max-width: 40rem) {
+    .root {
+      border-width: var(--border-sticker);
+      border-radius: var(--radius-tile);
+      box-shadow: var(--offset-tile) var(--offset-tile) 0 var(--color-outline);
+    }
+
+    .headingOverlap {
+      padding: var(--space-10) var(--space-4) var(--space-4);
+    }
+  }
+}

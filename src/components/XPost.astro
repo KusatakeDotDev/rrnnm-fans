@@ -1,0 +1,63 @@
+---
+/**
+ * XPost.tsx のラッパー（ADR-0011「スクリプトの扱い」の、外部の `<script async src>` を置く形）。
+ * 子に置いたポストへのリンクを、X の oEmbed から取った埋め込みのコードに差し替え、widgets.js に描かせる
+ * （ADR-0014「埋め込みのコードは、ブラウザで oEmbed から取る」）。
+ *
+ * ポストの URL は、子のリンクの1か所にだけ書く。リンクの文字に X の表示名を入れない（告知が入って変わる）。日付は変わらないので入れる。
+ * 埋め込んでよいポストは tests/helpers/x-embed.ts に書き、tests/conformance/routes.spec.ts が見る。
+ */
+import type { ComponentProps } from 'react';
+
+import XPost from './XPost.tsx';
+
+type Props = Pick<ComponentProps<typeof XPost>, 'on' | 'centered' | 'className'>;
+---
+
+<XPost {...Astro.props} data-x-post="">
+  <slot />
+</XPost>
+{/* すぐ前の箱（このラッパーが描いたもの）だけを見る。ページの [data-x-post] を探すと、/skeb/ の SkebWorks の
+    data-x-post（押したときにダイアログで出すもの）まで埋め込む。
+    - dnt: X に、この埋め込みをおすすめや広告の個人向けの調整に使わせない（返ってくる blockquote に data-dnt が付く）。
+      訪問が X に伝わること自体は止まらない（ADR-0014「払うもの」）
+    - theme は付けない（既定のライト）。サイトはまだライトだけ（docs/DESIGN.md §4「ダークモード（RRNNM-28）」）
+    - widgets.js が先に読み終わっていたら、差し込んだあとに描かせ直す（twttr.widgets.load）。まだなら、widgets.js が
+      読み終わったときにページを見て描く
+    - 取れなかったとき（通信断・ポストの削除・広告ブロッカー・5秒を過ぎた）は、リンクのまま残す
+    - Cookie もリファラも送らない（再生リストの表紙と同じ。プレビューのホスト名を X に渡さない）
+    - ブラウザのキャッシュを使わない（no-store）。publish.x.com は、頼んだオリジンをそのまま CORS の許可に入れて、
+      約100年持ってよいという応答を返す（Vary: Origin も付けない。2026-10-10 に確かめた）。キャッシュを使うと、同じサイトの
+      別のオリジン（プレビューの URL どうし）では、前のオリジンの許可が返って読めなくなり、表示名や本文も古いまま残る
+    規約テストでは oEmbed も widgets.js も読ませない（playwright.config.ts の BLOCK_EXTERNAL_EMBEDS）。 */}
+<script is:inline>
+  (() => {
+    const box = document.currentScript?.previousElementSibling;
+    // すぐ前が箱でなければ（ラッパーの並びが変わったなど）、ほかの要素を書き換えないよう何もしない。
+    if (!box?.matches('[data-x-post]')) return;
+    const link = box.querySelector('a[href]');
+    if (!link) return;
+    const api = new URL('https://publish.x.com/oembed');
+    api.searchParams.set('url', link.href);
+    api.searchParams.set('omit_script', 'true');
+    api.searchParams.set('dnt', 'true');
+    api.searchParams.set('lang', 'ja');
+    fetch(api, {
+      cache: 'no-store',
+      credentials: 'omit',
+      referrerPolicy: 'no-referrer',
+      signal: AbortSignal.timeout(5000),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body) => {
+        const html = body && body.html;
+        if (typeof html !== 'string' || !/^\s*<blockquote\b/i.test(html)) return;
+        box.innerHTML = html;
+        window.twttr?.widgets?.load?.(box);
+      })
+      .catch(() => {});
+  })();
+</script>
+{/* ページに書く第三者スクリプト（docs/CONCEPT.md §3）。許可するホストは tests/artifact/build-output.spec.ts、
+    性能予算から名指しで外したことは tests/artifact/performance-budget.spec.ts が持つ。 */}
+<script is:inline async src="https://platform.x.com/widgets.js"></script>

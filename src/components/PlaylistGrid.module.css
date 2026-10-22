@@ -1,0 +1,208 @@
+@layer components {
+  /* 置かれた幅で列の数と余白を替えるので、root をコンテナにする（ADR-0025「置かれた幅に合わせるときは `@container` にし、root をコンテナにする」）。
+     root 自身はクエリで変えられないので、縦の並びと間は中の .body が持つ。 */
+  .root {
+    container-type: inline-size;
+  }
+
+  .body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-7);
+  }
+
+  /* 見出しのステッカーを横いっぱいに伸ばさない（.body は縦の flex で、子は幅いっぱいになる）。 */
+  .head {
+    display: flex;
+  }
+  /* 見出しが無いときは消す。空の箱でも gap の分だけ格子の上が空く。 */
+  .head:empty {
+    display: none;
+  }
+
+  /* 出典。予定のカードの出典の行（ScheduleCard.module.css .caption）に揃えて小さく右寄せにする。
+     色だけは揃えない — 地の上なので本文色（7.55）。補助文の色は青い地では 3.40 で使えない。 */
+  .source {
+    margin: 0;
+    font-size: var(--text-small);
+    line-height: var(--leading-heading);
+    text-align: right;
+  }
+
+  /* -----------------------------------------------------------------------------
+     格子
+     -------------------------------------------------------------------------- */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-6);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* 境目は、トップに置いたとき画面の幅 960px・約 643px で切り替わる値（.container の左右の余白を引いた幅。RRNNM-80）。 */
+  @container (max-width: 56rem) {
+    .grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  /* -----------------------------------------------------------------------------
+     タイル。色の組（面 / 文字 / 枠内の面 / 花）は4件周期、傾きは6件周期。
+     どの組も文字は AA（本文色は白 13.21・淡いピンク 11.11・ラベンダー 9.78、
+     白は帯の青 6.78・濃紺 13.21）。
+     -------------------------------------------------------------------------- */
+  .tile {
+    --tile-bg: var(--color-surface);
+    --tile-ink: var(--color-text);
+    --thumb-bg: var(--color-fill-ground);
+    --thumb-ink: var(--color-decor);
+    --thumb-radius: var(--radius-thumb);
+    --flower-size: 2.75rem;
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    height: 100%;
+    border: var(--border-sticker) solid var(--color-outline);
+    border-radius: var(--radius-tile);
+    padding: var(--space-3) var(--space-3) var(--space-4);
+    background-color: var(--tile-bg);
+    color: var(--tile-ink);
+    box-shadow: var(--offset-tile) var(--offset-tile) 0 var(--color-outline);
+    text-decoration-line: none;
+    transform: rotate(var(--tilt, 0deg));
+    transition: box-shadow 0.15s ease;
+  }
+
+  /* 押し込まれた見え方。影が縮む。 */
+  .tile:hover,
+  .tile:focus-visible {
+    box-shadow: var(--offset-pressed) var(--offset-pressed) 0 var(--color-outline);
+  }
+  .tile:hover .title,
+  .tile:focus-visible .title {
+    text-decoration-line: underline;
+  }
+
+  /* 色と傾きの周期は、格子の直接の子の li に絞る。CSS Modules では素の li にスコープが付かないので、
+     このコンポーネントを別の一覧の li の中に置くと、外側の li の位置でも当たってしまう。 */
+  .grid > li:nth-child(4n + 2) > .tile {
+    --tile-bg: var(--color-fill-pink-soft);
+    --thumb-bg: var(--color-surface);
+    --thumb-ink: var(--color-decor-pink);
+  }
+  .grid > li:nth-child(4n + 3) > .tile {
+    --tile-bg: var(--color-band);
+    --tile-ink: var(--color-text-on-fill);
+    --thumb-bg: var(--color-fill-ground);
+    --thumb-ink: var(--color-decor);
+  }
+  .grid > li:nth-child(4n + 4) > .tile {
+    --tile-bg: var(--color-fill-lavender);
+    --thumb-bg: var(--color-surface);
+    --thumb-ink: var(--color-decor-violet);
+  }
+
+  .grid > li:nth-child(6n + 1) > .tile {
+    --tilt: -1.2deg;
+  }
+  .grid > li:nth-child(6n + 2) > .tile {
+    --tilt: 0.8deg;
+  }
+  .grid > li:nth-child(6n + 3) > .tile {
+    --tilt: -0.4deg;
+  }
+  .grid > li:nth-child(6n + 4) > .tile {
+    --tilt: 1.4deg;
+  }
+  .grid > li:nth-child(6n + 5) > .tile {
+    --tilt: 0.6deg;
+  }
+  .grid > li:nth-child(6n + 6) > .tile {
+    --tilt: -1deg;
+  }
+
+  /* チャンネルへのタイル。位置に関わらずこの組。 */
+  .grid > li.channel > .tile {
+    --tile-bg: var(--color-fill-ink);
+    --tile-ink: var(--color-text-on-fill);
+    --thumb-bg: var(--color-fill-lavender);
+    --thumb-ink: var(--color-band);
+    --tilt: -0.8deg;
+  }
+
+  .title {
+    padding-inline: var(--space-1);
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  /* -----------------------------------------------------------------------------
+     すべて見る
+     -------------------------------------------------------------------------- */
+  .more {
+    display: grid;
+    place-items: center;
+    min-height: 3.25rem;
+    border: var(--border-sticker) solid var(--color-outline);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-surface);
+    color: var(--color-text);
+    box-shadow: var(--offset-button) var(--offset-button) 0 var(--color-outline);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .more:hover {
+    box-shadow: var(--offset-pressed) var(--offset-pressed) 0 var(--color-outline);
+  }
+
+  /* 広い画面では畳まない。ボタンも出さない（hidden 属性より display の指定が勝つので書く）。 */
+  .more[hidden],
+  .more {
+    display: none;
+  }
+
+  @container (max-width: 37rem) {
+    .body {
+      gap: var(--space-5);
+    }
+    .grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-4);
+    }
+    .tile {
+      gap: var(--space-2);
+      /* stylelint-disable-next-line declaration-property-value-allowed-list -- 狭い画面のタイルは --radius-tile（1.625rem）より小さい角丸にし、その段はトークンに無い */
+      border-radius: 1.25rem;
+      padding: var(--space-2) var(--space-2) var(--space-3);
+      box-shadow: var(--offset-button) var(--offset-button) 0 var(--color-outline);
+      /* stylelint-disable-next-line declaration-property-value-allowed-list -- 狭い画面のタイルの表紙は --radius-thumb（1rem）より小さい角丸にし、その段はトークンに無い */
+      --thumb-radius: 0.75rem;
+      --flower-size: 2rem;
+    }
+    .title {
+      padding-inline: 0;
+      font-size: var(--text-small);
+    }
+
+    /* 畳む（先頭6件を残す）。広げたときにフォーカスを移す先は、スクリプトがこの結果から探す。
+       is-collapsible・is-expanded はスクリプト（PlaylistGrid.astro）が付ける印なので、
+       名前を変えないよう :global() で読む。 */
+    .root:global(.is-collapsible):not(:global(.is-expanded)) .grid > li:nth-child(n + 7) {
+      display: none;
+    }
+    .root:global(.is-collapsible) .more:not([hidden]) {
+      display: grid;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tile,
+    .more {
+      transition: none;
+    }
+  }
+}

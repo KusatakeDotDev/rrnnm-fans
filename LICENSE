@@ -1,0 +1,42 @@
+Copyright (c) 2026 KUSATAKE Daisuke. All rights reserved.
+
+このリポジトリのうち KUSATAKE Daisuke が作ったものは、利用・複製・改変・再配布を
+許諾していません。GitHub の利用規約が認める範囲（GitHub 上で見ることと fork すること）に
+限って使えます。作品からの引用や作品名などほかの人の著作物と、下の「第三者の素材」は、
+それぞれの権利者のものです。
+
+このリポジトリに Pull Request を送った場合、その変更を、このリポジトリとサイト
+（https://rrnnm.fans/）の一部として、無償・無期限で使い、改変し、配布し、
+再許諾することを KUSATAKE Daisuke に許諾したものとします。
+
+No license is granted to use, copy, modify or distribute the works of
+KUSATAKE Daisuke in this repository beyond what GitHub's Terms of Service
+allow (viewing and forking on GitHub). Quotations from and titles of other
+people's works, and the third-party materials listed below, belong to
+their respective rights holders.
+
+By submitting a pull request to this repository, you grant KUSATAKE Daisuke
+a free, perpetual right to use, modify, distribute and sublicense your
+contribution as part of this repository and the site (https://rrnnm.fans/).
+
+----------------------------------------------------------------------
+
+Third-party materials（第三者の素材）
+
+The notice above does NOT apply to the following files. They are
+third-party works distributed under their own terms.
+以下のファイルは、上の表示の対象外です。それぞれの権利者の条件に従います。
+
+public/brand/youtube-icon-red.svg, public/brand/x-logo-white.svg,
+public/brand/marshmallow-logo.svg, public/brand/booth-logo-icon.svg,
+public/brand/skeb-icon.svg
+  Official icons/logos of YouTube (Google LLC), X (X Corp), Marshmallow
+  (Diver Down Inc.), BOOTH (pixiv Inc.) and Skeb (Skeb Inc.). Trademarks or
+  logos of their respective owners, used under each owner's guideline or
+  terms. 各社の商標・ロゴ。各社のガイドラインや条件に従う。
+  See public/brand/NOTICE.txt.
+
+Zen Maru Gothic webfont files in the build output (_astro/zen-maru-gothic-*.woff2),
+bundled from the @fontsource/zen-maru-gothic package
+  Zen Maru Gothic, Copyright 2021 The Zen Maru Gothic Project Authors.
+  SIL Open Font License 1.1. See public/fonts/OFL.txt.

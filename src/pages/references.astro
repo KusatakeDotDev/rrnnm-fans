@@ -1,0 +1,78 @@
+---
+// 推し活の資料（docs/DESIGN.md §1 の /references。ADR-0014 の決定）。
+// TODO(RRNNM-11): 入口を作る。ナビ・トップの入口・フッターの一覧から入る形にする（ADR-0015「ナビは下層ページの白い帯にだけ置く」「フッターに一覧のページと単独のページを並べる」）。
+//
+// 見た目は /about と同じ下層ページの形（docs/DESIGN.md §3「レイアウト方針」）。
+//
+// **埋め込んでよいのは、ぴよ汰。様が自分で公開したポストだけ**（ADR-0014 の決定。許すポストは tests/helpers/x-embed.ts に書き、
+// tests/conformance/routes.spec.ts が見る。widgets.js を読むページは tests/artifact/build-output.spec.ts が見る）。
+// ポストの本文も X の表示名もページに書かない（ADR-0014「埋め込みのコードは、ブラウザで oEmbed から取る」）。
+// 紹介文の「ぴよ汰。」はクレジットの名前で、X の表示名（告知が入って変わる）とは別なので書く。
+// 「二次創作」の語を使わず、使い道もサイトから言わない。理由は ADR-0014「「推し活の資料」と呼ぶ」。
+//
+// 紹介文は、ぴよ汰。様に公開していただいているものとして、感謝の言い方にする（rurino-nemo-fansite#169）。何を公開して
+// いただいているかは、すぐ上の見出し（キービジュアルと三面図）が受ける。
+// 紹介文は誰が公開しているかの1文にし、どなたかは名前で始めない注記に分ける（rurino-nemo-fansite#213）。
+// 1文に詰めると読み取りにくく、同じ名前が上下に並ぶとくどく見えるため。
+// ぴよ汰。様の敬称は「さま」（rurino-nemo-fansite#213）。クリエイターを敬って呼ぶファンに合わせるため。
+// ぴよ汰。様の役割（「Live2D モデル制作者」）の出どころは、チャンネル概要欄のクレジット「illust & modeling」
+// （docs/FACTS.md §2）。イラストも手がけているが、書かない（rurino-nemo-fansite#169）。キービジュアルの報告のポストを
+// 載せるページなので、絵を手がけたことは読めば分かるため。
+// 名前は lit.link（ぴよ汰。様が活動のリンクをまとめているページ。FACTS §2）へリンクする（rurino-nemo-fansite#169）。
+// X のアカウントは、すぐ下の埋め込みが名前とフォローボタンで出すので、名前を X にリンクすると同じ行き先が2つ並ぶ。
+// リンクに「さま」は入れない。どこまでが名前か分かりにくくなるため（rurino-nemo-fansite#213）。読み上げの補足は、
+// リンクだけをたどるときに名前と一緒に読まれるよう、リンクの中に置く。
+//
+// 文は1行に書く。文字と文字の間で改行すると、日本語の間に空白が1つ入る（about.astro と同じ）。
+import XPost from '../components/XPost.astro';
+import Base from '../layouts/Base.astro';
+import '../styles/subpage.css';
+---
+
+<Base
+  title="推し活の資料"
+  description="瑠璃野ねもさんの Live2D モデルを手がけたぴよ汰。さまが、X で公開してくださっているキービジュアルと三面図です。"
+>
+  <Fragment slot="head">
+    <h1>推し活の資料</h1>
+  </Fragment>
+
+  <div class="subpage-paper on-paper">
+    <section aria-labelledby="key-visual">
+      <h2 id="key-visual">キービジュアルと三面図</h2>
+      <p class="lead"><a href="https://lit.link/piyotamaru" target="_blank" rel="noopener noreferrer">ぴよ汰。<span class="sr-only">（lit.link。外部サイトを新しいタブで開く）</span></a>さまが X で公開してくださっています！</p>
+      <p class="note">Live2D モデル制作者さまです</p>
+      <XPost className="x-post">
+        <p><a href="https://x.com/nori_tama00/status/1484737271933071361" target="_blank" rel="noopener noreferrer">X でポストを見る（2022年1月22日の投稿）<span class="sr-only">（外部サイトを新しいタブで開く）</span></a></p>
+      </XPost>
+    </section>
+  </div>
+</Base>
+
+<style>
+  @layer pages {
+    /* 地とリンク色は書かない（.on-paper が持つ。src/styles/global.css）。 */
+
+    h1 {
+      margin: 0;
+    }
+
+    /* 公開していただいているうれしさが伝わるように目立たせる。 */
+    .lead {
+      /* stylelint-disable-next-line declaration-property-value-allowed-list -- 導入の1文だけを、本文（--text-base）と h3（--text-h3）のあいだの大きさにし、その段はトークンに無い */
+      font-size: 1.125rem;
+      font-weight: 700;
+    }
+    /* 注記は紹介文と役割が違う短い文なので、補助文の色にする（白い面の上でだけ使える。ここは紙の上）。
+       文字は小さくしない（本文の下限 16px。docs/DESIGN.md）。 */
+    .note {
+      border-inline-start: var(--border-sticker) solid var(--color-frame);
+      padding-inline-start: var(--space-3);
+      color: var(--color-text-muted);
+    }
+
+    section :global(.x-post) {
+      margin-top: var(--space-2);
+    }
+  }
+</style>

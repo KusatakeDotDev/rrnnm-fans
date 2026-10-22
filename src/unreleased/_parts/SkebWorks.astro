@@ -1,0 +1,140 @@
+---
+/**
+ * SkebWorks.tsx のラッパー。**見た目は .tsx、振る舞いはここ**
+ * （docs/adr/0011-react-components-for-design-sync.md「スクリプトの扱い」）。
+ * コンポーネントの説明は SkebWorks.tsx にある。`class` を受けないのは ADR-0011「スコープをクラスで付ける」。
+ */
+import type { SkebWork } from '../../data/skeb';
+import SkebWorks from './SkebWorks.tsx';
+
+interface Props {
+  works: readonly SkebWork[];
+  data: unknown;
+}
+
+const { works, data } = Astro.props;
+---
+
+<SkebWorks works={works} data={data} />
+
+<script>
+  import { arrange, dailyIndex, drawOther, isWorkOrder, jstDateKey } from '../../lib/skeb-browse';
+
+  for (const root of document.querySelectorAll<HTMLElement>('[data-skeb-works]')) {
+    const list = root.querySelector<HTMLElement>('[data-skeb-list]');
+    if (!list) continue;
+    const cards = [...list.querySelectorAll<HTMLElement>('[data-skeb-work]')];
+    /* ピックアップはカードの写しなので、カードのタグをボタンにしてから写す。 */
+    setUpFilter(root, list, cards);
+    setUpPickup(root, cards.filter((card) => card.hasAttribute('data-skeb-summary')));
+    setUpSort(root, list, cards);
+  }
+
+  function setUpPickup(root: HTMLElement, candidates: HTMLElement[]): void {
+    const section = root.querySelector<HTMLElement>('[data-skeb-pickup]');
+    const title = root.querySelector<HTMLElement>('[data-skeb-pickup-title]');
+    const note = root.querySelector<HTMLElement>('[data-skeb-pickup-note]');
+    const draw = root.querySelector<HTMLButtonElement>('[data-skeb-pickup-draw]');
+    const slot = root.querySelector<HTMLElement>('[data-skeb-pickup-slot]');
+    if (!section || !title || !note || !draw || !slot || candidates.length === 0) return;
+
+    const today = jstDateKey(new Date());
+    let current = dailyIndex(today, candidates.length);
+    const show = () => slot.replaceChildren(...[...candidates[current]!.children].map((child) => child.cloneNode(true)));
+    show();
+    note.textContent = `${today.replaceAll('-', '.')} の日替わり`;
+    draw.hidden = candidates.length < 2;
+    section.hidden = false;
+    /* 引き直して中身が替わったことを伝えるため。最初の1件を描いたあとに付ける。 */
+    slot.setAttribute('aria-live', 'polite');
+
+    draw.addEventListener('click', () => {
+      current = drawOther(candidates.length, current, Math.random);
+      title.textContent = 'ランダムピックアップ';
+      note.hidden = true;
+      show();
+      /* 引き直したことを目でも分かるようにする。動きを減らす設定では動かさない。 */
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      draw.querySelector('[aria-hidden="true"]')?.animate([{ transform: 'rotate(0turn)' }, { transform: 'rotate(1turn)' }], { duration: 400, easing: 'ease-out' });
+      slot.animate([{ opacity: 0.3 }, { opacity: 1 }], { duration: 250, easing: 'ease-out' });
+    });
+  }
+
+  function setUpSort(root: HTMLElement, list: HTMLElement, cards: HTMLElement[]): void {
+    const label = root.querySelector<HTMLElement>('[data-skeb-sort]');
+    const select = label?.querySelector('select');
+    if (!label || !select) return;
+
+    select.addEventListener('change', () => {
+      if (!isWorkOrder(select.value)) return;
+      list.append(...arrange(cards, (card) => Number(card.dataset.skebWork), select.value, Math.random));
+    });
+    label.hidden = false;
+  }
+
+  function setUpFilter(root: HTMLElement, list: HTMLElement, cards: HTMLElement[]): void {
+    const filter = root.querySelector<HTMLElement>('[data-skeb-filter]');
+    const bar = root.querySelector<HTMLElement>('[data-skeb-filter-tags]');
+    const expand = root.querySelector<HTMLButtonElement>('[data-skeb-filter-expand]');
+    const count = root.querySelector<HTMLElement>('[data-skeb-count]');
+    if (!filter || !bar || !expand || !count) return;
+
+    const buttons = [...bar.querySelectorAll<HTMLButtonElement>('[data-skeb-filter-tag]')];
+    const tagsOf = new Map(cards.map((card) => [card, [...card.querySelectorAll('[data-skeb-tag]')].map((tag) => tag.textContent)]));
+    let active = '';
+
+    const apply = () => {
+      let shown = 0;
+      for (const card of cards) {
+        card.hidden = active !== '' && !tagsOf.get(card)!.includes(active);
+        if (!card.hidden) shown++;
+      }
+      for (const button of buttons) button.setAttribute('aria-pressed', String(button.dataset.skebFilterTag === active));
+      for (const button of root.querySelectorAll<HTMLButtonElement>('[data-skeb-tag] button')) button.setAttribute('aria-pressed', String(button.value === active));
+      count.textContent = active === '' ? `（全${shown}件）` : `（#${active}：${shown}件）`;
+    };
+    const choose = (tag: string) => {
+      active = active === tag ? '' : tag;
+      apply();
+    };
+    for (const button of buttons) button.addEventListener('click', () => choose(button.dataset.skebFilterTag ?? ''));
+
+    /* カードのタグは、絞り込みの列にあるものだけをボタンにする。列に無いタグは1作品だけのもので、絞っても1件しか残らないため。 */
+    const shared = new Set(buttons.map((button) => button.dataset.skebFilterTag ?? '').filter((tag) => tag !== ''));
+    for (const item of list.querySelectorAll<HTMLElement>('[data-skeb-tag]')) {
+      const tag = item.textContent ?? '';
+      if (!shared.has(tag)) continue;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.value = tag;
+      button.setAttribute('aria-pressed', 'false');
+      button.setAttribute('aria-controls', list.id);
+      const note = document.createElement('span');
+      note.className = 'sr-only';
+      note.textContent = '（このタグで絞り込む）';
+      button.append(tag, note);
+      item.replaceChildren(button);
+    }
+    /* フォーカスを列の同じボタンへ移す。列は一覧のすぐ上にあるので、絞り込んだ一覧が頭から見え、キーボードでも列から続けられる。
+       ピックアップの写しのタグも同じ root の中なので、ここで拾う。 */
+    root.addEventListener('click', (event) => {
+      const button = event.target instanceof Element ? event.target.closest<HTMLButtonElement>('[data-skeb-tag] button') : null;
+      if (!button) return;
+      choose(button.value);
+      buttons.find((filterButton) => (filterButton.dataset.skebFilterTag ?? '') === active)?.focus();
+    });
+
+    /* 列の幅はボタンが出ているあいだ縮むので、それで比べると、広げて収まる幅になってもボタンが残る。 */
+    const fit = () => {
+      expand.hidden = !filter.classList.contains('is-wrapped') && bar.scrollWidth <= filter.clientWidth;
+    };
+    expand.addEventListener('click', () => {
+      const wrapped = filter.classList.toggle('is-wrapped');
+      expand.setAttribute('aria-expanded', String(wrapped));
+      expand.textContent = wrapped ? '閉じる' : 'すべて見る';
+      fit();
+    });
+    filter.hidden = false;
+    new ResizeObserver(fit).observe(bar);
+  }
+</script>

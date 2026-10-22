@@ -1,0 +1,172 @@
+---
+// このサイトについて（docs/DESIGN.md のサイト構成の /about）。入口は全ページのフッター（SiteFooter.tsx）。
+// 見た目は下層ページの形（docs/DESIGN.md §3「レイアウト方針」）。
+//
+// 並びは、何のサイトか → 借りている素材 → 提案 → 連絡先。
+//   - 運営方針。**方針は docs/CONCEPT.md、技術の決定は docs/adr/ に書いてあることだけを書く**（足すなら先にそちらに書く）。
+//     最初の文と、ご本人の収益に触れないことは CONCEPT §1「サイトの立ち位置」。サムネイル画像の扱いは CONCEPT §3 が
+//     ここに書くよう求めている。
+//     **3Dモデルのクレジットと同じ節にしない。** ご本人の画像を、買った素材と同じ「借りている素材」に見せない。
+//     「ご本人の画像・映像・音声は転載しない」は書かない。サイトの上で約束しなくても、やらないことは
+//     CONCEPT §5 が決めている。
+//     アクセス解析の文は ADR-0001「アクセス解析 — Cloudflare Web Analytics」が根拠。Web Analytics は Cloudflare の
+//     ダッシュボードで入れるもので、リポジトリにもビルドの出力にも現れない。設定と文が合っているかは、公開前
+//     （CONCEPT §7）と公開後の定期確認（docs/OPERATIONS.md §6）で人が見る。止めたらこの文も消す。
+//     **Cookie は「解析には使わない」とだけ書き、「当サイトは Cookie を使わない」とは書かない。** Cloudflare の
+//     ボット対策などはダッシュボードの設定で Cookie を付けることがあり、リポジトリからは確かめられない
+//   - クレジットの条件は CONCEPT §3 と ADR-0009「花の3Dモデル」を参照。
+//   - ご提案。削除・訂正の窓口と節を分ける（CONCEPT §2）。フッターの「お問い合わせ」から飛んできた人が最初に読む文は、
+//     削除・訂正の窓口のままにする。
+//     節の中には、投稿が誰でも見られることと、削除・訂正はお問い合わせへ、の2文を置く。削除の依頼が、誰でも見られる
+//     提案窓口に書き込まれないように（CONCEPT §2）。
+//     例は「こんなページがほしい」「ここが見づらい」。「直してほしいところ」と書くと、同じ節の「訂正のご依頼」と紛れる。
+//     **リンクはリポジトリの最初の画面（README）へ向け、Discussions へ直接は向けない。** GitHub を使わない人向けの
+//     マシュマロは README だけが案内している（CONCEPT §2）
+//   - 削除・訂正の窓口（docs/CONCEPT.md §2）。連絡先を書くのはここだけで、全ページのフッターの
+//     「お問い合わせ」が見出し（#contact）へ飛ぶ。**id を変えるとフッターのリンクが切れる**
+//     （tests/conformance/routes.spec.ts がフッターから押して見る）。最後に置いても、飛んでくる人は迷わない。
+//     文は「削除・訂正のご依頼など、当サイトへのご連絡は」と広く受けたままにする。#contact へ直接飛んで
+//     きた人が提案を DM で送っても受け取れる。削除・訂正だけに絞ると、提案でも削除・訂正でもない連絡の行き先が無くなる
+// 免責はまだ書いていない。更新履歴は、アーカイブの記事が入ってから足す（理由は docs/OPERATIONS.md §4「更新履歴」）。
+//
+// 言い方は揃える。本文で自分のサイトを指すときは「当サイト」（全ページのフッターの常時表示文言
+// docs/CONCEPT.md §2 と同じ。h1 とリンクの「このサイトについて」はページの名前なのでそのまま）。
+// 「〜ています」は「〜ております」にする。
+//
+// サムネイルの文の言い回しには理由がある。
+//   - **「公式チャンネルの画像」とは書かない。** 再生リストの表紙は先頭の動画のもので、コラボの再生リストなら
+//     ほかのチャンネルの動画のこともある（ADR-0008「サムネイル表示の可否」の「表紙を選べないこと」）
+//   - **「規約で認められている」「適切に」とは書かない。** YouTube 利用規約（日本語版。2026-10-06 に読んだ）の
+//     「他のユーザーへのライセンス付与」が認めているのは「（動画の再生や埋め込みなど）本サービスの機能によってのみ
+//     可能な方法で」の利用で、サムネイルを外で出すことを明示した文は無い。ADR-0004・0008 は、この使い方を
+//     条件付きの例外にしている（CONCEPT §3）。書くのは事実だけ — YouTube が
+//     提供している画像を、リンクカードに限り、置かずに読み込んでいる
+//   - **oEmbed は言い換えない。** 足すなら、何に使う仕組みかは言わない。「リンク表示用」「埋め込み表示用」は、
+//     上の「規約で認められている」に近づく
+//   - **「oEmbed で提供している」と書けるのは、どちらも oEmbed の thumbnail_url から始まるから。** 再生リストの表紙は
+//     thumbnail_url そのもの（PlaylistGrid.astro）。予定のカードは thumbnail_url を受けたうえで、同じ動画の
+//     maxresdefault.jpg があればそちらに替える（schedule-oembed.ts。oEmbed が取れなければ画像は出さない）。
+//     ふつうは maxresdefault.jpg が出るので「一部は高画質版に替えて」とまで言う。これを消すと、予定のカードについては言い過ぎになる
+//   - 「リンクカードに限り」は、画像を出すのがリンクの中だけだから（ADR-0004「サムネイル表示の可否についての判断」の2、
+//     ADR-0008「例外の縛り方 — 成果物ではなく、スクリプトと純関数で」）
+//   - **「トップの」と場所を書かない。** 今サムネイルがあるのはトップだけだが、ほかのページでも使うことが
+//     ありうる。場所の代わりに条件を書き、条件を守る限り正しいままにする。**サムネイルを出す場所を増やすときは、
+//     上の3点（oEmbed の thumbnail_url から始める・リンクの中だけ・置かずに読み込む）を満たすか確かめる。**
+//     満たさないなら、この文を直す。どのみち例外を広げる判断（CONCEPT §5。ADR-0008 のように ADR を書く）が先に要り、
+//     そこで CONCEPT §3 がここを指す
+//
+// 文は1行に書く。文字と文字の間で改行すると、日本語の間に空白が1つ入る（タグの直前・直後の改行は消える。
+// ビルドの出力で確かめた）。
+import { CONTACT, CONTACT_HANDLE, IDEAS } from '../data/contact';
+import Base from '../layouts/Base.astro';
+import BoothImagePolicy from '../unreleased/_parts/BoothImagePolicy.astro';
+import '../styles/subpage.css';
+---
+
+<Base
+  title="このサイトについて"
+  description="瑠璃野ねもさんの非公式ファンサイト rrnnm.fans の運営方針・クレジット・ご提案とお問い合わせの窓口です。"
+>
+  <Fragment slot="head">
+    {/* 句ごとに <span> で包む。この境目でだけ2行に分かれる（狭い画面で「このサイトについ／て」にならない）。 */}
+    <h1><span>このサイトに</span><span>ついて</span></h1>
+  </Fragment>
+
+  <div class="subpage-paper on-paper">
+    <section aria-labelledby="policy">
+      <h2 id="policy">運営方針</h2>
+      <p>瑠璃野ねもさんを知るきっかけや、ご本人の活動への橋渡しになることを目指して、個人で運営しております。</p>
+      <ul>
+        <li>動画・再生リストへのリンクカードに限り、YouTube が oEmbed で提供しているサムネイル画像を、一部は高画質版に替えて表示しております。画像は当サイトに置かず、YouTube から直接読み込んでおります。</li>
+        <BoothImagePolicy />
+        <li>広告やアフィリエイト等の収益化は一切行っておりません。</li>
+        <li>アクセス解析には、Cookie を使わない Cloudflare Web Analytics を利用しております。</li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="credits">
+      <h2 id="credits">クレジット</h2>
+      <dl class="credit-list">
+        <div>
+          <dt><span class="where">トップページ</span> <a href="https://booth.pm/ja/items/3991171" target="_blank" rel="noopener noreferrer">ネモフィラの3Dモデル<span class="sr-only">（BOOTH の商品ページ。外部サイトを新しいタブで開く）</span></a></dt>
+          <dd>トキワ雑貨店さん</dd>
+          <dd>※ 元のファイルは公開せず、表示用の形式に変換して組み込んでおります。</dd>
+        </div>
+      </dl>
+    </section>
+
+    <section aria-labelledby="ideas">
+      <h2 id="ideas">ご提案</h2>
+      <p>こんなページがほしい、ここが見づらい、といったことは、<a href={IDEAS} target="_blank" rel="noopener noreferrer">GitHub の提案窓口<span class="sr-only">（外部サイトを新しいタブで開く）</span></a>にお寄せください。投稿は誰でも見られます。削除・訂正のご依頼は、下の<a href="#contact">お問い合わせ</a>へお願いいたします。</p>
+    </section>
+
+    <section aria-labelledby="contact">
+      <h2 id="contact">お問い合わせ</h2>
+      {/* ハンドルを括弧で包まない（「制作者の X（@…）」にしない）。読み上げの補足が括弧の中に入り、閉じ括弧が2つ続く。 */}
+      <p>削除・訂正のご依頼など、当サイトへのご連絡は、制作者の <span class="account">X アカウント <a href={CONTACT} target="_blank" rel="noopener noreferrer">@{CONTACT_HANDLE}<span class="sr-only">（外部サイトを新しいタブで開く）</span></a></span> へ DM でお願いいたします。</p>
+      <p>ご本人・関係者からのお申し出には、理由を問わず応じます。</p>
+    </section>
+  </div>
+</Base>
+
+<style>
+  @layer pages {
+    /* 地とリンク色は書かない（.on-paper が持つ。src/styles/global.css）。文字色を書くのは補助文の .where だけ。 */
+
+    h1 {
+      margin: 0;
+    }
+
+    h1 span {
+      display: inline-block;
+    }
+
+    /* フッターの「お問い合わせ」から飛んできたとき、見出しが画面の上端に貼り付かないようにする。
+       最後の節なので、背の高い画面ではそこまでスクロールできず効かないこともある。 */
+    #contact {
+      scroll-margin-top: var(--anchor-offset);
+    }
+
+    /* 行頭の点は消さない。list-style: none の ul は、Safari と VoiceOver ではリストとして読まれなくなる。 */
+    ul {
+      margin: 0;
+      padding-inline-start: 1.25em;
+    }
+    /* 未公開の区画（BoothImagePolicy.astro）が描く li にも、このページのスコープが付く（class で受け取る）。 */
+    ul > li + li {
+      margin-top: var(--space-2);
+    }
+
+    /* クレジットの1件は「場所と物」「作者・販売元」「注記」の3行。件と件の間は行の間より広く空ける。 */
+    .credit-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-5);
+      margin: 0;
+    }
+    .credit-list > div {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+    dt {
+      font-weight: 700;
+    }
+    dd {
+      margin: 0;
+    }
+    /* 場所は短いラベルなので小さくしてよい（--text-small。注記は本文なので小さくしない）。
+       補助文の色は白い面の上でだけ使える（tests/unit/palette.test.ts）。ここは紙の上。 */
+    .where {
+      color: var(--color-text-muted);
+      font-size: var(--text-small);
+    }
+
+    /* 狭い画面で「X アカウント」とハンドルが別の行に分かれると、どこへ送るのかが読み取りにくい。
+       inline-block なら、行に入る幅のうちはまとめて次の行へ送り、文字を大きくして入らなくなったら中で折り返す。
+       nowrap にしない。入らないときにはみ出して、ページに横スクロールが出る。 */
+    .account {
+      display: inline-block;
+    }
+  }
+</style>

@@ -1,0 +1,166 @@
+---
+/**
+ * トップのヒーロー（docs/adr/0009-nemophila-field-hero.md）の**ラッパー**。見た目は NemophilaField.tsx。
+ *
+ * 畑を描くスクリプト（`mountField`）は Astro がバンドルする `<script>` なので、ここに置く（ADR-0011「スクリプトの扱い」）。
+ *
+ * スクリプトはコンポーネントの中を `data-field*` で探す（スコープのクラスや属性には頼らない）ので、
+ * 属性の名前は NemophilaField.tsx と対。
+ *
+ * **前回の畑の絵を先に敷くスクリプトは、ラッパー専用の `NemophilaFieldWithSnapshot` が出す。**
+ * 敷いた絵を外すのは下のスクリプトなので、敷くスクリプトと外すスクリプトがいつも組で出る。
+ * 同期する default export（NemophilaField）は敷くスクリプトを出さない。
+ *
+ * `class` を受け取らない（ADR-0011「スコープをクラスで付ける」）。クラスは `className` で `.tsx` に渡す。
+ */
+import type { ComponentProps } from 'react';
+
+import NemophilaField from './NemophilaField.tsx';
+import { NemophilaFieldWithSnapshot } from './NemophilaField.tsx';
+
+type Props = Omit<ComponentProps<typeof NemophilaField>, 'children'>;
+---
+
+<NemophilaFieldWithSnapshot {...Astro.props}><slot /></NemophilaFieldWithSnapshot>
+
+<script>
+  import { mountField } from './field-renderer';
+  import { SNAPSHOT_IMAGE_ITEM, SNAPSHOT_KEY_ITEM, SNAPSHOT_READ_EVENT } from './field-snapshot';
+
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /*
+   * 最初の1枚を描いたら絵に撮っておき、次に開いたとき本物より先に出す（NemophilaField.tsx の SNAPSHOT_SCRIPT が敷く）。
+   * 本物が描けるまでの待ち（コンテキスト・シェーダー、株の素材を取りに行くときは素材も）を隠すため。
+   * 最初の1枚は開くたびに同じ（mountField の onFirstFrame）なので、入れ替えても動かない。
+   * キーは SNAPSHOT_SCRIPT が作って root に書いたものを使う。撮らないのは次のとき:
+   * - キーが無い（敷くスクリプトの無い畑・ページで2つめ以降の畑・キーを作ってから大きさが変わって消された）
+   * - 同じキーがもう置いてある（毎回撮り直さない。下の、絵を置かなかった印も含む）
+   * - sessionStorage が使えない（撮っても置けない）
+   * - 株の素材を諦めた回（次は素材がキャッシュから来るので、入れ替えた瞬間に株が現れてしまう）
+   * 絵は CSS の 1px に 1 画素まで縮めて撮る。0.3 秒で本物が重なるまでの下敷きなので細かさは要らず、
+   * そのままの解像度だと sessionStorage（全部で 5MB ほど）に収まらない。
+   * WebP で撮れない（Safari）・縮めても大きすぎる（とても大きな画面）ときは、キーだけ置いて絵は置かない。
+   */
+  /** 撮った絵が大きすぎたら置かない（文字数。UTF-16 なのでおよそ 2MB）。 */
+  const SNAPSHOT_MAX_CHARS = 1_000_000;
+  /** 置いてあるキー。保存先が使えなければ `undefined`（`null` は「まだ何も置いていない」）。 */
+  const storedSnapshotKey = () => {
+    try {
+      return sessionStorage.getItem(SNAPSHOT_KEY_ITEM);
+    } catch {
+      return undefined;
+    }
+  };
+
+  for (const root of document.querySelectorAll<HTMLElement>('[data-field]')) {
+    const canvas = root.querySelector<HTMLCanvasElement>('[data-field-canvas]');
+    const pause = root.querySelector<HTMLButtonElement>('[data-field-pause]');
+    if (!canvas) continue;
+    const snapshot = root.querySelector<HTMLElement>('[data-field-snapshot]');
+    /** 敷いた前回の絵を外す。本物のキャンバスが重なり終わってから（描けなかったときはすぐ）。 */
+    const dropSnapshot = (afterMs = 0) => {
+      if (snapshot) setTimeout(() => snapshot.remove(), afterMs);
+    };
+    /** キーはもう読まないので、敷くスクリプトに大きさの監視を外させる。 */
+    const doneWithKey = () => root.dispatchEvent(new Event(SNAPSHOT_READ_EVENT));
+
+    /* 止めているかどうかは、ボタンの aria-pressed と root の data-paused（CSS の動きも止める）で持つ。 */
+    const showPaused = (paused: boolean) => {
+      root.toggleAttribute('data-paused', paused);
+      pause?.setAttribute('aria-pressed', String(paused));
+    };
+    // 動きを減らす設定の人には、止めた状態で始める（mountField も静止画で始める）。
+    showPaused(reducedMotion);
+
+    // 組み立ての途中で投げても、この畑だけ CSS の畑のまま終える（次の畑の起動と、敷いた絵を外すのを止めない）。
+    let field: ReturnType<typeof mountField> = null;
+    try {
+      field = mountField(root, {
+        canvas,
+        reducedMotion,
+        onFirstFrame: ({ gaveUp }) => {
+          root.dataset['gl'] = 'on';
+          // 株を諦めた回は、株のある前回の絵と重ねると入れ替えた瞬間に株が消えて見えるので、すぐ外す（初めて開いたときと同じ出方）。
+          // 読むのは .canvas の transition の先頭の1本だけ。
+          dropSnapshot(gaveUp ? 0 : parseFloat(getComputedStyle(canvas).transitionDuration) * 1000 + 100);
+          if (pause) pause.hidden = false;
+
+          // キーは撮る時点で読む（大きさが変わっていれば、敷くスクリプトが消している）。
+          const snapshotKey = root.dataset['fieldSnapshotKey'];
+          doneWithKey();
+          const stored = storedSnapshotKey();
+          if (!snapshotKey || gaveUp || stored === undefined || stored === snapshotKey) return;
+          // 描いたフレームの中で呼ばれるので、ここで写せばキャンバスの中身が残っている。
+          const small = document.createElement('canvas');
+          small.width = canvas.clientWidth;
+          small.height = canvas.clientHeight;
+          small.getContext('2d')?.drawImage(canvas, 0, 0, small.width, small.height);
+          /**
+           * 絵を置いてからキーを置く。絵が `null`（撮れない・WebP で撮れない・大きすぎる）なら、絵を消してキーだけ置く —
+           * 次はキーが合うので撮り直さず、敷く側は絵が無いので敷かない（撮っては捨てるのを毎回繰り返さない）。
+           * 絵が置けなかった（容量が足りない）ら、絵を消してキーだけ置く（古い絵を新しいキーで敷かず、撮り直しも繰り返さない）。
+           * それも置けなければ、古いキーを消す。
+           */
+          const store = (image: string | null) => {
+            try {
+              if (image) sessionStorage.setItem(SNAPSHOT_IMAGE_ITEM, image);
+              else sessionStorage.removeItem(SNAPSHOT_IMAGE_ITEM);
+              sessionStorage.setItem(SNAPSHOT_KEY_ITEM, snapshotKey);
+            } catch {
+              try {
+                sessionStorage.removeItem(SNAPSHOT_IMAGE_ITEM);
+                sessionStorage.setItem(SNAPSHOT_KEY_ITEM, snapshotKey);
+              } catch {
+                try {
+                  sessionStorage.removeItem(SNAPSHOT_KEY_ITEM);
+                } catch {
+                  // 保存先が使えなければ、次も本物を待つだけ。
+                }
+              }
+            }
+          };
+          small.toBlob(
+            (blob) => {
+              // 撮れなかった回も同じ。Safari は WebP で撮れず、黙って PNG を返す（数倍の大きさ）。
+              // JPEG は空の透けが黒くなるので使えない。
+              if (!blob || blob.type !== 'image/webp') {
+                store(null);
+                return;
+              }
+              const reader = new FileReader();
+              reader.onload = () => {
+                const url = reader.result;
+                store(typeof url === 'string' && url.length <= SNAPSHOT_MAX_CHARS ? url : null);
+              };
+              reader.readAsDataURL(blob);
+            },
+            'image/webp',
+            0.8,
+          );
+        },
+        onLost: () => {
+          dropSnapshot();
+          doneWithKey();
+          delete root.dataset['gl'];
+          if (pause) pause.hidden = true;
+        },
+      });
+    } catch {
+      field = null;
+      // 取ったコンテキストを手放す（途中で投げたので、mountField は手放す前に抜けている）。
+      canvas.getContext('webgl2')?.getExtension('WEBGL_lose_context')?.loseContext();
+    }
+
+    if (!field) {
+      dropSnapshot();
+      doneWithKey();
+    }
+
+    pause?.addEventListener('click', () => {
+      const paused = pause.getAttribute('aria-pressed') !== 'true';
+      showPaused(paused);
+      field?.setPaused(paused);
+    });
+  }
+</script>

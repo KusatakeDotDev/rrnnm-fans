@@ -1,0 +1,12 @@
+{
+  "extends": "astro/tsconfigs/strict",
+  "include": [".astro/types.d.ts", ".storybook/**/*", "**/*"],
+  "exclude": ["dist", ".test-dist", "types", "ds-bundle", "storybook-static"],
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    "paths": {
+      "@site-assets": ["./src/components/site-assets.ts"]
+    }
+  }
+}

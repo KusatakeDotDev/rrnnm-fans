@@ -1,0 +1,648 @@
+---
+// クソバカスロット。瑠璃野ねもさんの 2026-10-18 のポスト（下の POST）にちなんだもの。フッターには出さない（src/data/site-navigation.ts の UNLINKED_ROUTES）。
+// 音は効果音ラボの素材。規約は、アプリの操作音として組み込むのを再配布に当たらないとし、直リンクを禁じているので、このサイトから配る。
+// ファイルは、非公開のリポジトリから重ねる（ADR-0029 の決定）。
+// ポストの「今日は」に合わせ、かならずそろうのはその日のうちだけ。日付は来た人が書き換えて延ばせる遊びにし、再読み込みで戻す。
+// 元ネタのポストを埋め込むのは、その文面（「今日は」）が、日付を書き換える遊びのヒントになるため。ADR-0028 の決定で、許すポストは tests/helpers/x-embed.ts。
+import { OFFICIAL } from '../data/official';
+import XPost from '../components/XPost.astro';
+import Base from '../layouts/Base.astro';
+import { DEFAULT_UNTIL, WORD } from '../lib/kusobaka-slot';
+
+const POST = `${OFFICIAL.x}/status/2111763781324046562`;
+---
+
+<Base title="クソバカスロット" description="瑠璃野ねもさんの10月18日のポストにちなんだ、その日のうちはかならず「クソバカ」がそろうスロットです。">
+  <Fragment slot="head">
+    <h1><span>クソバカ</span><span>スロット</span></h1>
+  </Fragment>
+
+  <div class="slot on-paper" data-slot>
+    {/* 音が出るページだと鳴る前に分かるようにし、その場で消せるようにする。JS が無いと音が出ないので、スクリプトが出す。 */}
+    <button type="button" class="mute" aria-pressed="false" aria-label="消音" data-slot-mute hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path class="body" d="M3 9h4l5-4v14l-5-4H3z" />
+        <path class="waves" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" />
+        <path class="cross" d="M16 9l6 6M22 9l-6 6" />
+      </svg>
+    </button>
+    <p class="streak"><span class="tabular" data-slot-count>0</span>連チャン</p>
+    <div class="reels">
+      {
+        WORD.map((_, i) => (
+          <div class="reel">
+            <div class="view" data-slot-reel aria-hidden="true">
+              <div class="strip" style={`--position: ${WORD.length + i}`}>
+                {Array.from({ length: WORD.length * 3 }, (_, k) => (
+                  <span>{WORD[k % WORD.length]}</span>
+                ))}
+              </div>
+            </div>
+            {/* JS が無いと回せないので、押せない形で出す（スクリプトが disabled を外す）。 */}
+            <button type="button" class="stop" data-slot-stop disabled>
+              ストップ<span class="sr-only">（{i + 1}本め）</span>
+            </button>
+          </div>
+        ))
+      }
+    </div>
+    <button type="button" class="start" data-slot-start disabled>スタート</button>
+    {/* 日付は文の字に見せ、気づいた人だけが押して書き換えられる遊びにする。
+        autocomplete="off" は、再読み込みでブラウザが書き換えた日付を戻さないため。
+        max は、Chrome が max の無い日付欄で年を6桁まで打たせ、4桁で月の欄へ進まないため。 */}
+    <p class="caption">※<input type="date" value={DEFAULT_UNTIL} max="9999-12-31" autocomplete="off" aria-label="確定でそろう日" data-slot-until />中だけ確定で揃います。</p>
+    <p class="sr-only" role="status" data-slot-status></p>
+  </div>
+
+  <div class="notes">
+    <p>クレジット: <a href="https://soundeffect-lab.info/" target="_blank" rel="noopener noreferrer">効果音ラボ<span class="sr-only">（外部サイトを新しいタブで開く）</span></a></p>
+    <p>元ネタ:</p>
+    <XPost on="ground" centered>
+      <p><a href={POST} target="_blank" rel="noopener noreferrer">X でポストを見る（2026年10月18日の投稿）<span class="sr-only">（外部サイトを新しいタブで開く）</span></a></p>
+    </XPost>
+  </div>
+</Base>
+
+<script>
+  // 本物を重ねたビルドでは取りに行かないので、ページの JS に埋め込まず、別のファイルにする。
+  import silent from '../assets/kusobaka-slot-silent.mp3?no-inline';
+  import {
+    charIndex,
+    CHEERS,
+    deadlineOf,
+    landing,
+    MISSES,
+    nextStop,
+    parseMuted,
+    pick,
+    REACTIONS,
+    slideDuration,
+    SOUND_LEVEL,
+    slidePosition,
+    stripPosition,
+    voiceFor,
+    WORD,
+    type Voice,
+  } from '../lib/kusobaka-slot';
+
+  type Sound = 'stop' | 'success' | Voice;
+
+  const SOUNDS: readonly Sound[] = ['stop', 'success', ...REACTIONS, ...CHEERS, ...MISSES];
+  // 重ねていないビルドでは、どの名前でも無音を鳴らす（ADR-0029 の決定）。
+  const sounds = import.meta.glob<string>('../assets/kusobaka-slot/*.mp3', { eager: true, import: 'default' });
+
+  /** 回る速さ（コマ/ミリ秒）。 */
+  const SPEED = 0.012;
+  /** 押した瞬間にぴたりと止めず、少し滑らせて止めた手応えを出す（コマ）。 */
+  const MIN_SLIDE = 0.3;
+  /** そろったときのセリフは、成功音の頭と重ならないよう遅らせる（秒）。 */
+  const CHEER_DELAY = 0.35;
+  /** 日付を書き換え終えたとみなすまでの間（ミリ秒）。 */
+  const ANNOUNCE_DELAY = 800;
+  const MUTED_ITEM = 'kusobaka-slot-muted';
+
+  // 押してから取りに行くと最初の音が遅れるので、開いた時点で取っておく。
+  // # の後ろの名前は、無音で取りに行く先が同じでも、どの音として取ったかを E2E が読むため。
+  const files = new Map(
+    SOUNDS.map((name) => [
+      name,
+      fetch(`${sounds[`../assets/kusobaka-slot/${name}.mp3`] ?? silent}#${name}`)
+        .then((response) => (response.ok ? response.arrayBuffer() : null))
+        .catch(() => null),
+    ]),
+  );
+  const buffers = new Map<Sound, Promise<AudioBuffer | null>>();
+  let audio: AudioContext | undefined;
+  let master: GainNode | undefined;
+  let voice: AudioBufferSourceNode | undefined;
+  let voices: Promise<void> = Promise.resolve();
+  const muteButton = document.querySelector<HTMLButtonElement>('[data-slot-mute]')!;
+  let muted = false;
+
+  function applyLevel(): void {
+    if (master) master.gain.value = muted ? 0 : SOUND_LEVEL;
+  }
+
+  // iOS の Safari は、押した処理の中で作るか再開した AudioContext でないと音を出さない。
+  function unlock(): void {
+    try {
+      if (!audio) {
+        const context = new AudioContext();
+        master = context.createGain();
+        master.connect(context.destination);
+        audio = context;
+        applyLevel();
+      }
+    } catch {
+      // AudioContext を作れないブラウザでも、音なしで回せるようにする。
+      return;
+    }
+    if (audio.state !== 'running') audio.resume().catch(() => {});
+    for (const name of files.keys()) void decoded(audio, name);
+  }
+
+  function decoded(context: AudioContext, name: Sound): Promise<AudioBuffer | null> {
+    let buffer = buffers.get(name);
+    if (!buffer) {
+      buffer = files
+        .get(name)!
+        .then((data) => (data ? context.decodeAudioData(data) : null))
+        .catch(() => null);
+      buffers.set(name, buffer);
+    }
+    return buffer;
+  }
+
+  function play(name: Sound, { delay = 0, isVoice = false } = {}): Promise<void> {
+    if (!audio) return Promise.resolve();
+    const context = audio;
+    const decoding = decoded(context, name);
+    const sound = async (): Promise<void> => {
+      const buffer = await decoding;
+      if (!buffer) return;
+      const source = context.createBufferSource();
+      source.buffer = buffer;
+      source.connect(master ?? context.destination);
+      // セリフどうしは重ねると聞き取れないので、前のセリフを切る。
+      if (isVoice) {
+        voice?.stop();
+        voice = source;
+      }
+      source.start(context.currentTime + delay);
+    };
+    if (!isVoice) return sound();
+    // 取り終える順は頼んだ順と限らない。後から取れた前のセリフが新しいセリフを切らないよう、頼んだ順に鳴らす。
+    voices = voices.then(sound, sound);
+    return voices;
+  }
+
+  interface Reel {
+    view: HTMLElement;
+    strip: HTMLElement;
+    position: number;
+    spin?: { time: number; from: number };
+    slide?: { time: number; from: number; to: number; duration: number };
+  }
+
+  const root = document.querySelector<HTMLElement>('[data-slot]')!;
+  const start = root.querySelector<HTMLButtonElement>('[data-slot-start]')!;
+  const stops = [...root.querySelectorAll<HTMLButtonElement>('[data-slot-stop]')];
+  const count = root.querySelector<HTMLElement>('[data-slot-count]')!;
+  const status = root.querySelector<HTMLElement>('[data-slot-status]')!;
+  const until = root.querySelector<HTMLInputElement>('[data-slot-until]')!;
+  const still = matchMedia('(prefers-reduced-motion: reduce)');
+  const reels: Reel[] = [...root.querySelectorAll<HTMLElement>('[data-slot-reel]')].map((view, i) => ({
+    view,
+    strip: view.firstElementChild as HTMLElement,
+    position: WORD.length + i,
+  }));
+
+  let stopped = 0;
+  let streak = 0;
+  let done = true;
+  let ticking = false;
+  // 回し始めたときの期限で決め、回っているあいだに期限を過ぎても、その回はかならずそろえる。
+  let certain = true;
+  const hits = WORD.map(() => true);
+
+  // 期限は覚えておかず、そのつど日付欄から読む。iPhone で前のページから戻ると、日付欄だけが初めの値に戻るため。
+  function isSure(): boolean {
+    const deadline = deadlineOf(until.value);
+    return deadline !== null && Date.now() < deadline;
+  }
+
+  function showDeadline(): boolean {
+    const sure = isSure();
+    // 回っているあいだは、帯の色を、時刻ではなくその回の決まり方に合わせる。
+    root.toggleAttribute('data-expired', !(done ? sure : certain));
+    return sure;
+  }
+
+  // disabled ではなく aria-disabled にするのは、押したボタンからフォーカスが外れないようにするため。
+  function setEnabled(button: HTMLButtonElement, enabled: boolean): void {
+    if (enabled) button.removeAttribute('aria-disabled');
+    else button.setAttribute('aria-disabled', 'true');
+  }
+
+  const draw = (reel: Reel) => reel.strip.style.setProperty('--position', String(stripPosition(reel.position)));
+  const spinPosition = (spin: NonNullable<Reel['spin']>, now: number) => spin.from - SPEED * Math.max(0, now - spin.time);
+
+  function tick(now: number): void {
+    for (const reel of reels) {
+      if (reel.spin) {
+        reel.position = spinPosition(reel.spin, now);
+      } else if (reel.slide) {
+        const { time, from, to, duration } = reel.slide;
+        reel.position = slidePosition(from, to, now - time, duration);
+        if (now - time >= duration) reel.slide = undefined;
+      }
+      draw(reel);
+    }
+    settle();
+    ticking = reels.some((reel) => reel.spin || reel.slide);
+    if (ticking) requestAnimationFrame(tick);
+  }
+
+  function settle(): void {
+    if (done || stopped < WORD.length || reels.some((reel) => reel.slide)) return;
+    done = true;
+    const complete = hits.every(Boolean);
+    streak = complete ? streak + 1 : 0;
+    count.textContent = String(streak);
+    status.textContent = complete ? `${WORD.join('')}！ ${streak}連チャン` : 'そろわなかった';
+    root.toggleAttribute('data-complete', complete);
+    if (complete) {
+      void play('success');
+      void play(voiceFor(stopped, Math.random), { delay: CHEER_DELAY, isVoice: true });
+    } else {
+      void play(pick(MISSES, Math.random), { isVoice: true });
+    }
+    setEnabled(start, true);
+    start.textContent = 'もう1回';
+    if (stops.some((button) => button === document.activeElement)) start.focus();
+    showDeadline();
+  }
+
+  start.addEventListener('click', () => {
+    if (!done) return;
+    unlock();
+    done = false;
+    stopped = 0;
+    certain = isSure();
+    showDeadline();
+    hits.fill(false);
+    root.removeAttribute('data-complete');
+    const now = performance.now();
+    for (const [i, reel] of reels.entries()) {
+      reel.slide = undefined;
+      reel.spin = { time: now, from: reel.position };
+      reel.view.setAttribute('data-spinning', '');
+      setEnabled(stops[i]!, true);
+    }
+    setEnabled(start, false);
+    status.textContent = '回っています';
+    if (document.activeElement === start) stops[0]!.focus();
+    if (!ticking) {
+      ticking = true;
+      requestAnimationFrame(tick);
+    }
+  });
+
+  for (const [i, button] of stops.entries()) {
+    button.addEventListener('click', () => {
+      const reel = reels[i]!;
+      if (!reel.spin) return;
+      // 回しているあいだにほかのアプリへ移ると、iOS は AudioContext を止める。
+      unlock();
+      const now = performance.now();
+      const from = spinPosition(reel.spin, now);
+      const to = certain ? landing(from, i, MIN_SLIDE) : nextStop(from);
+      hits[i] = charIndex(to) === i;
+      reel.spin = undefined;
+      reel.view.removeAttribute('data-spinning');
+      if (still.matches) {
+        reel.position = to;
+        draw(reel);
+      } else {
+        reel.slide = { time: now, from, to, duration: slideDuration(from - to, SPEED) };
+      }
+      setEnabled(button, false);
+      stopped += 1;
+      status.textContent = WORD[charIndex(to)]!;
+      void play('stop');
+      // 外れたリールがあるのにセリフが鳴ると、まだそろいそうに聞こえるため。
+      const onTrack = reels.every((other, k) => other.spin || hits[k]);
+      if (stopped < WORD.length && onTrack) void play(voiceFor(stopped, Math.random), { isVoice: true });
+      // キーボードで続けて止められるよう、右隣（無ければ左から）の回っているリールのボタンへ移る。
+      const next = [...reels.keys()].map((k) => (i + 1 + k) % reels.length).find((k) => reels[k]!.spin);
+      if (next !== undefined && document.activeElement === button) stops[next]!.focus();
+      settle();
+    });
+  }
+
+  until.addEventListener('input', () => showDeadline());
+  // Chrome はキーを打つたびに change を出し、年を打つ途中の日付も来るので、書き換えが止んでから一度だけ読み上げる。
+  // 回っている回の扱いは変わらないので、次の回からと言う。
+  let announce = 0;
+  until.addEventListener('change', () => {
+    clearTimeout(announce);
+    announce = window.setTimeout(() => {
+      const state = showDeadline() ? '確定' : '期限切れ';
+      status.textContent = done ? state : `次の回から：${state}`;
+    }, ANNOUNCE_DELAY);
+  });
+  showDeadline();
+  setInterval(showDeadline, 1000);
+
+  function showMuted(): void {
+    muteButton.setAttribute('aria-pressed', String(muted));
+    applyLevel();
+  }
+
+  // 保存先が使えないとき（ブラウザでサイトのデータを止めているなど）は、覚えずに、音を出す形から始める。
+  try {
+    muted = parseMuted(localStorage.getItem(MUTED_ITEM));
+  } catch {
+    muted = false;
+  }
+  showMuted();
+  muteButton.addEventListener('click', () => {
+    muted = !muted;
+    showMuted();
+    try {
+      localStorage.setItem(MUTED_ITEM, muted ? '1' : '0');
+    } catch {
+      // 覚えられなくても、今の切り替えはそのまま効く。
+    }
+  });
+  muteButton.hidden = false;
+
+  for (const button of [start, ...stops]) button.disabled = false;
+  for (const button of stops) setEnabled(button, false);
+</script>
+
+<style>
+  @layer pages {
+    h1 {
+      margin: 0;
+    }
+
+    h1 span {
+      display: inline-block;
+    }
+
+    .slot {
+      /* 1コマの高さ。`.view` はまん中の1コマと、上下の隣の半分ずつを見せる。 */
+      --cell: clamp(3.25rem, 15vw, 5.5rem);
+
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-5);
+      width: 100%;
+      max-width: 36rem;
+      margin: var(--space-10) auto 0;
+      border: var(--border-card) solid var(--color-outline);
+      border-radius: var(--radius-card);
+      padding: clamp(var(--space-4), 4vw, var(--space-8));
+      box-shadow: var(--offset-card) var(--offset-card) 0 var(--color-outline);
+    }
+
+    /* 続けて押すと字が選ばれてしまうため。Safari は接頭辞付きしか読まない。日付欄は書き換えさせるので外す。 */
+    .reels,
+    .start {
+      -webkit-user-select: none;
+      /* stylelint-disable-next-line plugin/use-baseline -- Safari は上の接頭辞付きを読み、ほかのブラウザがこれを読む */
+      user-select: none;
+    }
+
+    /* 縦に場所を取らないよう、カードの右上の角に重ねる（連チャンの数は中央寄せなので重ならない）。 */
+    .mute {
+      position: absolute;
+      top: clamp(0.5rem, 2vw, 1rem);
+      right: clamp(0.5rem, 2vw, 1rem);
+      display: grid;
+      place-items: center;
+      width: var(--tap-size);
+      height: var(--tap-size);
+      min-height: 0;
+      padding: 0;
+      border-width: var(--border-thumb);
+      border-radius: 50%;
+      background-color: var(--color-surface);
+      box-shadow: none;
+    }
+
+    .mute[hidden] {
+      display: none;
+    }
+
+    .mute svg {
+      width: 1.5rem;
+      height: 1.5rem;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .mute .body {
+      fill: currentColor;
+    }
+
+    .mute[aria-pressed='true'] .waves,
+    .mute[aria-pressed='false'] .cross {
+      display: none;
+    }
+
+    .caption {
+      margin: 0;
+      color: var(--color-text-muted);
+      font-size: var(--text-small);
+      text-align: center;
+    }
+
+    /* 日付欄に見せず、文の字として出す（気づいた人だけが押して書き換える遊び）。枠・背景・カレンダーのアイコンを消す。
+       幅は字に合わせる（Android の Chrome は日付欄に 10em の幅と、中の値に左右の余白を付ける）。
+       min-width は、日付を消して空になっても、押せる幅を残すため。 */
+    .caption input {
+      appearance: none;
+      /* stylelint-disable-next-line plugin/use-baseline -- 対応していないブラウザでは読まれず、下の width: auto と min-width のまま描くだけ */
+      field-sizing: content;
+      width: auto;
+      min-width: 2em;
+      margin: 0;
+      border: 0;
+      border-bottom: 1px dotted transparent;
+      border-radius: 0;
+      padding: 0;
+      background: none;
+      color: inherit;
+      font: inherit;
+    }
+
+    .caption input::-webkit-calendar-picker-indicator {
+      display: none;
+    }
+
+    .caption input::-webkit-date-and-time-value {
+      margin: 0;
+      text-align: inherit;
+    }
+
+    /* カーソルを当てたときだけ、書き換えられそうなことをほのめかす。 */
+    @media (hover: hover) {
+      .caption input:hover {
+        border-bottom-color: currentColor;
+      }
+    }
+
+    .streak {
+      /* 幅いっぱいのまま pop で大きくすると、スマートフォンの幅でページが横にはみ出す。 */
+      align-self: center;
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: var(--text-h3);
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .streak span {
+      margin-inline-end: 0.125em;
+      color: var(--color-figure);
+      font-size: 2em;
+      line-height: 1;
+    }
+
+    .slot[data-complete] .streak {
+      animation: pop 0.4s ease-out;
+    }
+
+    @keyframes pop {
+      from {
+        transform: scale(1.25);
+      }
+    }
+
+    .reels {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: clamp(var(--space-2), 2vw, var(--space-3));
+    }
+
+    .reel {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .view {
+      position: relative;
+      box-sizing: content-box;
+      height: calc(var(--cell) * 2);
+      overflow: hidden;
+      border: var(--border-sticker) solid var(--color-outline);
+      border-radius: var(--radius-thumb);
+      background-color: var(--color-surface);
+      background-image: linear-gradient(transparent 25%, var(--color-fill-pink-soft) 25% 75%, transparent 75%);
+    }
+
+    /* 期限を過ぎたら、まん中の段の色を落として、かならずそろう回でないことを見せる。そろったときの色（下）は、そのまま勝たせる。 */
+    .slot[data-expired] .view {
+      background-image: linear-gradient(transparent 25%, var(--color-fill-pale) 25% 75%, transparent 75%);
+    }
+
+    .slot[data-complete] .view {
+      background-image: linear-gradient(transparent 25%, var(--color-fill-amber) 25% 75%, transparent 75%);
+    }
+
+    /* 上下の隣のコマを薄くして、まん中の1コマが止まった字だと分かるようにする。 */
+    .view::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: linear-gradient(var(--color-surface), transparent 35% 65%, var(--color-surface));
+      pointer-events: none;
+    }
+
+    .strip {
+      display: flex;
+      flex-direction: column;
+      /* stylelint-disable-next-line no-unknown-custom-properties -- スクリプトと style 属性がリールごとに入れる変数で、CSS には宣言が無い */
+      transform: translateY(calc((0.5 - var(--position)) * var(--cell)));
+      will-change: transform;
+    }
+
+    .strip span,
+    .view::before {
+      display: grid;
+      place-items: center;
+      height: var(--cell);
+      font-family: var(--font-display);
+      /* stylelint-disable-next-line declaration-property-value-allowed-list -- 字はコマの高さ（--cell）に合わせて決め、文字の段のトークンに無い */
+      font-size: calc(var(--cell) * 0.62);
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    button {
+      min-height: var(--tap-size);
+      border: var(--border-sticker) solid var(--color-outline);
+      border-radius: var(--radius-pill);
+      background-color: var(--color-fill-amber);
+      box-shadow: 0 var(--offset-button) 0 var(--color-outline);
+      color: var(--color-text);
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* 押せないボタンは、押し込んだ形にする（色だけで分けない）。 */
+    button:is([aria-disabled='true'], :disabled) {
+      background-color: var(--color-fill-pale);
+      box-shadow: none;
+      color: var(--color-text);
+      transform: translateY(var(--offset-button));
+      cursor: default;
+    }
+
+    .stop {
+      padding: 0;
+      /* stylelint-disable-next-line declaration-property-value-allowed-list -- 停止ボタンの字は画面の幅に合わせて伸び縮みさせ、文字の段のトークンに無い */
+      font-size: clamp(0.75rem, 3.4vw, 1rem);
+    }
+
+    .start {
+      align-self: center;
+      min-width: min(100%, 14rem);
+      min-height: 3.5rem;
+      padding-inline: var(--space-6);
+      background-color: var(--color-fill-violet);
+      color: var(--color-text-on-fill);
+      font-size: var(--text-h3);
+    }
+
+    .notes {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+      width: 100%;
+      max-width: 36rem;
+      margin: var(--space-6) auto 0;
+      font-size: var(--text-small);
+      text-align: center;
+    }
+
+    .notes p {
+      margin: 0;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .slot[data-complete] .streak {
+        animation: none;
+      }
+
+      .view[data-spinning] .strip {
+        visibility: hidden;
+      }
+
+      .view[data-spinning]::before {
+        content: '？';
+        position: absolute;
+        inset: 50% 0 auto;
+        translate: 0 -50%;
+      }
+    }
+
+    @media (max-width: 40rem) {
+      .slot {
+        border-width: var(--border-sticker);
+        border-radius: var(--radius-tile);
+        box-shadow: var(--offset-tile) var(--offset-tile) 0 var(--color-outline);
+      }
+    }
+  }
+</style>

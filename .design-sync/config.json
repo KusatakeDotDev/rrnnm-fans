@@ -1,0 +1,52 @@
+{
+  "projectId": "4a186482-10d6-4e3e-ab99-57bb648a794b",
+  "shape": "storybook",
+  "storybookStatic": ".design-sync/sb-reference",
+  "pkg": "rurino-nemo-fansite",
+  "globalName": "RurinoNemo",
+  "tsconfig": ".design-sync/tsconfig.sync.json",
+  "extraEntries": [
+    "./.design-sync/entry.ts"
+  ],
+  "componentSrcMap": {
+    "SkebWorks": "src/unreleased/_parts/SkebWorks.tsx",
+    "Butterfly": "src/components/Butterfly.tsx",
+    "Card": "src/components/Card.tsx",
+    "CategoryBadge": "src/components/CategoryBadge.tsx",
+    "EntryItem": "src/components/EntryItem.tsx",
+    "EntryList": "src/components/EntryList.tsx",
+    "Eyebrow": "src/components/Eyebrow.tsx",
+    "FieldValue": "src/components/FieldValue.tsx",
+    "Flower": "src/components/Flower.tsx",
+    "Marquee": "src/components/Marquee.tsx",
+    "NemophilaField": "src/components/NemophilaField.tsx",
+    "PlaylistGrid": "src/components/PlaylistGrid.tsx",
+    "Quote": "src/components/Quote.tsx",
+    "ScheduleCard": "src/components/ScheduleCard.tsx",
+    "SectionLabel": "src/components/SectionLabel.tsx",
+    "SiteFooter": "src/components/SiteFooter.tsx",
+    "SiteHeader": "src/components/SiteHeader.tsx",
+    "StatGrid": "src/components/StatGrid.tsx",
+    "StatTile": "src/components/StatTile.tsx",
+    "StickerHeading": "src/components/StickerHeading.tsx",
+    "Twitter": "src/components/Twitter.tsx",
+    "UnknownChip": "src/components/UnknownChip.tsx",
+    "XPost": "src/components/XPost.tsx",
+    "YouTubeThumbnail": "src/components/YouTubeThumbnail.tsx"
+  },
+  "buildCmd": "node node_modules/typescript/bin/tsc -p .design-sync/tsconfig.types.json",
+  "guidelinesGlob": [
+    "docs/DESIGN.md",
+    "docs/CONCEPT.md"
+  ],
+  "readmeHeader": ".design-sync/conventions.md",
+  "overrides": {
+    "NemophilaField": {
+      "cardMode": "single",
+      "primaryStory": "Day"
+    },
+    "PlaylistGrid": {
+      "viewport": "900x1100"
+    }
+  }
+}

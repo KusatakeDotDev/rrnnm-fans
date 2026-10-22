@@ -1,0 +1,149 @@
+---
+// トップ（ADR-0009 の決定・ADR-0010 の決定）。畑と帯は画面の端から端まで使うので、横幅のコンテナの外（Base の hero スロット）に置く。
+//
+// 数字は docs/FACTS.md に確認済みのものだけを書く。
+// 未確認は `null` を渡して「未確認」チップにする。**憶測で埋めない**（Issue rurino-nemo-fansite#14）。
+//
+// 再生リストは本家への送客（docs/CONCEPT.md §4 柱9 / docs/adr/0008-playlist-carousel.md）。
+import Butterfly from '../components/Butterfly.tsx';
+import Card from '../components/Card.tsx';
+import Marquee from '../components/Marquee.tsx';
+import NemophilaField from '../components/NemophilaField.astro';
+import PlaylistGrid from '../components/PlaylistGrid.astro';
+import ScheduleCard from '../components/ScheduleCard.astro';
+import { preloadThumbnailScript } from '../components/ScheduleCard.tsx';
+import { getSchedule } from '../data/schedule-oembed';
+import StickerHeading from '../components/StickerHeading.tsx';
+import Base from '../layouts/Base.astro';
+
+// 予定のカード（ScheduleCard.astro）と同じ取得。ビルドの中で1回しか取りに行かない（schedule-oembed.ts）。
+const schedule = await getSchedule();
+---
+
+<Base
+  overlayHeader
+  description="瑠璃野ねもさんの非公式ファンサイトです。今週の配信予定や再生リストを載せています。ご本人・関係者とは一切関係がありません。"
+>
+  {/* 予定のサムネイルの ?t= 付きの URL を、<head> で先に取りに行く（理由は ScheduleCard.tsx の preloadThumbnailScript）。
+      カードの側のスクリプトは、ここで決めた URL をそのまま使う。 */}
+  {
+    schedule && (
+      <Fragment slot="preload">
+        <script is:inline set:html={preloadThumbnailScript(schedule.thumbnail.url)} />
+      </Fragment>
+    )
+  }
+  {/* React のコンポーネントに slot を直に書くと、props として渡って root に slot 属性が残る。
+      Fragment に書けば属性は出ない（docs/adr/0011-react-components-for-design-sync.md）。 */}
+  <Fragment slot="hero">
+    {/* キャッチは句ごとに <span> で包む。この境目で2行に分かれる（NemophilaField.module.css）。
+        添え書きは「ファンサイト」のままにする。動詞の無い短い名乗りなので、「ファン」を外すと
+        誰が作ったサイトか読めない。フッターの文（SiteFooter.tsx）は「応援する」がその役を持つので「非公式サイト」にした。 */}
+    <NemophilaField lede="瑠璃野ねも 非公式ファンサイト">
+      <h1><span>とっても可憐な</span><span>ネモフィラの妖精</span></h1>
+    </NemophilaField>
+    <Marquee />
+  </Fragment>
+
+  {/* 畑のピル「今週の配信予定」の行き先。 */}
+  <section class="schedule" aria-labelledby="schedule">
+    <StickerHeading id="schedule" tone="pink" tilt={-4} className="schedule-heading">今週の配信予定</StickerHeading>
+    <Butterfly size="2.5rem" tone="pink" className="schedule-butterfly" />
+    <span class="tape" aria-hidden="true"></span>
+    <Card headingOverlap className="schedule-sticker">
+      <ScheduleCard />
+    </Card>
+  </section>
+
+  <div class="playlists">
+    <PlaylistGrid>
+      <Fragment slot="heading">
+        <StickerHeading tone="lavender" tilt={2}>再生リスト</StickerHeading>
+      </Fragment>
+    </PlaylistGrid>
+  </div>
+</Base>
+
+<style>
+  @layer pages {
+    /* 色は書かない。地とリンク色は .on-paper が持つ（src/styles/global.css）。 */
+
+    /* ---------------------------------------------------------------------------
+       今週の配信予定。見出しのステッカーはカードの左上に掛け、テープと蝶を添える。
+       ------------------------------------------------------------------------- */
+    .schedule {
+      position: relative;
+      width: 100%;
+      max-width: 62.5rem;
+      margin: var(--space-24) auto 0;
+    }
+
+    /* 子コンポーネントの root には親のスコープが当たらないので、:global() で降ろす
+       （docs/adr/0011-react-components-for-design-sync.md「スコープをクラスで付ける」）。 */
+    .schedule :global(.schedule-heading) {
+      position: absolute;
+      z-index: 3;
+      top: -1.875rem;
+      left: -1.125rem;
+    }
+
+    .schedule :global(.schedule-butterfly) {
+      position: absolute;
+      z-index: 4;
+      top: -2.75rem;
+      left: 15.625rem;
+      transform: rotate(16deg);
+    }
+
+    .tape {
+      position: absolute;
+      z-index: 3;
+      top: -1rem;
+      right: 4.375rem;
+      width: 8.125rem;
+      height: 2.125rem;
+      background-color: color-mix(in srgb, var(--color-fill-lavender) 92%, transparent);
+      transform: rotate(6deg);
+    }
+
+    .schedule :global(.schedule-sticker) {
+      transform: rotate(-0.6deg);
+    }
+
+    /* ---------------------------------------------------------------------------
+       再生リスト
+       ------------------------------------------------------------------------- */
+    .playlists {
+      margin-top: var(--space-28);
+    }
+
+    /* ピルから飛んできたとき、見出しのステッカーが画面の上端に貼り付かないようにする。 */
+    .schedule :global(#schedule) {
+      scroll-margin-top: var(--anchor-offset);
+    }
+
+    @media (max-width: 40rem) {
+      .schedule {
+        margin-top: var(--space-16);
+      }
+      .schedule :global(.schedule-heading) {
+        top: -1.5rem;
+        left: -0.25rem;
+      }
+      .schedule :global(.schedule-butterfly) {
+        top: -2.25rem;
+        left: auto;
+        right: 1.5rem;
+      }
+      .tape {
+        display: none;
+      }
+      .schedule :global(.schedule-sticker) {
+        --thumb-radius: var(--radius-thumb);
+      }
+      .playlists {
+        margin-top: var(--space-16);
+      }
+    }
+  }
+</style>

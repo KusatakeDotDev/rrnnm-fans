@@ -1,0 +1,147 @@
+@layer components {
+  /* 帯は傾けて左右にはみ出させる。はみ出たぶんで横スクロールが出ないよう、ここで横だけ切る
+     （clip なら縦は切らないので、畑に重なる上端と波形の縁は見えたまま）。 */
+  .root {
+    --scallop: 12px; /* 縁の半円の半径。周期はこの2倍 */
+    --scallop-margin: 2px; /* 箱の下端の透明な余白（下の縁の説明を参照） */
+    position: relative;
+    z-index: 2;
+    margin-top: -2.125rem;
+    overflow-x: clip;
+  }
+
+  /* 帯と縁をまとめて傾ける。縁（.edge）の位置の基準と、帯の後ろに回す重なりの範囲もここ。
+     transform でもそうなるが、傾けない分岐を足しても崩れないよう position と isolation で明示する
+     （position だけでは重なりの文脈はできず、.edge の z-index: -1 が .root まで出ていく）。 */
+  .ribbon {
+    position: relative;
+    isolation: isolate;
+    margin-inline: -1.25rem;
+    transform: rotate(-1.5deg);
+  }
+
+  .band {
+    --band-pad: var(--space-4);
+    --band-pad-bottom: var(--band-pad);
+    overflow: hidden;
+    padding-block: var(--band-pad) var(--band-pad-bottom);
+    background-color: var(--color-band);
+    color: var(--color-text-on-fill);
+    font-family: var(--font-latin-display);
+    /* stylelint-disable-next-line declaration-property-value-allowed-list -- 帯の字は文字の段のトークンに無い大きさで、Marquee.tsx の GROUP_MIN_WIDTH と組で決めている */
+    font-size: 1.375rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    line-height: 1.4;
+    white-space: nowrap;
+  }
+
+  .track {
+    display: flex;
+    width: max-content;
+    /* 行頭を少し左へはみ出させ、帯が途中から切り出されたように見せる。 */
+    margin-inline-start: -3rem;
+  }
+
+  .group {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-7);
+    padding-inline-end: var(--space-7);
+  }
+
+  .bead {
+    flex: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: var(--color-fill-pink-soft);
+  }
+
+  .edge {
+    display: none;
+  }
+
+  /* 下の縁（スカラップ）。帯の下端を半円に切り抜き、その後ろに半周期ずらした紫の半円を
+     少し下げて敷いて、青の半円の継ぎ目から覗かせる。半円は半径を周期の半分にして接させる
+     （小さいと半円の間から下の地が透ける）。
+     縁を帯と別の面にすると、傾けたときに境目を両側から半透明に塗るので、地が細い線になって
+     覗く。帯そのものを下へ伸ばしてマスクで切り抜けば、青は1枚の面のままで境目が無い。
+     マスクの長方形と半円の層も、ぴったり接すると同じ線が出るので 1px 重ねる。
+     箱の下端には、地も塗らない透明な余白（--scallop-margin）を置く。傾けた箱の下端に色が
+     あると、マスクで消していても端から端までにじみ、薄い線になる（GPU でも出る）。
+     形はマスクだけで決まるので、マスクが効くときだけ描く。
+     効かないブラウザでは、下に伸ばした青と紫が平らな縞になるより、縁の無い平らな帯で済ませる。
+     条件は接頭辞付きだけで書く。Chromium・Safari・Firefox はどれも -webkit-mask-* をエイリアスとして
+     持つので、これで両方を拾える。`(mask-image: none) or (-webkit-mask-image: none)` と書くと、
+     CSS の圧縮（lightningcss）が接頭辞付きの側を落として、接頭辞なしだけの条件にしてしまう。 */
+  @supports (-webkit-mask-image: none) {
+    /* 紫の半円は帯の箱から半径の半分だけ下へ出る（.edge）。その分の場所を取る。
+       margin だと後ろの要素の margin と相殺されるので padding で取る。 */
+    .root {
+      padding-bottom: calc(var(--scallop) / 2);
+    }
+
+    .band {
+      --band-pad-bottom: calc(var(--band-pad) + var(--scallop) + var(--scallop-margin));
+      background: linear-gradient(var(--color-band), var(--color-band)) top / 100% calc(100% - var(--scallop-margin))
+        no-repeat;
+      mask-image:
+        linear-gradient(var(--color-decor), var(--color-decor)),
+        radial-gradient(circle at var(--scallop) 0, var(--color-decor) var(--scallop), transparent calc(var(--scallop) + 0.5px));
+      mask-position:
+        top,
+        0 100%;
+      mask-size:
+        100% calc(100% - var(--scallop) - var(--scallop-margin) + 1px),
+        calc(var(--scallop) * 2) calc(var(--scallop) + var(--scallop-margin));
+      mask-repeat: no-repeat, repeat-x;
+    }
+
+    /* 紫は半円の層1枚だけで描く（長方形の層を足すと、その境目が青の継ぎ目から線として見える）。
+       箱の上端は青の半円の付け根（帯の下端から半径と余白のぶん上）に揃え、円の中心を
+       付け根から半径の半分だけ下げる。下端には帯と同じ透明な余白を置く。
+       半円の上側は付け根で切れるが、そこは青の長方形の下に隠れ、青の継ぎ目の下は紫の円の中で埋まる。 */
+    .edge {
+      display: block;
+      position: absolute;
+      z-index: -1;
+      inset-inline: 0;
+      bottom: calc(var(--scallop) / -2);
+      height: calc(var(--scallop) * 1.5 + var(--scallop-margin));
+      background: linear-gradient(var(--color-decor-violet), var(--color-decor-violet)) top / 100%
+        calc(100% - var(--scallop-margin)) no-repeat;
+      mask-image: radial-gradient(
+        circle at var(--scallop) calc(var(--scallop) / 2),
+        var(--color-decor) var(--scallop),
+        transparent calc(var(--scallop) + 0.5px)
+      );
+      mask-position: var(--scallop) 0;
+      mask-size: calc(var(--scallop) * 2) 100%;
+      mask-repeat: repeat-x;
+    }
+  }
+
+  @media (max-width: 40rem) {
+    .root {
+      margin-top: -1.625rem;
+    }
+    .ribbon {
+      margin-inline: -1rem;
+      transform: rotate(-2deg);
+    }
+    .band {
+      --band-pad: var(--space-3);
+      font-size: var(--text-base);
+      letter-spacing: 0.12em;
+    }
+    .group {
+      gap: var(--space-5);
+      padding-inline-end: var(--space-5);
+    }
+    .bead {
+      width: 9px;
+      height: 9px;
+    }
+  }
+}

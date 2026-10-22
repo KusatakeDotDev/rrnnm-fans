@@ -1,0 +1,33 @@
+version: 2
+
+# docs/adr/0001-tech-stack.md「フレームワーク — Astro」の「依存更新は月1でまとめて」をそのまま設定にしたもの。
+# 自動マージの条件は .github/workflows/dependabot-auto-merge.yml。
+updates:
+  - package-ecosystem: npm # pnpm のロックファイルもこれで扱う
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5
+    # 1PR にまとめる。3年後に npm install が通ることを優先する方針（ADR-0001）では、
+    # 更新を細切れに眺めるより、月1でまとめて CI に通すほうが実態に合う。
+    groups:
+      # Playwright だけは別の PR にする。上げた PR はタグを直すまで落ちるので、ほかの更新を止めないため（詳しくは pnpm-workspace.yaml の catalog）。
+      # 依存は最初に当たったグループに入るので、minor-and-patch より前に置く。
+      playwright:
+        patterns: ['playwright', '@playwright/*']
+        update-types: [minor, patch]
+      minor-and-patch:
+        patterns: ['*']
+        update-types: [minor, patch]
+    ignore:
+      # TypeScript 7 では astro check と Stryker が動かないため。詳しくは pnpm-workspace.yaml の catalog。
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ['*']

@@ -1,0 +1,13 @@
+@layer components {
+  /* 高さは、幅（size）から絵の縦横比で決まる。 */
+  .root {
+    aspect-ratio: 40 / 34;
+  }
+
+  .pink {
+    color: var(--color-decor-pink);
+  }
+  .violet {
+    color: var(--color-decor-violet);
+  }
+}

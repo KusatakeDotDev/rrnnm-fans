@@ -1,0 +1,3 @@
+/* レイヤーの順。宣言はここにだけ書き、どの経路でも最初に読ませる（ADR-0025「順の宣言は1か所に書き、ビルドしたページで確かめる」）。
+   サイトは Base.astro が <head> にインラインで置き、Storybook（.storybook/preview.ts）と同期（.design-sync/entry.ts）は最初に import する。 */
+@layer base, layout, components, utilities, pages;

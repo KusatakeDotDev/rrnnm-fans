@@ -1,0 +1,14 @@
+---
+// /about の「運営方針」の箇条に足す1件。グッズのページ（../goods.astro）と一緒に出し分けるため、ここに置く（ADR-0018）。
+// 言い回しは about.astro のサムネイルの文と同じ考え方で書く（docs/adr/0020-booth-goods-images.md）。「OGP」も言い換えない。
+// 場所（グッズのページ）は書かず、条件（商品ページの OGP の画像・リンクの中だけ・置かずに読み込む）を書く。
+// data-booth-image-policy は、オフのビルドに漏れていないかを tests/artifact/goods-data.spec.ts が探すマーカー。文言は探さない。
+// class は、置く側のリストの間隔が当たるよう、置く側のスコープを受け取るため（ADR-0011「スコープをクラスで付ける」）。
+interface Props {
+  class?: string;
+}
+
+const { class: className } = Astro.props;
+---
+
+<li class={className} data-booth-image-policy>BOOTH の商品ページへのリンクカードに限り、BOOTH が OGP で提供している商品の画像を表示しております。画像は当サイトに置かず、BOOTH から直接読み込んでおります。</li>

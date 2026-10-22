@@ -1,0 +1,44 @@
+@layer components {
+  .root {
+    position: relative;
+    display: grid;
+    place-items: center;
+    aspect-ratio: 16 / 9;
+    /* 16:9 は縁の線の内側に取る。border-box のままだと線の分だけ中が横長になり、画像の上下が切れる。 */
+    box-sizing: content-box;
+    overflow: hidden;
+    /* ステッカーの上に乗る中の要素なので、ホバーでは変えない（押し込むのはステッカーの側）。
+       線の太さと影は置く側が差し替えられる。 */
+    border: var(--thumb-border, var(--border-thumb)) solid var(--color-outline);
+    box-shadow: var(--thumb-shadow, none);
+    /* 角丸と、画像が来るまでの面・その上の花の色は置く側が差し替えられる
+       （再生リストのタイルは色の組ごとに変える）。既定はサムネイルの下地に、地の青の花。 */
+    border-radius: var(--thumb-radius, var(--radius-thumb-lg));
+    background-color: var(--thumb-bg, var(--color-thumb));
+    /* 花の色。文字の色ではない — 再生リストの 4n+2 のタイルでは蝶のピンク（文字にしない色）になる。
+       枠に文字を置くとこれを継ぐので、置くなら文字に自分で色を持たせる。
+       ピンクの文字を見る検査は無い（Issue rurino-nemo-fansite#99 で消した。ADR-0003 §9 で人が見る）。 */
+    color: var(--thumb-ink, var(--color-fill-ground));
+  }
+
+  /* 枠いっぱいに敷く。高さを 100% にするだけでは、グリッドの行が画像の高さ（4:3）に
+     引っ張られ、上に帯が残って下が切れる（実測）。枠から外して絶対配置で合わせる。
+     子の <img> もスクリプトが足す <img> もこのファイルのクラスを持たないので、
+     どちらも :global() で拾う。 */
+  .root :global(img) {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: opacity 0.4s ease-out;
+  }
+
+  /* 読み込み中は透明にして、下の中身（花・地の色）を見せておく。外すとフェードで出る。
+     prefers-reduced-motion でもこのフェードは残す — 位置も大きさも変わらない透明度の変化で、
+     消すと「いきなり切り替わる」ちらつきのほうが戻ってくる。 */
+  .root :global(img[data-loading]) {
+    opacity: 0;
+  }
+}

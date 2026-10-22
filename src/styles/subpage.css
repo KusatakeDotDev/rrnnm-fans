@@ -1,0 +1,42 @@
+@layer layout {
+  .subpage-paper {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-10);
+    width: 100%;
+    max-width: 40rem;
+    margin: var(--space-12) auto 0;
+    border: var(--border-card) solid var(--color-outline);
+    border-radius: var(--radius-card);
+    padding: var(--space-10) var(--space-12);
+    /* stylelint-disable-next-line plugin/use-baseline -- 対応していないブラウザでは、これまでどおり文字の境目で折り返すだけ（SiteFooter.module.css と同じ） */
+    word-break: auto-phrase;
+  }
+
+  .subpage-paper > section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .subpage-paper > section > h2 {
+    margin: 0;
+    border-bottom: 2px solid var(--color-outline);
+    padding-bottom: var(--space-2);
+    font-size: var(--text-h3);
+  }
+
+  .subpage-paper p {
+    margin: 0;
+  }
+
+  @media (max-width: 40rem) {
+    .subpage-paper {
+      gap: var(--space-8);
+      margin-top: var(--space-8);
+      border-width: var(--border-sticker);
+      border-radius: var(--radius-tile);
+      padding: var(--space-7) var(--space-5);
+    }
+  }
+}

@@ -1,0 +1,27 @@
+name: サイトの不具合
+description: 表示の崩れ・リンク切れ・動かないところなど、サイトの不具合をお知らせいただく窓口です
+body:
+  - type: markdown
+    attributes:
+      value: |
+        サイトの不具合をお知らせいただく窓口です。サイトへのご提案は[提案の窓口](https://github.com/KusatakeDotDev/rrnnm-fans-ideas)、掲載内容の削除・訂正のお申し出は[このサイトについて](https://rrnnm.fans/about/#contact)のお問い合わせ先からお願いいたします。
+  - type: input
+    id: page
+    attributes:
+      label: ページ
+      description: 不具合のあったページの URL
+      placeholder: https://rrnnm.fans/
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: 起きたこと
+      description: どう表示されたか、どう動いたか
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: 端末とブラウザ
+      placeholder: '例: iPhone の Safari、Windows の Chrome'

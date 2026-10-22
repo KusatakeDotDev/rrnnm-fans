@@ -1,0 +1,179 @@
+---
+// グッズ（docs/DESIGN.md §1 の /goods）。入口は全ページのフッター（src/data/site-navigation.ts の PAGE_LINKS）。
+// ご本人のボイスとグッズを、お店の商品ページへのリンクカードで並べる。柱は「送る」（docs/CONCEPT.md §4 柱9）。
+//
+// 見た目は /about と同じ下層ページの形（docs/DESIGN.md §3「レイアウト方針」）。h1 は白い帯、本文は影の無い白い紙1枚（.subpage-paper）。
+//
+// **お店ごとに節を分ける。** BOOTH のほかにも売られることがあるので、ページの名前（グッズ）は売り場を言わない。
+// 今あるのは BOOTH の節だけ。プリロールのコラボ商品を載せるかは RRNNM-21 で決める。
+// **お店の節の中は、ボイスとフィジカルグッズのグループに分ける。** 聞くものと手元に届く物を、
+// 分けて見られるように。グループとその並び、どのグループに並べるか（BOOTH のカテゴリで決める）、カードにカテゴリを出すかは
+// goods.ts の GOODS_GROUPS にある。商品の無くなったグループは、見出しごと出さない。
+// グループは h3 の見出しだけで分け、名前の付いた section にはしない。そうするとグループもランドマーク（region）になって
+// お店の節の region の中に入り、ランドマークの一覧に、h3 の見出しで移れるものと同じものが並ぶため。
+//
+// 商品は src/data/goods.ts に人が書き、画像はビルドのときに商品ページの OGP から取る（goods-images.ts）。
+// **画像を出すのは、商品ページへのリンクの中だけ**（docs/adr/0020-booth-goods-images.md の決定）。画像はこちらに置かず、
+// BOOTH（booth.pximg.net）から直に読み込む。リファラは送らない（プレビューのホスト名を BOOTH に渡さない）。
+// 画像の下には、いつも花を敷く。ビルドのときに取れなかった商品も、ブラウザで読めなかった画像（お店が差し替えた・
+// コンテンツブロッカーが止めたなど）も、花が見える。どのカードも同じ大きさの正方形に収まるので、画像の有無で並びが崩れない。
+// 画像の alt は空にする。リンクの名前は、すぐ下の商品の名前が持つ。
+// ページの最初の2件のカードの画像は遅延読み込みにしない。列の数は幅で変わり（下の .goods。320px で1列・390px で2列・
+// 広い画面で3列）、主なスマートフォンの幅（390px）では、最初の行の2枚が最初の画面に入るため。320px のときと、
+// 最初のグループが1件だけで2枚目が下のグループに回ったときは、2枚目が最初の画面の外に出ることがあるが、1枚を先に取るだけなので
+// 分けない。ほかは遅延読み込み（画面に入っていれば、すぐ取りに行く）。グループごとに数えると、下のグループの最初の2枚まで先に取ってしまう。
+// 画像の取れなかった商品も2件に数える（eager の画像がその分減るだけ）。数えずに後ろへ送ると、画面の外のカードの画像まで eager にしてしまう。
+//
+// **価格と在庫は出さない。** 変わっても気付けず、古いまま残るため。値段と在庫は BOOTH で見てもらう。
+// 商品の紹介文も書かない。写せば転載になり、要約すればこちらの読み方が混ざる（docs/CONCEPT.md §1）。
+// 「買って応援」のような、ご本人の収益に触れる言い方もしない（CONCEPT §1「サイトの立ち位置」）。
+//
+// 文は1行に書く。文字と文字の間で改行すると、日本語の間に空白が1つ入る（about.astro と同じ）。
+import Flower from '../components/Flower.tsx';
+import { GOODS_GROUPS } from '../data/goods';
+import { getBoothGoods } from '../data/goods-images';
+import { OFFICIAL } from '../data/official';
+import Base from '../layouts/Base.astro';
+import '../styles/subpage.css';
+
+const booth = await getBoothGoods();
+const groups = GOODS_GROUPS.map((group) => ({
+  ...group,
+  items: booth.filter((item) => group.kinds.some((kind) => kind === item.kind)),
+})).filter((group) => group.items.length > 0);
+const eager = new Set(groups.flatMap((group) => group.items).slice(0, 2));
+---
+
+<Base
+  title="グッズ"
+  description="瑠璃野ねもさんの BOOTH のお店に並んでいる、ボイスとグッズです。"
+>
+  <Fragment slot="head">
+    <h1>グッズ</h1>
+  </Fragment>
+
+  <div class="subpage-paper on-paper">
+    <section aria-labelledby="booth">
+      <h2 id="booth">BOOTH</h2>
+      <p>瑠璃野ねもさんの <a href={OFFICIAL.booth} target="_blank" rel="noopener noreferrer">BOOTH のお店<span class="sr-only">（外部サイトを新しいタブで開く）</span></a>に並んでいる、ボイスとグッズです。</p>
+      {groups.map((group) => (
+        <div class="group">
+          <h3>{group.title}</h3>
+          <ul class="goods" role="list">
+            {group.items.map((item) => (
+              <li>
+                <a href={item.url} target="_blank" rel="noopener noreferrer">
+                  <span class="image">
+                    <Flower size="40%" />
+                    {item.image && (
+                      <img src={item.image} width="620" height="620" alt="" loading={eager.has(item) ? 'eager' : 'lazy'} decoding="async" referrerpolicy="no-referrer" />
+                    )}
+                  </span>
+                  <span class="name">{item.name}</span>
+                  <span class="sr-only">（BOOTH の商品ページ。外部サイトを新しいタブで開く）</span>
+                </a>
+                {group.showKind && <span class="kind">{item.kind}</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </section>
+  </div>
+</Base>
+
+<style>
+  @layer pages {
+    /* 地とリンク色は書かない（.on-paper が持つ。src/styles/global.css）。文字色を書くのは補助文の .kind だけ。
+       紙・節・見出しの形も書かない（下層ページで共通の .subpage-paper が持つ。src/styles/subpage.css）。 */
+
+    h1 {
+      margin: 0;
+    }
+
+    /* ボイスとフィジカルグッズのグループ。お店の節（.subpage-paper > section）の中の行の間隔（0.625rem）に足して、上を空ける。
+       グループの間は、カードの行の間（下の .goods の 1.5rem）より広くして、どこでグループが変わるかを見せる。 */
+    .group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-top: 0.875rem;
+    }
+
+    .group + .group {
+      margin-top: 1.875rem;
+    }
+
+    /* グループの見出しは、お店の見出し（.subpage-paper の h2。--text-h3）より小さくする。下線も引かない。
+       今はカードの商品名（.name。16px・太字）と大きさも太さも書体も同じで、色（見出しは文字の色、商品名はリンクの色）と下線の有無で
+       見分ける。
+       TODO(RRNNM-41): h2 と同じ 20px にするか、商品名の太字をやめるかを決める。 */
+    h3 {
+      margin: 0;
+      font-size: var(--text-base);
+    }
+
+    /* カードの並び。広い画面では紙の中に3つ、390px のスマートフォンでは2つ入る幅。
+       行頭の点は消す。list-style: none の ul は Safari と VoiceOver でリストとして読まれなくなるので、
+       role="list" で戻す（about.astro の ul は文の箇条なので、点を残している）。 */
+    .goods {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+      gap: 1.5rem 1rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .goods li {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .goods a {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    /* 画像の場所。正方形の枠で、サムネイルの下地に地の青の花を敷き、その上に画像を重ねる。
+       枠は再生リストのタイルの中のサムネイルと同じ細い線と角丸。
+       線・下地・花の色・画像の敷き方は、YouTubeThumbnail（src/components/YouTubeThumbnail.module.css の .root）と
+       そろえてある。片方を直したら、もう片方も合わせる。あの枠を使わないのは、縦横比が違ううえに、あの枠のマーカー
+       （data-youtube-thumbnail）の付いた画像には、読み込みを待つスクリプトを置く決まりがあるため
+       （tests/artifact/build-output.spec.ts）。ここの画像はフェードさせない。フェードには読み込みを待つスクリプトが要り、
+       このページは JS を持たないまま置きたいため。 */
+    .image {
+      position: relative;
+      display: grid;
+      place-items: center;
+      aspect-ratio: 1;
+      overflow: hidden;
+      border: var(--border-thumb) solid var(--color-outline);
+      border-radius: var(--radius-thumb);
+      background-color: var(--color-thumb);
+      color: var(--color-fill-ground);
+    }
+
+    .image img {
+      position: absolute;
+      inset: 0;
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .name {
+      font-weight: 700;
+    }
+
+    /* カテゴリは短いラベルなので小さくしてよい（--text-small）。
+       補助文の色は白い面の上でだけ使える（tests/unit/palette.test.ts）。ここは紙の上。 */
+    .kind {
+      color: var(--color-text-muted);
+      font-size: var(--text-small);
+    }
+  }
+</style>

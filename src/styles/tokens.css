@@ -1,0 +1,270 @@
+/* =============================================================================
+   デザイントークン（ADR-0010 の決定 / docs/DESIGN.md §4「パレットと配色ルール」）
+   -----------------------------------------------------------------------------
+   色の literal（16進数）は「パレット」ブロックにだけ書き、コンポーネントは「役割」を参照する（Issue rurino-nemo-fansite#5）。
+   役割にも16進数を書かない。ダークモード（Issue rurino-nemo-fansite#8）をパレットの差し替えだけで済ませるため。
+   ============================================================================= */
+
+:root {
+  color-scheme: light; /* TODO(RRNNM-28): light dark にする */
+
+  /* ---------------------------------------------------------------------------
+     パレット
+     TODO(RRNNM-28): このブロックを @media (prefers-color-scheme: dark) で再定義する（役割トークンには触らない）。
+     ------------------------------------------------------------------------- */
+
+  /* ADR-0010「配色 — 出どころを「キービジュアルの実測」から「ロゴと設定画」へ」 */
+  --c-ink:        #1B2A6B; /* 文字・枠・ずらし影。瞳の濃紺              */
+  --c-ink-night:  #0E1640; /* 夜の畑の上のずらし影                      */
+  --c-ink-muted:  #5A6286; /* 補助文。出典の文字                        */
+  --c-blue-deep:  #2658AF; /* 文字の帯・フッターの上端。裾の青      */
+  --c-blue-logo:  #2A51A3; /* ロゴの青。白い面の上のリンク               */
+  --c-ground:     #A2C7F3; /* ページの地。髪・スカートの淡い青           */
+  --c-frame:      #EAF4FB; /* サムネイルの下地                          */
+  --c-lavender:   #E7D7FE; /* ステッカー                                */
+  --c-ribbon:     #988CDE; /* リボンの紫。装飾だけ（白地 2.94）          */
+  --c-pink-soft:  #FCE5F5; /* 髪先のピンク。ステッカーの面               */
+  --c-pink-deep:  #E25B82; /* 蝶のピンク。差し色。**文字にしない**        */
+  --c-paper:      #FFFFFF; /* 白い面                                    */
+
+  /* 分類バッジ・数字タイルの面。案A のころの値（ADR-0010「配色 — 出どころを「キービジュアルの実測」から「ロゴと設定画」へ」）。
+     TODO(RRNNM-15): 新しい配色へ寄せ直す */
+  --c-pink:      #FAACC3; /* 淡いピンクの面                            */
+  --c-blue:      #4A74C4; /* 青の面                                    */
+  --c-navy:      #3E519B; /* 濃青の面                                  */
+  --c-blue-pale: #CFE0F3; /* 淡青の面。畑の花びらの明るいところにも使う   */
+  --c-violet:    #5D4390; /* 紫の面・差し色の文字                       */
+  --c-amber:     #FAC05B; /* 黄の面                                    */
+
+  /* 公式アカウントのアイコンの下地（SiteFooter.tsx / docs/BRAND_ASSETS.md）。
+     各サービスのアプリアイコンの地に合わせた色で、こちらの配色ではない。ほかに使わない。 */
+  --c-brand-x:           #000000; /* X のアプリアイコンの黒                          */
+  --c-brand-marshmallow: #F3969A; /* マシュマロ公式 GIF が想定するピンクの背景       */
+
+  /* ネモフィラ畑（ADR-0009「色」）。畑のモックの値を起点に、上に置く文字が AA を満たすよう空の濃さを詰めたもの。
+     その比は tests/unit/palette.test.ts が見る（axe は WebGL とグラデーションの上の文字を測れないため）。 */
+  --c-field-day-sky:     #9FCBEF; /* ふだん。空の上端             */
+  --c-field-day-haze:    #DBEAF6; /* 空の下のほう                 */
+  --c-field-day-fog:     #E4EEF6; /* 地平線の霧。遠くの花もこの色へ */
+  --c-field-day-ground:  #557F9C; /* 花のあいだに見える地面        */
+  --c-field-day-stem:    #6E9C86; /* 茎                          */
+  --c-field-soon-sky:    #8F95D0; /* 配信前。夕方の空              */
+  --c-field-soon-haze:   #F0D8DF;
+  --c-field-soon-fog:    #ECDDE5;
+  --c-field-soon-ground: #7482AA;
+  --c-field-soon-stem:   #7A8A9E;
+  --c-field-soon-mote:   #FFF1E6; /* 漂う光の粒                   */
+  --c-field-live-sky:    #1B285C; /* 配信中。夜の畑               */
+  --c-field-live-haze:   #46609F;
+  --c-field-live-fog:    #3F5A9E;
+  --c-field-live-ground: #22335E;
+  --c-field-live-stem:   #3D5A78;
+  --c-field-live-mote:   #D6ECFF; /* 漂う光の粒・夜空の星          */
+  --c-field-live-glow:   #9FD0FF; /* 夜に花が帯びる光             */
+  --c-field-live-dot:    #FF5A7A; /* 「配信中」の点。文字ではない  */
+  --c-field-petal:       #92C7F1; /* 花びらの中ほど               */
+  --c-field-petal-edge:  #5B9DDF; /* 花びらの縁                   */
+  --c-field-petal-vein:  #3E519B; /* 花びらの筋                   */
+
+  /* ---------------------------------------------------------------------------
+     役割 — 面
+     ------------------------------------------------------------------------- */
+  --color-bg:      var(--c-ground); /* ページの地                         */
+  --color-surface: var(--c-paper);  /* ステッカー・カードの面             */
+  --color-frame:   var(--c-ground); /* 白い面の上の細い区切り線・縁        */
+
+  /* ステッカーの枠と、ずらした影。**枠は色だけで区別しない**ので比の下限はかからない。 */
+  --color-outline:       var(--c-ink);
+  --color-outline-night: var(--c-ink-night); /* 夜の畑の上の影 */
+
+  /* 畑の上の文字の後ろに敷くにじみ（NemophilaField.module.css の --field-halo）。**装飾ではない** —
+     文字色と組で、花に掛かったところの比を支える（ADR-0010「ヒーロー — 畑はそのまま、上に乗るものを組み直す」）。
+     組は tests/unit/palette.test.ts が見る。 */
+  --color-halo:       var(--c-paper);
+  --color-halo-night: var(--c-ink-night);
+
+  /* 地の上の装飾（ドット・花・蝶）。**文字ではない**ので比の下限はかからない。 */
+  --color-decor:        var(--c-paper);
+  --color-decor-pink:   var(--c-pink-deep); /* 蝶 */
+  --color-decor-violet: var(--c-ribbon);    /* 蝶・帯の下の縁 */
+  --color-decor-petal:  var(--c-field-petal); /* フッターの区切りの花と線 */
+  --color-decor-lavender: var(--c-lavender); /* フッターの区切りの花（ひとつおき） */
+  --color-decor-star:   var(--c-field-live-mote);
+  --color-decor-live:   var(--c-field-live-dot); /* 配信中の点 */
+
+  /* サムネイルが来るまでの下地。上に置く花は --color-decor（白）ではなく地の青。 */
+  --color-thumb: var(--c-frame);
+
+  /* 文字の帯・フッターの上端。この上は白（6.78）。 */
+  --color-band: var(--c-blue-deep);
+
+  /* 差し色。白地 7.86 AA。**青い地では 4.49 で不可** — 白い面の上でだけ文字にできる。 */
+  --color-accent: var(--c-violet);
+
+  /* ---------------------------------------------------------------------------
+     役割 — 面と文字色の組
+     面の色と、その上に置ける文字色は**組で決まる**。組を崩すと必ず AA を割るので、
+     どちらの文字色を使うかはページ側ではなくコンポーネントが持つ。
+     ------------------------------------------------------------------------- */
+
+  /* 濃い面。この上は --color-text-on-fill（白）。比は順に 4.58 / 7.36 / 7.86 / 13.21。 */
+  --color-fill-blue:      var(--c-blue);
+  --color-fill-blue-deep: var(--c-navy);
+  --color-fill-violet:    var(--c-violet);
+  --color-fill-ink:       var(--c-ink);
+
+  /* 淡い面。この上は --color-text（本文色）。
+     ピンク・淡青・黄は分類バッジの面、ラベンダーと淡いピンクはステッカーの面。
+     どれも文字色にはできない（黄は白地で比 1.65）。面にしか使わない。 */
+  --color-fill-pink:      var(--c-pink);
+  --color-fill-pale:      var(--c-blue-pale);
+  --color-fill-amber:     var(--c-amber);
+  --color-fill-lavender:  var(--c-lavender);
+  --color-fill-pink-soft: var(--c-pink-soft);
+  --color-fill-ground:    var(--c-ground);
+
+  /* 公式アカウントのアイコンの下地。上に置くのは各社のロゴだけで、文字は置かない。 */
+  --color-fill-brand-youtube:     var(--c-paper);
+  --color-fill-brand-x:           var(--c-brand-x);
+  --color-fill-brand-marshmallow: var(--c-brand-marshmallow);
+  --color-fill-brand-skeb:        var(--c-paper);
+
+  /* 濃い面の上の文字。淡い面の上では使えない（白は地の青の上で 1.75）。 */
+  --color-text-on-fill: var(--c-paper);
+
+  /* ---------------------------------------------------------------------------
+     役割 — 文字（比は docs/DESIGN.md §4「配色ルール — コントラスト実測に基づく」）
+     地が変われば使える色も変わるので、役割名に地を書く。
+     ------------------------------------------------------------------------- */
+
+  /* 本文・見出し・枠。白地 13.21 / 青い地 7.55。どちらの地でも AA。
+     **青い地（#A2C7F3）で AA を満たす文字色はこれだけ。** 地の上に直に置く文字は
+     見出しも注記もリンクも全部これになる。他の色は白い面へ上げる。 */
+  --color-text: var(--c-ink);
+
+  /* 補助文。出典の注記・「未確認」チップの文字。
+     白地 5.96 AA。**青い地では 3.40 で不可** — 白い面の上でだけ使う。
+     **本文には使わない。** 本文を薄くする用途ではなく、本文と役割が違う短い文のための色。 */
+  --color-text-muted: var(--c-ink-muted);
+
+  /* 数字を大きく見せるときの色（docs/DESIGN.md §5「数字を効かせる」）。
+     白地 7.49 AA。**青い地では 4.28 で不可**。数字は白いタイルの上に出す。 */
+  --color-figure: var(--c-blue-logo);
+
+  /* 見出し。本文色と分けて持つのは、夜の畑が白へ差し替えるため（NemophilaField.module.css）。 */
+  --color-heading: var(--color-text);
+
+  /* リンク。青い地に置ける色が本文色しか無いので、地の上のリンクは**下線で区別する**。 */
+  --color-link-on-paper:  var(--c-blue-logo); /* 白地 7.49 AA                 */
+  --color-link-on-ground: var(--c-ink);       /* 青い地 7.55 AA。ロゴの青は 4.28 で不可 */
+
+  /* 実際に使う側の1個。既定はページの地＝青。
+     白い面を敷いた要素は .on-paper で、濃い面のコンポーネントは自分でこれを差し替える（global.css の「リンク」）。 */
+  --color-link: var(--color-link-on-ground);
+
+  /* ---------------------------------------------------------------------------
+     役割 — 書体（docs/DESIGN.md §4「書体」・docs/adr/0024-zen-maru-gothic-webfont.md）
+     ------------------------------------------------------------------------- */
+
+  /* 本文。先頭の2つは webfont（src/styles/fonts.css）と、読み込みを待つあいだの端末の書体（src/styles/font-fallback.css）。
+     その後ろは、どちらも使えないとき（どちらも読まない Storybook と同期先、local() が当たらない端末）の並び。 */
+  --font-sans:
+    "Zen Maru Gothic",
+    "Zen Maru Gothic Fallback",
+    system-ui,
+    -apple-system,
+    "Hiragino Sans",
+    "Hiragino Kaku Gothic ProN",
+    "Yu Gothic UI",
+    "Noto Sans JP",
+    "Meiryo",
+    sans-serif;
+
+  /* 見出し・サイトタイトル・分類バッジ・数字タイル。 */
+  --font-display: var(--font-sans);
+
+  /* 英字の装飾（文字の帯）。Quicksand は **webfont にしない**（ADR-0010「書体」）。 */
+  --font-latin-display:
+    "Quicksand",
+    var(--font-display);
+
+  /* ---------------------------------------------------------------------------
+     役割 — 文字サイズと行送り
+     ------------------------------------------------------------------------- */
+  /* 補助文とチップ。**本文には使わない**（本文の下限は 16px）。
+     ラベル・単位・「未確認」チップのような、本文の外側にある短い文だけ。 */
+  --text-small: 0.875rem; /* 14px                      */
+
+  --text-base: 1rem;    /* 16px。本文はこれを下回らない */
+  --text-h3:   1.25rem; /* 20px                      */
+  --text-h2:   clamp(1.375rem, 1rem + 1.6vw, 1.875rem);   /* 22〜30px。見出しステッカー */
+  --text-h1:   clamp(2.125rem, 1.2rem + 3.6vw, 3.375rem); /* 34〜54px。畑のキャッチ   */
+
+  /* 数字を大きく見せる箇所（docs/DESIGN.md §5）。見出しではないので h* とは別に持つ。 */
+  --text-figure: 1.375rem; /* 22px                     */
+
+  --leading-body:    1.8; /* 日本語主体。行間はゆったり */
+  --leading-heading: 1.4;
+
+  /* ---------------------------------------------------------------------------
+     役割 — 形（ADR-0010「形 — ステッカー」）
+     コンポーネントごとに数値を書かずここに置く。
+     ------------------------------------------------------------------------- */
+  --radius-card:     2.25rem;  /* 36px 大きいカード                    */
+  --radius-tile:     1.625rem; /* 26px タイル・狭い画面のカード          */
+  --radius-thumb-lg: 1.375rem; /* 22px カードの中のサムネイル            */
+  --radius-thumb:    1rem;     /* 16px タイルの中のサムネイル            */
+  --radius-pill:     999px;    /* ボタン・ピル・見出しステッカー          */
+
+  --border-sticker: 3px; /* ボタン・タイル・見出し */
+  --border-card:    4px; /* 大きいカード           */
+  --border-thumb:   2px; /* サムネイルの縁。ステッカーの上に乗る中の要素なので細く */
+
+  /* ずらした影の長さ。色は --color-outline（夜は --color-outline-night）。 */
+  --offset-button: 4px;
+  --offset-pill:   5px;
+  --offset-tile:   6px;
+  --offset-card:   10px;
+  /* 押し込んだとき（ホバー・フォーカス）。押し込んだステッカーと同じ影を、中の要素に添えるときにも使う。 */
+  --offset-pressed: 2px;
+
+  /* 押せるものの大きさの下限（44px）。 */
+  --tap-size: 2.75rem;
+
+  /* 見出しのステッカー（StickerHeading）の既定の傾き。 */
+  --tilt-sticker: -4deg;
+
+  /* 地に敷く白いドットの間隔（狭い画面は global.css で詰める）。 */
+  --dot-gap: 1.75rem; /* 28px */
+  /* ドットの半径・ぼかしの外側の半径・濃さ（global.css の body::before と、OG 画像が読む）。 */
+  --dot-radius: 2px;
+  --dot-edge: 2.5px;
+  --dot-opacity: 0.55;
+
+  /* ---------------------------------------------------------------------------
+     役割 — 余白（ADR-0025「余白は 4px 刻みのトークンにし、切り上げて丸める」）
+     --space-N は N × 0.25rem（4px 刻み）。使う N だけを置く。
+     ------------------------------------------------------------------------- */
+  --space-1:   0.25rem;  /* 4px */
+  --space-2:   0.5rem;   /* 8px */
+  --space-3:   0.75rem;  /* 12px */
+  --space-4:   1rem;     /* 16px */
+  --space-5:   1.25rem;  /* 20px */
+  --space-6:   1.5rem;   /* 24px */
+  --space-7:   1.75rem;  /* 28px */
+  --space-8:   2rem;     /* 32px */
+  --space-9:   2.25rem;  /* 36px */
+  --space-10:  2.5rem;   /* 40px */
+  --space-12:  3rem;     /* 48px */
+  --space-13:  3.25rem;  /* 52px */
+  --space-14:  3.5rem;   /* 56px */
+  --space-16:  4rem;     /* 64px */
+  --space-18:  4.5rem;   /* 72px */
+  --space-20:  5rem;     /* 80px */
+  --space-24:  6rem;     /* 96px */
+  --space-28:  7rem;     /* 112px */
+  --space-30:  7.5rem;   /* 120px */
+
+  /* ページ内のリンクで飛んだ先の上に空ける余白。見出しのステッカーが画面の上端に貼り付かないようにする。 */
+  --anchor-offset: var(--space-16);
+}

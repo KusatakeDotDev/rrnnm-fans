@@ -1,0 +1,52 @@
+@layer components {
+  .root {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 1.875rem;
+    height: 1.875rem;
+    border-radius: var(--radius-pill);
+    font-family: var(--font-display);
+    font-size: var(--text-small);
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  /* 濃い面 — 白文字。比は 4.58 / 7.36 / 7.86 / 13.57（tokens.css）。 */
+  .root[data-tone='blue'] {
+    background-color: var(--color-fill-blue);
+    color: var(--color-text-on-fill);
+  }
+
+  .root[data-tone='blue-deep'] {
+    background-color: var(--color-fill-blue-deep);
+    color: var(--color-text-on-fill);
+  }
+
+  .root[data-tone='violet'] {
+    background-color: var(--color-fill-violet);
+    color: var(--color-text-on-fill);
+  }
+
+  .root[data-tone='ink'] {
+    background-color: var(--color-fill-ink);
+    color: var(--color-text-on-fill);
+  }
+
+  /* 淡い面 — 本文色。比は 7.60 / 10.09 / 8.24（tokens.css）。
+     ここに白文字を置くと 1.79 / 1.35 / 1.65 まで落ちる。 */
+  .root[data-tone='pink'] {
+    background-color: var(--color-fill-pink);
+    color: var(--color-text);
+  }
+
+  .root[data-tone='pale'] {
+    background-color: var(--color-fill-pale);
+    color: var(--color-text);
+  }
+
+  .root[data-tone='amber'] {
+    background-color: var(--color-fill-amber);
+    color: var(--color-text);
+  }
+}
