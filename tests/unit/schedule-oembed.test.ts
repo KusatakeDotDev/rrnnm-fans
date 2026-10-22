@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { SCHEDULE_VIDEO_ID } from '../../src/data/schedule';
+import { SCHEDULE_AUTHOR, SCHEDULE_VIDEO_ID } from '../../src/data/schedule';
 import { fetchErrorReason, readMaxresHead, readScheduleOEmbed } from '../../src/lib/schedule-oembed';
 
 /**
@@ -16,13 +16,77 @@ const OEMBED = {
   thumbnail_width: 480,
   thumbnail_height: 360,
 };
+/** これから始まるライブ（待機所）の oEmbed。題名は html の iframe にだけあり、作者名と画像は無い（RRNNM-106）。 */
+const WAITING_ROOM = {
+  type: 'video',
+  version: '1.0',
+  provider_name: 'YouTube',
+  provider_url: 'https://www.youtube.com/',
+  html: `<iframe width="200" height="150" src="https://www.youtube.com/embed/${SCHEDULE_VIDEO_ID}?feature=oembed" frameborder="0" allowfullscreen title="💠今週の配信スケジュール💠"></iframe>`,
+};
 const OK = { ok: true, status: 200 };
 
 const reasonOf = (result: { ok: true } | { ok: false; reason: string }) => (result.ok ? null : result.reason);
+const oembedOf = (json: unknown) => {
+  const result = readScheduleOEmbed(OK, JSON.stringify(json));
+  return result.ok ? result.oembed : null;
+};
+const withIframeTitle = (title: string) => ({ ...WAITING_ROOM, html: WAITING_ROOM.html.replace(/title="[^"]*"/, `title="${title}"`) });
 
 describe('予定の oEmbed の応答', () => {
-  it('oEmbed の形の JSON なら、その oEmbed を使う', () => {
-    expect(readScheduleOEmbed(OK, JSON.stringify(OEMBED))).toEqual({ ok: true, oembed: OEMBED });
+  it('項目が揃っていれば、題名・作者名・提供元・画像を読む', () => {
+    expect(oembedOf(OEMBED)).toEqual({
+      title: OEMBED.title,
+      author_name: OEMBED.author_name,
+      provider_name: 'YouTube',
+      thumbnail: { url: OEMBED.thumbnail_url, width: 480, height: 360 },
+    });
+  });
+
+  it('待機所の最小限の応答なら、題名を html の iframe から読み、作者名と画像は無しにする', () => {
+    expect(oembedOf(WAITING_ROOM)).toEqual({
+      title: '💠今週の配信スケジュール💠',
+      author_name: undefined,
+      provider_name: 'YouTube',
+      thumbnail: undefined,
+    });
+  });
+
+  it('title があれば、iframe の title より先に使う', () => {
+    expect(oembedOf({ ...WAITING_ROOM, title: '項目の題名' })?.title).toBe('項目の題名');
+  });
+
+  it('iframe の title のエスケープを戻す', () => {
+    expect(oembedOf(withIframeTitle('&lt;A&gt; &amp; &quot;B&quot; Don&#39;t &#128160;'))?.title).toBe(`<A> & "B" Don't 💠`);
+  });
+
+  it('エスケープは1回だけ戻し、題名に書かれた文字参照はそのまま残す', () => {
+    expect(oembedOf(withIframeTitle('AT&amp;amp;T &amp;#39;'))?.title).toBe('AT&amp;T &#39;');
+  });
+
+  it('作者名の前後の空白は落とす', () => {
+    expect(oembedOf({ ...OEMBED, author_name: ' テスト用チャンネル\n' })?.author_name).toBe('テスト用チャンネル');
+  });
+
+  it.each([
+    ['null', null],
+    ['文字列でない', 1],
+    ['空', ''],
+    ['空白だけ', ' \t'],
+  ])('作者名が %s なら、作者名は無しにする', (_, author) => {
+    const oembed = oembedOf({ ...OEMBED, author_name: author });
+    expect(oembed?.title).toBe(OEMBED.title);
+    expect(oembed?.author_name).toBeUndefined();
+  });
+
+  it.each([
+    ['thumbnail_url', 1],
+    ['thumbnail_width', '480'],
+    ['thumbnail_height', '360'],
+  ])('%s の型が違えば、画像は無しにし、ほかは読む', (field, wrongType) => {
+    const oembed = oembedOf({ ...OEMBED, [field]: wrongType });
+    expect(oembed?.title).toBe(OEMBED.title);
+    expect(oembed?.thumbnail).toBeUndefined();
   });
 
   it('HTTP の失敗なら使わず、状態を理由に出す', () => {
@@ -34,7 +98,10 @@ describe('予定の oEmbed の応答', () => {
     ['本文が空白だけ', ' \n'],
     ['壊れた JSON', '{broken'],
     ['形の違う JSON', JSON.stringify({ error: 'Not Found' })],
-    ['必須の項目が欠けた JSON', JSON.stringify({ ...OEMBED, thumbnail_url: undefined })],
+    ['提供元が無い JSON', JSON.stringify({ ...OEMBED, provider_name: undefined })],
+    ['題名も iframe も無い JSON', JSON.stringify({ ...WAITING_ROOM, html: undefined })],
+    ['iframe に title が無い JSON', JSON.stringify({ ...WAITING_ROOM, html: '<iframe src="https://www.youtube.com/embed/x"></iframe>' })],
+    ['iframe の title が空の JSON', JSON.stringify(withIframeTitle(''))],
     ['JSON の null', 'null'],
   ])('%s なら使わない', (_, body) => {
     expect(readScheduleOEmbed(OK, body).ok).toBe(false);
@@ -155,6 +222,26 @@ describe('ビルドのときの予定の取得', () => {
       thumbnail: { url: `https://i.ytimg.com/vi/${SCHEDULE_VIDEO_ID}/maxresdefault.jpg`, width: 1280, height: 720 },
     });
     expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('待機所の最小限の応答でも、iframe の題名と決まった作者名で、高解像度の予定を出す', async () => {
+    const { schedule, warn } = await getSchedule(async (_url, init) =>
+      init?.method === 'HEAD' ? new Response(null, { headers: { 'content-length': '20000' } }) : Response.json(WAITING_ROOM),
+    );
+    expect(schedule).toEqual({
+      oembed: { title: '💠今週の配信スケジュール💠', author_name: SCHEDULE_AUTHOR, provider_name: 'YouTube' },
+      thumbnail: { url: `https://i.ytimg.com/vi/${SCHEDULE_VIDEO_ID}/maxresdefault.jpg`, width: 1280, height: 720 },
+    });
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('高解像度が無く、oEmbed にも画像が無ければ、予定なしにし、理由をログに出す', async () => {
+    const { schedule, warn } = await getSchedule(async (_url, init) =>
+      init?.method === 'HEAD' ? new Response(null, { status: 404 }) : Response.json(WAITING_ROOM),
+    );
+    expect(schedule).toBeNull();
+    expect(warn).toHaveBeenCalledOnce();
+    expect(String(warn.mock.calls[0]?.[0])).toContain('404');
   });
 
   it('oEmbed が HTTP で失敗したら、予定なしにし、状態をログに出す', async () => {

@@ -44,7 +44,7 @@ export const WithThumbnail: Story = {
   ),
 };
 
-// oEmbed に作者名が無かったとき。カードはそのまま描き、出典の行は「出典：＜タイトル＞」になる。
+// 作者名を渡さなかったとき。カードはそのまま描き、出典の行は「出典：＜タイトル＞」になる。
 export const WithoutAuthor: Story = {
   render: () => (
     <div className="on-ground" style={ground}>
