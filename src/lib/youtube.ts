@@ -1,15 +1,13 @@
 /**
- * YouTube oEmbed の応答の読み方と、表紙として受け入れる画像の条件（ADR-0008「名前と表紙は、ブラウザで取る」）。
+ * YouTube oEmbed のリクエスト先と、再生リストの応答の読み方・表紙として受け入れる画像の条件（ADR-0008「名前と表紙は、ブラウザで取る」）。
  *
- * **ビルド時（src/data/schedule-oembed.ts）とブラウザ（PlaylistGrid.astro）と
- * 監視（scripts/check-playlists.mjs）が同じ関数を使う。** 条件を2箇所に書くと、片方だけが緩む。
+ * **ブラウザ（PlaylistGrid.astro）と監視（scripts/check-playlists.mjs）とビルド時の予定（src/data/schedule-oembed.ts）が
+ * 同じリクエスト先を使う。** 予定の応答だけは、待機所の最小限の応答も読むので、src/lib/schedule-oembed.ts が別に読む（RRNNM-106）。
  * fetch はしない（ADR-0003「層1 — 純関数だけを置く」）。
  */
 
 export interface OEmbed {
   title: string;
-  /** 投稿したチャンネルの名前。`isOEmbed` は確かめないので型は分からない。読むのは `oembedAuthor` を通す。 */
-  author_name?: unknown;
   provider_name: string;
   thumbnail_url: string;
   thumbnail_width: number;
@@ -37,20 +35,6 @@ export function isOEmbed(value: unknown): value is OEmbed {
     typeof v.thumbnail_width === 'number' &&
     typeof v.thumbnail_height === 'number'
   );
-}
-
-/**
- * oEmbed の応答から作者名（投稿したチャンネルの名前）を読む。文字列でない・空白だけなら `undefined`。
- * 予定のカードの出典の行に出す（docs/adr/0004-schedule-thumbnail.md「出典の行に作者名を出す」）。
- *
- * **`isOEmbed` の必須には入れない。** 使うのは出典の行だけで、無ければ作者名を省いて描けばよい。
- * 必須にすると、作者名が欠けただけで予定のカードがテキストリンクに落ち、使わない再生リストの表紙まで出なくなる。
- */
-export function oembedAuthor(oembed: OEmbed): string | undefined {
-  const name = oembed.author_name;
-  if (typeof name !== 'string') return undefined;
-  const trimmed = name.trim();
-  return trimmed === '' ? undefined : trimmed;
 }
 
 /**

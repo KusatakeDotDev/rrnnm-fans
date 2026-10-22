@@ -10,8 +10,8 @@
  * プロセス内では oEmbed fetch・maxresdefault の存在確認 HEAD がそれぞれ1回だけになる。
  */
 import { fetchErrorReason, readMaxresHead, readScheduleOEmbed } from '../lib/schedule-oembed';
-import { oembedAuthor, oembedUrl } from '../lib/youtube';
-import { SCHEDULE_VIDEO_ID, WATCH_URL } from './schedule';
+import { oembedUrl } from '../lib/youtube';
+import { SCHEDULE_AUTHOR, SCHEDULE_VIDEO_ID, WATCH_URL } from './schedule';
 import type { ScheduleCardProps } from '../components/ScheduleCard.tsx';
 
 // YouTube 側の応答が詰まった場合に astro build がブロックされ続けないための上限。
@@ -49,15 +49,16 @@ async function fetchSchedule(): Promise<ScheduleData | null> {
     console.warn(`[schedule] ${WATCH_URL} の oEmbed を取れなかった: ${fetched.reason}`);
     return null;
   }
-  const { oembed } = fetched;
+  const { title, author_name, provider_name, thumbnail } = fetched.oembed;
+  const card = { title, author_name: author_name ?? SCHEDULE_AUTHOR, provider_name };
   const maxres = await fetchMaxres();
-  if (!maxres.ok) console.warn(`[schedule] ${MAXRES_URL} を使わず、oEmbed の画像にする: ${maxres.reason}`);
-  return {
-    oembed: { title: oembed.title, author_name: oembedAuthor(oembed), provider_name: oembed.provider_name },
-    thumbnail: maxres.ok
-      ? { url: MAXRES_URL, width: 1280, height: 720 }
-      : { url: oembed.thumbnail_url, width: oembed.thumbnail_width, height: oembed.thumbnail_height },
-  };
+  if (maxres.ok) return { oembed: card, thumbnail: { url: MAXRES_URL, width: 1280, height: 720 } };
+  if (thumbnail === undefined) {
+    console.warn(`[schedule] ${MAXRES_URL} を使えず、oEmbed にも画像が無い: ${maxres.reason}`);
+    return null;
+  }
+  console.warn(`[schedule] ${MAXRES_URL} を使わず、oEmbed の画像にする: ${maxres.reason}`);
+  return { oembed: card, thumbnail };
 }
 
 let cached: Promise<ScheduleData | null> | null = null;

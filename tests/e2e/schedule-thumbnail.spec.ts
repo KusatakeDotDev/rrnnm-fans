@@ -277,7 +277,7 @@ test.describe('JS を切ったとき', () => {
       expect.soft(await links(page, `a:has(${thumbnail})`), 'サムネイルのリンク').toEqual([newTab(WATCH_URL)]);
       expect.soft(await links(page, '[data-schedule-source] a'), '出典の行のタイトルのリンク').toEqual([newTab(WATCH_URL)]);
     });
-    // 実データでは作者名が取れないこともあり、取れなければ省いて描くので、作者名は固定応答のビルドでだけ見る。
+    // 実データでは作者名を oEmbed から取れず、決まった名前に替えることもあるので、作者名は固定応答のビルドでだけ見る。
     if (fixtureBuild()) {
       // 固定応答（tests/fixtures/build-fetch.mjs）が効いていることを確かめるのは、ここだけ。
       await test.step('固定応答のビルドでは、予定のカードの出典の行に固定データの作者名が出る', async () => {
