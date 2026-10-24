@@ -56,8 +56,8 @@ export function validateQuote(value: unknown): WorkQuote {
     throw new Error("Invalid quote source");
   // Stryker disable next-line ConditionalExpression: JSON から読める値なら、文字列でなくても下の toISOString との照合で同じように弾く
   if (typeof value.retrieved !== "string") throw new Error("Invalid quote date");
-  // Stryker disable next-line Regex: 下の toISOString との照合は10文字の値しか通さず、この形も10文字ちょうどなので、アンカーを外しても結果が同じ
   if (
+    // Stryker disable next-line Regex: 下の toISOString との照合は10文字の値しか通さず、この形も10文字ちょうどなので、アンカーを外しても結果が同じ
     !/^\d{4}-\d{2}-\d{2}$/.test(value.retrieved) ||
     !Number.isFinite(Date.parse(value.retrieved)) ||
     new Date(value.retrieved).toISOString().slice(0, 10) !== value.retrieved ||

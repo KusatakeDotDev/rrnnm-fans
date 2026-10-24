@@ -57,9 +57,9 @@ export function boothItemImage(html: string, itemId: number): string | null {
  * コメントは、HTML と同じく `<!-->`・`<!--->` と、`--!>` でも閉じたものとして読む。
  */
 function headOf(html: string): string {
-  // Stryker disable next-line StringLiteral: コメントと script・noscript はタグの外にしか無いので、外した跡に何を置いても、読む <meta> と </head> は変わらない
   const stripped = html.replace(
     /<!--(?:-?>|[\s\S]*?--!?>)|<(script|noscript)\b[\s\S]*?<\/\1\s*>/gi,
+    // Stryker disable next-line StringLiteral: コメントと script・noscript はタグの外にしか無いので、外した跡に何を置いても、読む <meta> と </head> は変わらない
     "",
   );
   const end = stripped.search(/<\/head\s*>/i);
