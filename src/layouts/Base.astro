@@ -92,7 +92,7 @@ const pageLinks = PAGE_LINKS.filter((link) => isRouteVisible(link.href));
         （src/components/ScheduleCard.tsx の preloadThumbnailScript）。CSS の <link> より前に出るので、
         ここに置いたインラインのスクリプトは CSS を待たずに走る。 */}
     <slot name="preload" />
-    {/* media="print" のあいだは描画を止めず、読み終えてから全部の画面に当てる。JS が無いときは当てず、フォールバックの面で描く（ADR-0032）。 */}
+    {/* media="print" のあいだは描画を止めず、読み終えてから全部の画面に当てる。JS が無いときは当てず、フォールバックの面で描く（ADR-0032「`<noscript>` の webfont も外す」）。 */}
     <link rel="stylesheet" href={webfontHref} media="print" onload="this.media='all'" />
   </head>
   <body>
