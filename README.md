@@ -41,7 +41,7 @@ Pull Request は、今のところお受けしていません。
 - コンポーネントは React（`.tsx`）で書いていますが、使うのはビルドのときだけで、ブラウザには React を配っていません。同じコンポーネントを Claude Design（デザインツール）に同期して、見た目を作るためです
 - トップのネモフィラ畑は、ライブラリを使わずに WebGL2 で描いています
 - テストは [Vite+](https://viteplus.dev/)（Vitest）・Playwright・Storybook で、ミューテーションテストに Stryker を使っています
-- JS・TS の lint は Vite+（Oxlint）、CSS の lint は Stylelint です
+- JS・TS の lint と整形は Vite+（Oxlint・Oxfmt）、CSS の lint は Stylelint です
 
 手元で動かす手順と、コードのコメントにある `ADR-0011` や `RRNNM-49` などの参照の意味は、[`DEVELOPMENT.md`](DEVELOPMENT.md) にあります。
 

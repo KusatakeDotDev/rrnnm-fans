@@ -114,7 +114,7 @@ jobs:
       - name: CSS の lint
         if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
         run: pnpm lint:css
-      - name: JS・TS の lint
+      - name: JS・TS の lint と整形
         if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
         run: pnpm check
 
