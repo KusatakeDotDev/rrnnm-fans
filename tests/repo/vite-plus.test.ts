@@ -62,6 +62,20 @@ function vitePeerRanges(): [pkg: string, range: string][] {
   return ranges;
 }
 
+/** ロックファイルの snapshots: にある name の入り方（バージョンと peer の組み合わせごとに1つ）。 */
+function snapshots(name: string): string[] {
+  const keys: string[] = [];
+  let inSnapshots = false;
+  for (const line of lockLines) {
+    if (/^\S/.test(line)) inSnapshots = line === 'snapshots:';
+    else if (inSnapshots && /^ {2}\S/.test(line)) {
+      const key = line.trim().replace(/^['"]|['"]?:.*$/g, '');
+      if (key.startsWith(`${name}@`)) keys.push(key);
+    }
+  }
+  return keys;
+}
+
 const parse = (version: string) => version.split('.').map(Number);
 const compare = (a: number[], b: number[]) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2];
 
@@ -99,6 +113,13 @@ describe('ADR-0031 — Vitest と Vite のバージョンは、vite-plus の中�
 
   it.each(['vite@*', 'vitest@*'])('overrides で、どの依存の %s も catalog のものにする', (key) => {
     expect(overrides.get(key), `pnpm-workspace.yaml の overrides に '${key}': 'catalog:' を書く`).toBe('catalog:');
+  });
+
+  it.each(['vitest', '@vitest/browser', '@vitest/browser-playwright'])('%s は、ロックファイルに1つの入り方でだけ入る', (name) => {
+    expect(
+      snapshots(name),
+      `${name} が peer の違いで2つ以上入っている。どの依存の Vite も vite-plus-core になっているか（overrides）を確かめる`,
+    ).toHaveLength(1);
   });
 
   it('Astro が求める Vite の範囲に、vite-plus の中の Vite が入る', () => {
