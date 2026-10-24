@@ -1,6 +1,5 @@
 // stylelint.config.mjs が読む自前のルール。決まりの本文となぜは、そのファイルの先頭のコメントにある。
 import { readdirSync, readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 
 import postcss from 'postcss';
 import stylelint from 'stylelint';
@@ -118,8 +117,9 @@ const PLACEMENT =
 const ACCEPTED = (() => {
   const names = new Set();
   for (const dir of ['src/components/', 'src/unreleased/']) {
-    for (const file of readdirSync(new URL(dir, ROOT), { recursive: true })) {
-      if (!String(file).endsWith('.module.css')) continue;
+    for (const entry of readdirSync(new URL(dir, ROOT), { recursive: true })) {
+      const file = String(entry);
+      if (!file.endsWith('.module.css')) continue;
       for (const { name, fallback } of varCalls(readFileSync(new URL(`${dir}${file}`.replaceAll('\\', '/'), ROOT), 'utf8'))) {
         if (fallback !== null) names.add(name);
       }

@@ -52,7 +52,8 @@ async function fetchImage(id: number): Promise<string | null> {
   } catch (error) {
     // ビルド環境のネットワーク不調・タイムアウトなど。画像の無いカードに落ちる。
     // Node の fetch は、届かなかった理由（名前解決・接続・TLS）を cause に入れ、本体は「fetch failed」とだけ言う。
-    const cause = error instanceof Error && error.cause !== undefined ? `（${String(error.cause)}）` : '';
+    // oxlint-disable-next-line typescript/no-base-to-string -- cause は Node の fetch が入れる Error で、String で名前と理由が出る
+    const cause =error instanceof Error && error.cause !== undefined ? `（${String(error.cause)}）` : '';
     console.warn(`[goods] ${url} の画像を取れなかった: ${String(error)}${cause}`);
     return null;
   }

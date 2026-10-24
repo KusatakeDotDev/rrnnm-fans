@@ -25,6 +25,8 @@
     "deploy": "node scripts/deploy-dist.mjs production",
     "typecheck": "astro check && tsc --noEmit",
     "lint:css": "stylelint \"src/**/*.{css,astro}\"",
+    "check": "vp check",
+    "check:fix": "vp check --fix",
     "test": "vp test run",
     "test:watch": "vp test",
     "test:e2e": "playwright test",

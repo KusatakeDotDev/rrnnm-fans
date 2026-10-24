@@ -5,7 +5,7 @@ import type { StorybookConfig } from '@storybook/react-vite';
 import { cssTarget } from '../src/styles/browser-targets.mjs';
 
 // コンポーネントの一覧（Issue rurino-nemo-fansite#96）。サイトのビルドとは別に、src/components の .tsx を React のまま描く。
-// Astro の設定は読まない（ルートに vite.config が無いので、Vite の設定はここで足す）。
+// Astro の設定は読まない。ルートの vite.config.ts は読み込まれるが、Vite+ の lint と整形の設定だけなので、Vite の設定はここで足す。
 // .storybook/ はドットのディレクトリで tsconfig.json の `**/*` に入らないので、include に名指しで足して型検査に入れている。
 const config: StorybookConfig = {
   framework: '@storybook/react-vite',

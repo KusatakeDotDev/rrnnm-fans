@@ -19,6 +19,7 @@ const MIN_MAXRES_BYTES = 10_000;
 /** fetch が投げたもの。Node の fetch は、届かなかった理由（名前解決・接続・TLS）を cause に入れ、本体は「fetch failed」とだけ言う。 */
 export function fetchErrorReason(error: unknown): string {
   const cause = error instanceof Error ? error.cause : undefined;
+  // oxlint-disable-next-line typescript/no-base-to-string -- cause は Node の fetch が入れる Error で、String で名前と理由が出る
   return cause === undefined ? String(error) : `${String(error)}（${String(cause)}）`;
 }
 

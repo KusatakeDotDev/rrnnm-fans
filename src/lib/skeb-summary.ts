@@ -25,7 +25,7 @@ export function oneOf<T>(list: readonly T[], value: unknown): value is T {
 
 function shortText(value: unknown, max: number): asserts value is string {
   if (typeof value !== 'string' || !value || value !== value.trim() ||
-      [...value].length > max || /[\p{Cc}\p{Cf}<>]/u.test(value)) throw new Error('Invalid summary text');
+      Array.from(value).length > max ||/[\p{Cc}\p{Cf}<>]/u.test(value)) throw new Error('Invalid summary text');
 }
 
 export function validateQuote(value: unknown): WorkQuote {
