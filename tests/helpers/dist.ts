@@ -215,10 +215,10 @@ export function scriptSrcs(text: string, where: string): string[] {
 /**
  * ページが読む CSS（インラインの `<style>` と `<link rel="stylesheet">` の中身）を、文書の順に返す。
  * レイヤーの順は名前が最初に出た順で決まるので、並びを変えずに返す（tests/artifact/css-layers.spec.ts）。
- * `<noscript>` の中は、JS が無いときに同じ CSS を読ませるためのものなので除く。別ホストの CSS は中身を読めないので throw する。
+ * 別ホストの CSS は中身を読めないので throw する。
  */
 export function pageStyles(file: string): string[] {
-  const html = readFileSync(file, "utf8").replace(/<noscript\b[\s\S]*?<\/noscript\s*>/gi, "");
+  const html = readFileSync(file, "utf8");
   return [...html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style\s*>|<link\b([^>]*)>/gi)].flatMap(
     ([, body, attrs = ""]) => {
       if (body !== undefined) return [body];
@@ -278,7 +278,7 @@ function pageCodePoints(html: string, css: string): Set<number> {
  *
  * CSS の `@font-face` は、`cssGzip` に入れず `webfont` に分けて返す。webfont は、ページの字が
  * `unicode-range` に当たるチャンクだけを読むので、ページごとに辿る（→ docs/adr/0006-performance-budget.md
- * 「線の引き方」）。`<noscript>` の中の `<link>` は、JS が無いときに同じ CSS を読ませるためのものなので数えない。
+ * 「線の引き方」）。
  */
 export function routeAssets(file: string): {
   htmlGzip: number;
@@ -304,10 +304,9 @@ export function routeAssets(file: string): {
     return value;
   };
 
-  const stylesheetLinks = tagAttrs(
-    html.replace(/<noscript\b[\s\S]*?<\/noscript\s*>/gi, ""),
-    TAG.link,
-  ).filter((a) => (ATTR.rel.exec(a)?.[1] ?? "").toLowerCase().split(/\s+/).includes("stylesheet"));
+  const stylesheetLinks = tagAttrs(html, TAG.link).filter((a) =>
+    (ATTR.rel.exec(a)?.[1] ?? "").toLowerCase().split(/\s+/).includes("stylesheet"),
+  );
   const hrefs = (links: string[]): string[] =>
     links.map((a) => valueOf(a, ATTR.href, "stylesheet の href"));
   const css = resolveRefs(file, hrefs(stylesheetLinks));
