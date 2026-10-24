@@ -564,7 +564,7 @@ describe('ADR-0009 §映る幅に植える — 縦横比が変わっても密度
     const spot = { x: 0, z: 0 };
     const BANDS = 8;
     const depth = NEAR_Z - FAR_Z;
-    const counts = new Array<number>(BANDS).fill(0);
+    const counts = Array.from({ length: BANDS }, () => 0);
     for (let i = 0; i < plan.count; ) {
       if (!placeFlower(bed, plan, random, spot)) continue;
       const half = Math.abs(spot.x);

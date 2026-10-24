@@ -37,7 +37,8 @@ async function recordSounds(page: Page, slow?: { name: string; delay: number }):
     window.fetch = async (...args: Parameters<typeof fetch>) => {
       const response = await originalFetch(...args);
       // ページは、取りに行く URL の # の後ろに音の名前を付ける。response.url からは # の後ろが落ちるので、頼んだ URL から読む。
-      const name = /#([\w-]+)$/.exec(String(args[0]))?.[1];
+      const [input] = args;
+      const name = /#([\w-]+)$/.exec(input instanceof Request ? input.url : String(input))?.[1];
       if (name === undefined) return response;
       const read = response.arrayBuffer.bind(response);
       response.arrayBuffer = async () => {
@@ -48,6 +49,7 @@ async function recordSounds(page: Page, slow?: { name: string; delay: number }):
       return response;
     };
 
+    // oxlint-disable-next-line typescript/unbound-method -- 差し替える前のものを取っておき、call・apply で this を渡して呼ぶ
     const decode = BaseAudioContext.prototype.decodeAudioData;
     BaseAudioContext.prototype.decodeAudioData = async function (this: BaseAudioContext, data: ArrayBuffer) {
       const name = names.get(data);
@@ -59,6 +61,7 @@ async function recordSounds(page: Page, slow?: { name: string; delay: number }):
 
     const gains: GainNode[] = [];
     (window as unknown as { gains: GainNode[] }).gains = gains;
+    // oxlint-disable-next-line typescript/unbound-method -- 差し替える前のものを取っておき、call・apply で this を渡して呼ぶ
     const createGain = BaseAudioContext.prototype.createGain;
     BaseAudioContext.prototype.createGain = function (this: BaseAudioContext) {
       const gain = createGain.call(this);
@@ -67,11 +70,13 @@ async function recordSounds(page: Page, slow?: { name: string; delay: number }):
     };
 
     const nameOf = (node: AudioBufferSourceNode) => (node.buffer ? names.get(node.buffer) : undefined) ?? '?';
+    // oxlint-disable-next-line typescript/unbound-method -- 差し替える前のものを取っておき、call・apply で this を渡して呼ぶ
     const start = AudioBufferSourceNode.prototype.start;
     AudioBufferSourceNode.prototype.start = function (this: AudioBufferSourceNode, ...args: Parameters<typeof start>) {
       log.push(`start ${nameOf(this)}`);
       return start.apply(this, args);
     };
+    // oxlint-disable-next-line typescript/unbound-method -- 差し替える前のものを取っておき、call・apply で this を渡して呼ぶ
     const stop = AudioBufferSourceNode.prototype.stop;
     AudioBufferSourceNode.prototype.stop = function (this: AudioBufferSourceNode, ...args: Parameters<typeof stop>) {
       log.push(`stop ${nameOf(this)}`);

@@ -247,7 +247,7 @@ function pageCodePoints(html: string, css: string): Set<number> {
       value.replace(CSS_ESCAPE, (_, hex?: string, char?: string) => (hex ? String.fromCodePoint(Number.parseInt(hex, 16)) : char!)),
     )
     .join('');
-  return new Set([...(text + content)].map((char) => char.codePointAt(0)!));
+  return new Set(Array.from(text + content, (char) => char.codePointAt(0)!));
 }
 
 /**
