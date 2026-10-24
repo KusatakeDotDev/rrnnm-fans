@@ -1,9 +1,9 @@
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { gzipSync } from 'node:zlib';
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { gzipSync } from "node:zlib";
 
-import { coversAny, fontFaceRules, onlyFontFaces, withoutFontFaces } from '../../src/lib/font-face';
+import { coversAny, fontFaceRules, onlyFontFaces, withoutFontFaces } from "../../src/lib/font-face";
 
 /**
  * ビルド成果物（dist/）を走査するヘルパー。
@@ -12,7 +12,9 @@ import { coversAny, fontFaceRules, onlyFontFaces, withoutFontFaces } from '../..
  * そのそれぞれに対して同じ不変条件を回す。ページが増えたらテストも自動で増える。
  * これが「サイト全体にかかる規約」を無保守で守る唯一の形（→ docs/adr/0003-testing-and-ci.md）。
  */
-export const DIST = path.resolve(process.env['TEST_DIST'] ?? fileURLToPath(new URL('../../dist', import.meta.url)));
+export const DIST = path.resolve(
+  process.env["TEST_DIST"] ?? fileURLToPath(new URL("../../dist", import.meta.url)),
+);
 
 function allFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -23,7 +25,7 @@ function allFiles(dir: string): string[] {
 
 function assertDistExists(): void {
   if (!existsSync(DIST)) {
-    throw new Error('dist/ が無い。先に `pnpm build` を実行する。');
+    throw new Error("dist/ が無い。先に `pnpm build` を実行する。");
   }
 }
 
@@ -35,10 +37,10 @@ export function distFiles(): string[] {
 
 /** dist の HTML のパスを URL パスに直す。例: dist/songs/index.html → /songs/ */
 export function toRoute(file: string): string {
-  const rel = path.relative(DIST, file).split(path.sep).join('/');
-  if (rel === 'index.html') return '/';
-  if (rel.endsWith('/index.html')) return `/${rel.slice(0, -'index.html'.length)}`;
-  return `/${rel.replace(/\.html$/, '')}`;
+  const rel = path.relative(DIST, file).split(path.sep).join("/");
+  if (rel === "index.html") return "/";
+  if (rel.endsWith("/index.html")) return `/${rel.slice(0, -"index.html".length)}`;
+  return `/${rel.replace(/\.html$/, "")}`;
 }
 
 /**
@@ -46,7 +48,7 @@ export function toRoute(file: string): string {
  * 外の調子で変わることは、固定応答のビルドでだけ落とす。
  */
 export function fixtureBuild(): boolean {
-  return JSON.parse(readFileSync(`${DIST}.receipt.json`, 'utf8')).kind === 'success';
+  return JSON.parse(readFileSync(`${DIST}.receipt.json`, "utf8")).kind === "success";
 }
 
 /** dist に出た HTML を URL パスに直したもの。例: dist/songs/index.html → /songs/ */
@@ -56,13 +58,13 @@ export function builtRoutes(): string[] {
 
 /** dist の中身をテキストとして読む。バイナリは除く（画像はそもそも置かない方針）。 */
 export function distTextFiles(): { path: string; rel: string; text: string }[] {
-  const textExtensions = ['.html', '.js', '.mjs', '.css', '.json', '.txt', '.xml', '.svg', ''];
+  const textExtensions = [".html", ".js", ".mjs", ".css", ".json", ".txt", ".xml", ".svg", ""];
   return distFiles()
     .filter((f) => textExtensions.includes(path.extname(f)))
     .map((f) => ({
       path: f,
-      rel: path.relative(DIST, f).split(path.sep).join('/'),
-      text: readFileSync(f, 'utf8'),
+      rel: path.relative(DIST, f).split(path.sep).join("/"),
+      text: readFileSync(f, "utf8"),
     }));
 }
 
@@ -80,11 +82,11 @@ export function gzipSize(input: string | Buffer): number {
 /** dist に出た HTML を、URL パスとファイルパスの対で返す。 */
 export function builtPages(): { route: string; file: string }[] {
   const pages = distFiles()
-    .filter((f) => f.endsWith('.html'))
+    .filter((f) => f.endsWith(".html"))
     .map((file) => ({ route: toRoute(file), file }));
 
   if (pages.length === 0) {
-    throw new Error('dist/ に HTML が1枚も無い。ビルドが壊れている。');
+    throw new Error("dist/ に HTML が1枚も無い。ビルドが壊れている。");
   }
   return pages.sort((a, b) => a.route.localeCompare(b.route));
 }
@@ -100,16 +102,16 @@ export function builtPages(): { route: string; file: string }[] {
  */
 export function fieldAssetBytes(): { rel: string; bytes: number }[] {
   return distFiles()
-    .filter((f) => path.relative(DIST, f).split(path.sep)[0] === 'field')
-    .filter((f) => f.endsWith('.bin'))
+    .filter((f) => path.relative(DIST, f).split(path.sep)[0] === "field")
+    .filter((f) => f.endsWith(".bin"))
     .map((f) => ({
-      rel: path.relative(DIST, f).split(path.sep).join('/'),
+      rel: path.relative(DIST, f).split(path.sep).join("/"),
       bytes: statSync(f).size,
     }));
 }
 
 /** 参照を URL として解決するときの仮のオリジン。これと違うオリジンに解決されたら別ホスト。 */
-export const PAGE_ORIGIN = 'https://dist.invalid';
+export const PAGE_ORIGIN = "https://dist.invalid";
 
 /**
  * HTML の参照（href / src）を dist の中のファイルに解決する。
@@ -124,13 +126,17 @@ export const PAGE_ORIGIN = 'https://dist.invalid';
  * 判定は前置き一致ではなく URL の解決に任せる。`//cdn.example/x.css` は `/` で始まるが
  * 別ホストで、`startsWith('/')` で見ると dist のパスに化ける。
  */
-function resolveRefs(file: string, refs: string[], base = new URL(toRoute(file), PAGE_ORIGIN)): { local: string[]; external: string[] } {
+function resolveRefs(
+  file: string,
+  refs: string[],
+  base = new URL(toRoute(file), PAGE_ORIGIN),
+): { local: string[]; external: string[] } {
   const local: string[] = [];
   const external: string[] = [];
 
   for (const ref of refs) {
     const url = new URL(ref, base);
-    if (url.protocol === 'data:') continue;
+    if (url.protocol === "data:") continue;
     if (url.origin !== PAGE_ORIGIN) {
       external.push(ref);
       continue;
@@ -186,7 +192,7 @@ export function isJsonScript(attrs: string): boolean {
 
 /** 開始タグの属性の並びを返す。 */
 function tagAttrs(html: string, tag: RegExp): string[] {
-  return [...html.matchAll(tag)].map(([, attrs = '']) => attrs);
+  return [...html.matchAll(tag)].map(([, attrs = ""]) => attrs);
 }
 
 /**
@@ -200,7 +206,8 @@ export function scriptSrcs(text: string, where: string): string[] {
     .filter((a) => ATTR.hasSrc.test(a))
     .map((a) => {
       const value = ATTR.src.exec(a)?.[1];
-      if (value === undefined) throw new Error(`script の src を拾えない（属性: ${a.trim()}）: ${where}`);
+      if (value === undefined)
+        throw new Error(`script の src を拾えない（属性: ${a.trim()}）: ${where}`);
       return value;
     });
 }
@@ -211,20 +218,32 @@ export function scriptSrcs(text: string, where: string): string[] {
  * `<noscript>` の中は、JS が無いときに同じ CSS を読ませるためのものなので除く。別ホストの CSS は中身を読めないので throw する。
  */
 export function pageStyles(file: string): string[] {
-  const html = readFileSync(file, 'utf8').replace(/<noscript\b[\s\S]*?<\/noscript\s*>/gi, '');
-  return [...html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style\s*>|<link\b([^>]*)>/gi)].flatMap(([, body, attrs = '']) => {
-    if (body !== undefined) return [body];
-    if (!(ATTR.rel.exec(attrs)?.[1] ?? '').toLowerCase().split(/\s+/).includes('stylesheet')) return [];
-    const href = ATTR.href.exec(attrs)?.[1];
-    if (href === undefined) throw new Error(`stylesheet の href を拾えない（属性: ${attrs.trim()}）: ${file}`);
-    const { local, external } = resolveRefs(file, [href]);
-    if (external.length > 0) throw new Error(`別ホストの CSS は、レイヤーの順を計算できない（${href}）: ${file}`);
-    return local.map((css) => readFileSync(css, 'utf8'));
-  });
+  const html = readFileSync(file, "utf8").replace(/<noscript\b[\s\S]*?<\/noscript\s*>/gi, "");
+  return [...html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style\s*>|<link\b([^>]*)>/gi)].flatMap(
+    ([, body, attrs = ""]) => {
+      if (body !== undefined) return [body];
+      if (!(ATTR.rel.exec(attrs)?.[1] ?? "").toLowerCase().split(/\s+/).includes("stylesheet"))
+        return [];
+      const href = ATTR.href.exec(attrs)?.[1];
+      if (href === undefined)
+        throw new Error(`stylesheet の href を拾えない（属性: ${attrs.trim()}）: ${file}`);
+      const { local, external } = resolveRefs(file, [href]);
+      if (external.length > 0)
+        throw new Error(`別ホストの CSS は、レイヤーの順を計算できない（${href}）: ${file}`);
+      return local.map((css) => readFileSync(css, "utf8"));
+    },
+  );
 }
 
 const ENTITY = /&(?:#x([0-9a-f]+)|#(\d+)|(amp|lt|gt|quot|apos|nbsp));/gi;
-const NAMED_ENTITY: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: '\u00a0' };
+const NAMED_ENTITY: Record<string, string> = {
+  amp: "&",
+  lt: "<",
+  gt: ">",
+  quot: '"',
+  apos: "'",
+  nbsp: "\u00a0",
+};
 const CSS_CONTENT = /content:\s*(["'])((?:\\[\s\S]|(?!\1)[^\\])*)\1/g;
 const CSS_ESCAPE = /\\(?:([0-9a-f]{1,6})\s?|([\s\S]))/gi;
 
@@ -236,17 +255,21 @@ const CSS_ESCAPE = /\\(?:([0-9a-f]{1,6})\s?|([\s\S]))/gi;
 function pageCodePoints(html: string, css: string): Set<number> {
   const body = /<body\b[^>]*>([\s\S]*)<\/body>/i.exec(html)?.[1] ?? html;
   const text = body
-    .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/<(script|style|template)\b[\s\S]*?<\/\1\s*>/gi, '')
-    .replace(/<[^>]*>/g, ' ')
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/<(script|style|template)\b[\s\S]*?<\/\1\s*>/gi, "")
+    .replace(/<[^>]*>/g, " ")
     .replace(ENTITY, (_, hex?: string, dec?: string, name?: string) =>
-      name ? NAMED_ENTITY[name.toLowerCase()]! : String.fromCodePoint(Number.parseInt(hex ?? dec!, hex ? 16 : 10)),
+      name
+        ? NAMED_ENTITY[name.toLowerCase()]!
+        : String.fromCodePoint(Number.parseInt(hex ?? dec!, hex ? 16 : 10)),
     );
   const content = [...css.matchAll(CSS_CONTENT)]
-    .map(([, , value = '']) =>
-      value.replace(CSS_ESCAPE, (_, hex?: string, char?: string) => (hex ? String.fromCodePoint(Number.parseInt(hex, 16)) : char!)),
+    .map(([, , value = ""]) =>
+      value.replace(CSS_ESCAPE, (_, hex?: string, char?: string) =>
+        hex ? String.fromCodePoint(Number.parseInt(hex, 16)) : char!,
+      ),
     )
-    .join('');
+    .join("");
   return new Set(Array.from(text + content, (char) => char.codePointAt(0)!));
 }
 
@@ -270,48 +293,52 @@ export function routeAssets(file: string): {
   /** 別ホストの CSS・JS・webfont。dist に無いので上の数字に入っていない（→ ADR-0006「別ホストの CSS・JS は測れない」）。 */
   external: string[];
 } {
-  const html = readFileSync(file, 'utf8');
+  const html = readFileSync(file, "utf8");
 
   // 属性の拾い方が壊れると、その CSS・JS が 0 バイトになり**予算だけが静かに甘くなる**。
   // 「あるのに値を拾えない」は必ず不具合なので、1件ずつ throw する。
   const valueOf = (attrs: string, attr: RegExp, what: string): string => {
     const value = attr.exec(attrs)?.[1];
-    if (value === undefined) throw new Error(`${what} を拾えない（属性: ${attrs.trim()}）: ${file}`);
+    if (value === undefined)
+      throw new Error(`${what} を拾えない（属性: ${attrs.trim()}）: ${file}`);
     return value;
   };
 
-  const stylesheetLinks = tagAttrs(html.replace(/<noscript\b[\s\S]*?<\/noscript\s*>/gi, ''), TAG.link).filter((a) =>
-    (ATTR.rel.exec(a)?.[1] ?? '').toLowerCase().split(/\s+/).includes('stylesheet'),
-  );
-  const hrefs = (links: string[]): string[] => links.map((a) => valueOf(a, ATTR.href, 'stylesheet の href'));
+  const stylesheetLinks = tagAttrs(
+    html.replace(/<noscript\b[\s\S]*?<\/noscript\s*>/gi, ""),
+    TAG.link,
+  ).filter((a) => (ATTR.rel.exec(a)?.[1] ?? "").toLowerCase().split(/\s+/).includes("stylesheet"));
+  const hrefs = (links: string[]): string[] =>
+    links.map((a) => valueOf(a, ATTR.href, "stylesheet の href"));
   const css = resolveRefs(file, hrefs(stylesheetLinks));
   // media="print" で読み、読み終えてから全部の画面に当てる CSS（Base.astro の webfont）は、描画を止めない。
-  const isPrint = (a: string): boolean => ATTR.media.exec(a)?.[1]?.trim().toLowerCase() === 'print';
+  const isPrint = (a: string): boolean => ATTR.media.exec(a)?.[1]?.trim().toLowerCase() === "print";
   const deferred = new Set(resolveRefs(file, hrefs(stylesheetLinks.filter(isPrint))).local);
   const js = resolveRefs(file, scriptSrcs(html, file));
 
   // インラインの <script> も JS 予算に入れる。JSON（データの埋め込み）は実行されないので除く。
   const inlineJs = [...html.matchAll(TAG.scriptWithBody)]
-    .filter(([, attrs = '']) => !ATTR.hasSrc.test(attrs) && !isJsonScript(attrs))
-    .map(([, , body = '']) => body)
-    .join('\n');
+    .filter(([, attrs = ""]) => !ATTR.hasSrc.test(attrs) && !isJsonScript(attrs))
+    .map(([, , body = ""]) => body)
+    .join("\n");
 
-  const sumGzip = (files: string[]): number => files.reduce((total, f) => total + gzipSize(readFileSync(f)), 0);
+  const sumGzip = (files: string[]): number =>
+    files.reduce((total, f) => total + gzipSize(readFileSync(f)), 0);
 
-  const stylesheets = css.local.map((f) => ({ file: f, text: readFileSync(f, 'utf8') }));
+  const stylesheets = css.local.map((f) => ({ file: f, text: readFileSync(f, "utf8") }));
   const siteCss = stylesheets.map(({ text }) => withoutFontFaces(text));
-  const fontFaceCss = stylesheets.map(({ text }) => onlyFontFaces(text)).join('');
+  const fontFaceCss = stylesheets.map(({ text }) => onlyFontFaces(text)).join("");
   const blockingFaces = stylesheets
     .filter(({ file: cssFile }) => !deferred.has(cssFile))
     .flatMap(({ text }) => fontFaceRules(text))
     .filter((rule) => rule.url !== null).length;
-  const codePoints = pageCodePoints(html, siteCss.join('\n'));
+  const codePoints = pageCodePoints(html, siteCss.join("\n"));
 
   // url() は CSS のファイルの場所から解決する。同じチャンクを2つの面が指していても1回だけ数える。
   const fontFiles = new Set<string>();
   const fontExternal: string[] = [];
   for (const { file: cssFile, text } of stylesheets) {
-    const base = new URL(path.relative(DIST, cssFile).split(path.sep).join('/'), `${PAGE_ORIGIN}/`);
+    const base = new URL(path.relative(DIST, cssFile).split(path.sep).join("/"), `${PAGE_ORIGIN}/`);
     const urls = fontFaceRules(text)
       .filter((rule) => rule.url !== null && coversAny(rule.unicodeRange, codePoints))
       .map((rule) => rule.url!);
@@ -323,10 +350,13 @@ export function routeAssets(file: string): {
   return {
     htmlGzip: gzipSize(html),
     cssGzip: siteCss.reduce((total, text) => total + gzipSize(text), 0),
-    jsGzip: sumGzip(js.local) + (inlineJs.trim() === '' ? 0 : gzipSize(inlineJs)),
+    jsGzip: sumGzip(js.local) + (inlineJs.trim() === "" ? 0 : gzipSize(inlineJs)),
     webfont: {
-      cssGzip: fontFaceCss === '' ? 0 : gzipSize(fontFaceCss),
-      files: [...fontFiles].sort().map((f) => ({ rel: path.relative(DIST, f).split(path.sep).join('/'), bytes: statSync(f).size })),
+      cssGzip: fontFaceCss === "" ? 0 : gzipSize(fontFaceCss),
+      files: [...fontFiles].sort().map((f) => ({
+        rel: path.relative(DIST, f).split(path.sep).join("/"),
+        bytes: statSync(f).size,
+      })),
       blockingFaces,
     },
     external: [...css.external, ...js.external, ...fontExternal],

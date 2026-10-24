@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from "@playwright/test";
 
 /**
  * src/components/NemophilaField.module.css の登場の演出（copy-in）と、動きを減らす設定で止めるルール。
@@ -11,20 +11,22 @@ import { expect, test } from '@playwright/test';
  * 設定が無いときに演出が付いていることも見る。付いていなければ、止まっているかを見ても意味が無い。
  * 演出の名前は CSS Modules でビルドごとに変わるので、`none` かどうかだけを見る。
  */
-for (const reducedMotion of ['no-preference', 'reduce'] as const) {
-  test(`畑のキャッチと添え書きの登場の演出 — prefers-reduced-motion: ${reducedMotion}`, async ({ page }) => {
+for (const reducedMotion of ["no-preference", "reduce"] as const) {
+  test(`畑のキャッチと添え書きの登場の演出 — prefers-reduced-motion: ${reducedMotion}`, async ({
+    page,
+  }) => {
     await page.emulateMedia({ reducedMotion });
-    await page.goto('/');
+    await page.goto("/");
 
     const animations = await page
-      .locator('[data-field] h1, [data-field] h1 ~ p')
+      .locator("[data-field] h1, [data-field] h1 ~ p")
       .evaluateAll((els) => els.map((el) => getComputedStyle(el).animationName));
 
     expect(animations).toHaveLength(2);
-    if (reducedMotion === 'reduce') {
-      expect(animations).toEqual(['none', 'none']);
+    if (reducedMotion === "reduce") {
+      expect(animations).toEqual(["none", "none"]);
     } else {
-      expect(animations).not.toContain('none');
+      expect(animations).not.toContain("none");
     }
   });
 }

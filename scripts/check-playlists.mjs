@@ -19,8 +19,8 @@
  * 取り直しもまた同時になり、同じ制限に掛かる。週1回の監視なので、順に回す数秒の差は問題にならない。
  * 200 以外だったときは5秒待って1回だけ取り直す。
  */
-import { PLAYLISTS, playlistUrl } from '../src/data/playlists.ts';
-import { oembedUrl } from '../src/lib/youtube.ts';
+import { PLAYLISTS, playlistUrl } from "../src/data/playlists.ts";
+import { oembedUrl } from "../src/lib/youtube.ts";
 
 // YouTube 側が詰まっても、ワークフローの timeout-minutes より先に諦める。
 const TIMEOUT_MS = 10_000;
@@ -58,12 +58,12 @@ const gone = results.filter((r) => GONE.has(r.status));
 const unknown = results.filter((r) => r.status !== 200 && !GONE.has(r.status));
 
 for (const { label, url, status } of results) {
-  const mark = status === 200 ? 'ok' : GONE.has(status) ? 'NG' : '??';
+  const mark = status === 200 ? "ok" : GONE.has(status) ? "NG" : "??";
   console.log(`${mark}  ${status}  ${label}  ${url}`);
 }
 
 // GitHub Actions では注釈として実行のまとめに出る。ログを開かなくても、どれが何だったか分かる。
-if (process.env['GITHUB_ACTIONS']) {
+if (process.env["GITHUB_ACTIONS"]) {
   for (const { label, url, status } of gone) {
     console.log(`::error title=本家で見つからない再生リスト::${label} ${url}（${status}）`);
   }

@@ -24,4 +24,4 @@ body:
     id: environment
     attributes:
       label: 端末とブラウザ
-      placeholder: '例: iPhone の Safari、Windows の Chrome'
+      placeholder: "例: iPhone の Safari、Windows の Chrome"

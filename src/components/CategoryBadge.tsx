@@ -11,13 +11,16 @@
  * 下の3つ以外の属性（`className`・`id`・`aria-*` など）は root の span にそのまま渡す
  * （docs/adr/0011-react-components-for-design-sync.md「props の決まり」）。
  */
-import type { HTMLAttributes } from 'react';
+import type { HTMLAttributes } from "react";
 
-import { cx } from '../lib/cx';
-import styles from './CategoryBadge.module.css';
-import type { Tone } from './tones';
+import { cx } from "../lib/cx";
+import styles from "./CategoryBadge.module.css";
+import type { Tone } from "./tones";
 
-interface CategoryBadgeProps extends Omit<HTMLAttributes<HTMLSpanElement>, 'children' | 'dangerouslySetInnerHTML'> {
+interface CategoryBadgeProps extends Omit<
+  HTMLAttributes<HTMLSpanElement>,
+  "children" | "dangerouslySetInnerHTML"
+> {
   /** 丸の中に出す略号。1文字を想定している。 */
   abbr: string;
   /** 分類名。画面には出ないが読み上げには出る。 */
@@ -25,7 +28,13 @@ interface CategoryBadgeProps extends Omit<HTMLAttributes<HTMLSpanElement>, 'chil
   tone?: Tone;
 }
 
-export default function CategoryBadge({ abbr, label, tone = 'violet', className, ...rest }: CategoryBadgeProps) {
+export default function CategoryBadge({
+  abbr,
+  label,
+  tone = "violet",
+  className,
+  ...rest
+}: CategoryBadgeProps) {
   return (
     <span className={cx(styles.root, className)} {...rest} data-tone={tone}>
       <span aria-hidden="true">{abbr}</span>

@@ -1,9 +1,9 @@
-import type { Meta, StoryObj } from '@storybook/react-vite';
+import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import Twitter from '../src/components/Twitter.tsx';
-import { column } from './shared/layout.ts';
+import Twitter from "../src/components/Twitter.tsx";
+import { column } from "./shared/layout.ts";
 
-const meta = { title: 'General/Twitter', component: Twitter } satisfies Meta<typeof Twitter>;
+const meta = { title: "General/Twitter", component: Twitter } satisfies Meta<typeof Twitter>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 

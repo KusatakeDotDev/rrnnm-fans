@@ -9,12 +9,12 @@
  * （docs/adr/0011-react-components-for-design-sync.md「props の決まり」）。
  * タグは `as` で替わるが、どれでも root は1つなので、属性の行き先は呼び出し側から読める。
  */
-import type { HTMLAttributes } from 'react';
+import type { HTMLAttributes } from "react";
 
-import { cx } from '../lib/cx';
-import styles from './SectionLabel.module.css';
+import { cx } from "../lib/cx";
+import styles from "./SectionLabel.module.css";
 
-interface SectionLabelProps extends Omit<HTMLAttributes<HTMLElement>, 'dangerouslySetInnerHTML'> {
+interface SectionLabelProps extends Omit<HTMLAttributes<HTMLElement>, "dangerouslySetInnerHTML"> {
   /**
    * 見出しの階層。既定は h3。
    *
@@ -22,9 +22,9 @@ interface SectionLabelProps extends Omit<HTMLAttributes<HTMLElement>, 'dangerous
    * 小さいラベルにならない。大見出しが要る場所では、このコンポーネントではなく
    * 素の `<h2>` か StickerHeading を書く。
    */
-  as?: 'h3' | 'h4' | 'p';
+  as?: "h3" | "h4" | "p";
 }
 
-export default function SectionLabel({ as: Tag = 'h3', className, ...rest }: SectionLabelProps) {
+export default function SectionLabel({ as: Tag = "h3", className, ...rest }: SectionLabelProps) {
   return <Tag className={cx(styles.root, className)} {...rest} />;
 }

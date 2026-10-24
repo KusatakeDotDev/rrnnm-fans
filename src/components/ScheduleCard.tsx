@@ -15,11 +15,11 @@
  * **ほかの属性は受け取らない。** 取れたかどうかで root の要素が替わる（カードの div か、
  * テキストリンクの a か）ため（docs/adr/0011「props の決まり」の例外）。
  */
-import { cx } from '../lib/cx';
-import { OFFICIAL } from '../data/official';
-import styles from './ScheduleCard.module.css';
-import { T_WINDOW_MS, WATCH_URL as watchUrl } from '../data/schedule';
-import YouTubeThumbnail from './YouTubeThumbnail.tsx';
+import { cx } from "../lib/cx";
+import { OFFICIAL } from "../data/official";
+import styles from "./ScheduleCard.module.css";
+import { T_WINDOW_MS, WATCH_URL as watchUrl } from "../data/schedule";
+import YouTubeThumbnail from "./YouTubeThumbnail.tsx";
 
 /**
  * `schedule` の型は、ここに中身の見える形で書く（名前の付いた型にしない）。
@@ -50,7 +50,7 @@ export interface ScheduleCardProps {
 const T_VALUE = `Math.floor(Date.now() / ${T_WINDOW_MS})`;
 
 /** `<head>` の preload の `<link>` に付けるマーカー。下のスクリプトはこれで preload を探し、その URL をそのまま使う。 */
-const PRELOAD_MARKER = 'data-schedule-thumbnail';
+const PRELOAD_MARKER = "data-schedule-thumbnail";
 
 /**
  * `<head>` で、`?t=` 付きの URL を先に取りに行くスクリプト（`<link rel="preload" as="image">` を足す）。
@@ -65,7 +65,7 @@ const PRELOAD_MARKER = 'data-schedule-thumbnail';
  */
 export function preloadThumbnailScript(plain: string): string {
   // </script> を閉じさせないよう、< をエスケープしてから埋め込む。
-  const literal = JSON.stringify(plain).replace(/</g, '\\u003c');
+  const literal = JSON.stringify(plain).replace(/</g, "\\u003c");
   return `
   (() => {
     if (!('loading' in HTMLImageElement.prototype)) return;
@@ -194,7 +194,8 @@ export default function ScheduleCard({ schedule }: ScheduleCardProps) {
           target="_blank"
           rel="noopener noreferrer"
         >
-          最新の配信スケジュールを見る ↗<span className="sr-only">（外部サイトを新しいタブで開く）</span>
+          最新の配信スケジュールを見る ↗
+          <span className="sr-only">（外部サイトを新しいタブで開く）</span>
         </a>
       </div>
     );
@@ -219,11 +220,19 @@ export default function ScheduleCard({ schedule }: ScheduleCardProps) {
               loading="lazy" は、元の URL をプリロードスキャナーに先に取らせないために付ける。直後のスクリプトが
               ?t= 付きに替えてから eager に戻す（上の LOAD_THUMBNAIL）。見本（Claude Design・Storybook）では
               スクリプトを置かないので lazy のままになるが、見本の側で lazy を写す理由は無い。 */}
-          <img src={thumbnail.url} loading="lazy" width={thumbnail.width} height={thumbnail.height} alt="" />
+          <img
+            src={thumbnail.url}
+            loading="lazy"
+            width={thumbnail.width}
+            height={thumbnail.height}
+            alt=""
+          />
           {/* サーバーで描くとき（Astro のビルド）だけ置く。ブラウザの React（Claude Design・Storybook の見本）で描いた
               <script> は動かず、React 19 の開発版が console.error を出すだけ。サイトはクライアントアイランドを
               持たない（docs/adr/0011）ので、サイトの出力は変わらない。 */}
-          {typeof document === 'undefined' && <script dangerouslySetInnerHTML={{ __html: LOAD_THUMBNAIL }} />}
+          {typeof document === "undefined" && (
+            <script dangerouslySetInnerHTML={{ __html: LOAD_THUMBNAIL }} />
+          )}
         </YouTubeThumbnail>
       </a>
       {/* 出典の行（ADR-0004「出典の行に作者名を出す」）。作者名が取れなかったら省く（カードごとテキストリンクに
@@ -233,8 +242,13 @@ export default function ScheduleCard({ schedule }: ScheduleCardProps) {
           `<!-- -->` を挟み、字の並べ方が変わる（ADR-0011「props の決まり」）。
           data-schedule-source は、出典の行があることをテストが探すマーカー。文言は探さない。 */}
       <span className={styles.caption} data-schedule-source="">
-        {oembed.author_name ? `出典：${oembed.author_name} ` : '出典：'}
-        <a className={styles.captionTitle} href={watchUrl} target="_blank" rel="noopener noreferrer">
+        {oembed.author_name ? `出典：${oembed.author_name} ` : "出典："}
+        <a
+          className={styles.captionTitle}
+          href={watchUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           {oembed.title}
           <span className="sr-only">（外部サイトを新しいタブで開く）</span>
         </a>

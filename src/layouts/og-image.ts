@@ -13,8 +13,8 @@
  * `src/lib` に置かないのは、あそこが純関数だけの層でミューテーションテストの対象だから。
  */
 export const OG_IMAGE = {
-  path: '/og/site.20261007.png',
+  path: "/og/site.20261007.png",
   width: 1200,
   height: 630,
-  hash: '346a8c55298c394e',
+  hash: "346a8c55298c394e",
 } as const;

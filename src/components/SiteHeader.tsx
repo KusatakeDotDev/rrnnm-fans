@@ -20,14 +20,17 @@
  * `overlay`・`paper` 以外の属性（`className`・`id`・`aria-*` など）は root の header にそのまま渡す
  * （docs/adr/0011-react-components-for-design-sync.md「props の決まり」）。
  */
-import type { HTMLAttributes } from 'react';
-import { LOGO_OUTLINED, LOGO_WHITE_OUTLINED } from '@site-assets';
+import type { HTMLAttributes } from "react";
+import { LOGO_OUTLINED, LOGO_WHITE_OUTLINED } from "@site-assets";
 
-import { cx } from '../lib/cx';
-import styles from './SiteHeader.module.css';
-import type { SiteLink } from '../data/site-navigation';
+import { cx } from "../lib/cx";
+import styles from "./SiteHeader.module.css";
+import type { SiteLink } from "../data/site-navigation";
 
-interface SiteHeaderProps extends Omit<HTMLAttributes<HTMLElement>, 'children' | 'dangerouslySetInnerHTML'> {
+interface SiteHeaderProps extends Omit<
+  HTMLAttributes<HTMLElement>,
+  "children" | "dangerouslySetInnerHTML"
+> {
   /** 下の段に重ねる（トップだけ）。 */
   overlay?: boolean;
   /** ロゴを白い帯に置く（下層ページ）。`overlay` と両方なら `overlay` を採る。 */
@@ -35,14 +38,20 @@ interface SiteHeaderProps extends Omit<HTMLAttributes<HTMLElement>, 'children' |
   pageLinks?: readonly SiteLink[];
 }
 
-export default function SiteHeader({ overlay = false, paper = false, pageLinks = [], className, ...rest }: SiteHeaderProps) {
+export default function SiteHeader({
+  overlay = false,
+  paper = false,
+  pageLinks = [],
+  className,
+  ...rest
+}: SiteHeaderProps) {
   const onPaper = paper && !overlay;
   return (
     <header
-      className={cx(styles.root, 'container', onPaper && 'on-paper', className)}
+      className={cx(styles.root, "container", onPaper && "on-paper", className)}
       {...rest}
-      data-overlay={overlay ? '' : undefined}
-      data-paper={onPaper ? '' : undefined}
+      data-overlay={overlay ? "" : undefined}
+      data-paper={onPaper ? "" : undefined}
     >
       <a className={styles.brand} href="/">
         {/* width/height はロゴの SVG（public/logo/）の縦横比。縦横比の変わるロゴに差し替えたら、下の白抜き版と
@@ -71,7 +80,11 @@ export default function SiteHeader({ overlay = false, paper = false, pageLinks =
       </a>
       {onPaper && pageLinks.length > 0 && (
         <nav className={styles.nav} aria-label="サイト内ナビゲーション">
-          {pageLinks.map((link) => <a key={link.href} href={link.href}>{link.label}</a>)}
+          {pageLinks.map((link) => (
+            <a key={link.href} href={link.href}>
+              {link.label}
+            </a>
+          ))}
         </nav>
       )}
     </header>

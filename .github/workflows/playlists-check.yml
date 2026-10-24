@@ -17,7 +17,7 @@ on:
   schedule:
     # 毎週月曜 09:17（JST）。cron は UTC で書く。
     # 正時を避けるのは、GitHub の定期実行が正時に集中して遅れやすいため。
-    - cron: '17 0 * * 1'
+    - cron: "17 0 * * 1"
   pull_request:
     # 足した ID の打ち間違いを、その PR の中で見つける。
     paths:

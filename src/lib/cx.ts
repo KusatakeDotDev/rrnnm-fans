@@ -10,5 +10,7 @@
  * `class` 属性には名前と空白1つずつしか出さない。
  */
 export function cx(...names: readonly (string | false | null | undefined)[]): string {
-  return names.flatMap((name) => (typeof name === 'string' ? (name.match(/\S+/g) ?? []) : [])).join(' ');
+  return names
+    .flatMap((name) => (typeof name === "string" ? (name.match(/\S+/g) ?? []) : []))
+    .join(" ");
 }

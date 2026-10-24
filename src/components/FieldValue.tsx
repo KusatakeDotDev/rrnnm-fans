@@ -8,9 +8,9 @@
  * **ほかの属性は受け取らない。** 値の有無で root の要素が替わる（値の span か、UnknownChip か）ので、
  * 渡した属性がどちらに付くかが呼び出し側から読めなくなる（docs/adr/0011「props の決まり」の例外）。
  */
-import { cx } from '../lib/cx';
-import styles from './FieldValue.module.css';
-import UnknownChip from './UnknownChip.tsx';
+import { cx } from "../lib/cx";
+import styles from "./FieldValue.module.css";
+import UnknownChip from "./UnknownChip.tsx";
 
 interface FieldValueProps {
   /**
@@ -26,7 +26,7 @@ interface FieldValueProps {
 
 export default function FieldValue({ value, field }: FieldValueProps) {
   return value ? (
-    <span className={cx(styles.root, 'tabular')}>{value}</span>
+    <span className={cx(styles.root, "tabular")}>{value}</span>
   ) : (
     <UnknownChip field={field} />
   );

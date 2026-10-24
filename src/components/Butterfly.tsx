@@ -8,19 +8,28 @@
  * （docs/adr/0011-react-components-for-design-sync.md「props の決まり」）。
  * `style` を渡すと、幅と一緒に当たる。
  */
-import type { SVGAttributes } from 'react';
+import type { SVGAttributes } from "react";
 
-import { cx } from '../lib/cx';
-import styles from './Butterfly.module.css';
+import { cx } from "../lib/cx";
+import styles from "./Butterfly.module.css";
 
-interface ButterflyProps extends Omit<SVGAttributes<SVGSVGElement>, 'children' | 'dangerouslySetInnerHTML'> {
+interface ButterflyProps extends Omit<
+  SVGAttributes<SVGSVGElement>,
+  "children" | "dangerouslySetInnerHTML"
+> {
   /** 幅。高さは 34/40 の比で決まる。CSS の長さで書く。 */
   size?: string;
   /** 色。渡さなければ、置いた場所の文字色（currentColor）。 */
-  tone?: 'pink' | 'violet';
+  tone?: "pink" | "violet";
 }
 
-export default function Butterfly({ size = '1.5rem', tone, className, style, ...rest }: ButterflyProps) {
+export default function Butterfly({
+  size = "1.5rem",
+  tone,
+  className,
+  style,
+  ...rest
+}: ButterflyProps) {
   return (
     <svg
       className={cx(styles.root, tone && styles[tone], className)}
@@ -33,8 +42,22 @@ export default function Butterfly({ size = '1.5rem', tone, className, style, ...
       <g fill="currentColor">
         <ellipse cx="13" cy="13" rx="9.2" ry="10.4" opacity="0.82" transform="rotate(-24 13 13)" />
         <ellipse cx="27" cy="13" rx="9.2" ry="10.4" opacity="0.82" transform="rotate(24 27 13)" />
-        <ellipse cx="14.6" cy="24.5" rx="6.2" ry="6.8" opacity="0.62" transform="rotate(-14 14.6 24.5)" />
-        <ellipse cx="25.4" cy="24.5" rx="6.2" ry="6.8" opacity="0.62" transform="rotate(14 25.4 24.5)" />
+        <ellipse
+          cx="14.6"
+          cy="24.5"
+          rx="6.2"
+          ry="6.8"
+          opacity="0.62"
+          transform="rotate(-14 14.6 24.5)"
+        />
+        <ellipse
+          cx="25.4"
+          cy="24.5"
+          rx="6.2"
+          ry="6.8"
+          opacity="0.62"
+          transform="rotate(14 25.4 24.5)"
+        />
         <rect x="19.1" y="6" width="1.8" height="23" rx="0.9" />
       </g>
       <path

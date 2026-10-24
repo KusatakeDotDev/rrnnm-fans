@@ -1,9 +1,9 @@
-import type { Meta, StoryObj } from '@storybook/react-vite';
+import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import Butterfly from '../src/components/Butterfly.tsx';
-import { row } from './shared/layout.ts';
+import Butterfly from "../src/components/Butterfly.tsx";
+import { row } from "./shared/layout.ts";
 
-const meta = { title: 'General/Butterfly', component: Butterfly } satisfies Meta<typeof Butterfly>;
+const meta = { title: "General/Butterfly", component: Butterfly } satisfies Meta<typeof Butterfly>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
@@ -30,9 +30,9 @@ export const Tones: Story = {
 export const Colored: Story = {
   render: () => (
     <div className="on-paper" style={row}>
-      <Butterfly size="2.5rem" style={{ color: 'var(--color-accent)' }} />
-      <Butterfly size="2.5rem" style={{ color: 'var(--color-fill-pink)' }} />
-      <Butterfly size="2.5rem" style={{ color: 'var(--color-fill-blue)' }} />
+      <Butterfly size="2.5rem" style={{ color: "var(--color-accent)" }} />
+      <Butterfly size="2.5rem" style={{ color: "var(--color-fill-pink)" }} />
+      <Butterfly size="2.5rem" style={{ color: "var(--color-fill-blue)" }} />
     </div>
   ),
 };

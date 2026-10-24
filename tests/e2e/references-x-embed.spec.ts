@@ -1,8 +1,8 @@
-import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from '@playwright/test';
+import AxeBuilder from "@axe-core/playwright";
+import { expect, test } from "@playwright/test";
 
-import { AXE_TAGS, THIRD_PARTY_EMBED } from '../helpers/axe';
-import { X_HOST } from '../helpers/x-embed';
+import { AXE_TAGS, THIRD_PARTY_EMBED } from "../helpers/axe";
+import { X_HOST } from "../helpers/x-embed";
 
 /**
  * playwright.config.ts の BLOCK_EXTERNAL_EMBEDS が効いていることを見る。
@@ -16,17 +16,17 @@ import { X_HOST } from '../helpers/x-embed';
  * 変えたとき、読みに行く前に終わってしまう。数えるのは読み終えたもの（requestfinished）で、止めたホストへの
  * 読み込みは失敗するので数えない。
  */
-test('規約テストでは X の埋め込みを読まない — /references/', async ({ page }) => {
+test("規約テストでは X の埋め込みを読まない — /references/", async ({ page }) => {
   const fromX: string[] = [];
-  page.on('requestfinished', (request) => {
+  page.on("requestfinished", (request) => {
     if (X_HOST.test(new URL(request.url()).hostname)) fromX.push(request.url());
   });
 
-  await page.goto('/references/', { waitUntil: 'networkidle' });
+  await page.goto("/references/", { waitUntil: "networkidle" });
 
-  expect(fromX, 'X のホストから読めたもの').toEqual([]);
-  await expect(page.locator('[data-x-post] a[href]')).toHaveCount(1);
-  await expect(page.locator('[data-x-post] blockquote')).toHaveCount(0);
+  expect(fromX, "X のホストから読めたもの").toEqual([]);
+  await expect(page.locator("[data-x-post] a[href]")).toHaveCount(1);
+  await expect(page.locator("[data-x-post] blockquote")).toHaveCount(0);
 });
 
 /**
@@ -41,15 +41,17 @@ test('規約テストでは X の埋め込みを読まない — /references/', 
  * 当たるので、その状態でも WCAG A/AA を見る（tests/conformance/routes.spec.ts の axe は、X を止めたリンクだけの状態しか見ない）。
  */
 const OEMBED = /^https:\/\/publish\.x\.com\/oembed\?/;
-const CORS = { 'access-control-allow-origin': '*' };
+const CORS = { "access-control-allow-origin": "*" };
 
-test('oEmbed が返したら、ページのリンクのポストの埋め込みのコードを差し込む — /references/', async ({ page }) => {
+test("oEmbed が返したら、ページのリンクのポストの埋め込みのコードを差し込む — /references/", async ({
+  page,
+}) => {
   const requested: URL[] = [];
   // ページのリンクは差し込むと消えるので、応答を返す前（横取りした時点）に読む。スクリプトと同じく、解決した URL（a.href）で。
   let href: string | null = null;
   await page.route(OEMBED, async (route) => {
     requested.push(new URL(route.request().url()));
-    href = await page.locator('[data-x-post] a[href]').evaluate((a: HTMLAnchorElement) => a.href);
+    href = await page.locator("[data-x-post] a[href]").evaluate((a: HTMLAnchorElement) => a.href);
     return route.fulfill({
       headers: CORS,
       json: {
@@ -60,31 +62,44 @@ test('oEmbed が返したら、ページのリンクのポストの埋め込み�
       },
     });
   });
-  await page.goto('/references/');
+  await page.goto("/references/");
 
-  await expect(page.locator('[data-x-post] blockquote.twitter-tweet')).toHaveCount(1);
-  await expect(page.locator('[data-x-post] > p')).toHaveCount(0);
+  await expect(page.locator("[data-x-post] blockquote.twitter-tweet")).toHaveCount(1);
+  await expect(page.locator("[data-x-post] > p")).toHaveCount(0);
   // 頼む中身: ページのリンクのポストを、widgets.js の script を外し、個人向けの調整に使わせない形で。
   expect(
-    requested.map((url) => Object.fromEntries(['url', 'omit_script', 'dnt', 'lang'].map((key) => [key, url.searchParams.get(key)]))),
-  ).toEqual([{ url: href, omit_script: 'true', dnt: 'true', lang: 'ja' }]);
+    requested.map((url) =>
+      Object.fromEntries(
+        ["url", "omit_script", "dnt", "lang"].map((key) => [key, url.searchParams.get(key)]),
+      ),
+    ),
+  ).toEqual([{ url: href, omit_script: "true", dnt: "true", lang: "ja" }]);
 
-  const results = await new AxeBuilder({ page }).withTags(AXE_TAGS).exclude(THIRD_PARTY_EMBED).analyze();
-  expect(results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' / ')}`)).toEqual([]);
+  const results = await new AxeBuilder({ page })
+    .withTags(AXE_TAGS)
+    .exclude(THIRD_PARTY_EMBED)
+    .analyze();
+  expect(
+    results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(" / ")}`),
+  ).toEqual([]);
 });
 
-test('oEmbed が取れなかったら、ポストへのリンクのまま残す — /references/', async ({ page }) => {
-  await page.route(OEMBED, (route) => route.fulfill({ status: 404, headers: CORS, body: '' }));
-  await page.goto('/references/', { waitUntil: 'networkidle' });
+test("oEmbed が取れなかったら、ポストへのリンクのまま残す — /references/", async ({ page }) => {
+  await page.route(OEMBED, (route) => route.fulfill({ status: 404, headers: CORS, body: "" }));
+  await page.goto("/references/", { waitUntil: "networkidle" });
 
-  await expect(page.locator('[data-x-post] a[href]')).toHaveCount(1);
-  await expect(page.locator('[data-x-post] blockquote')).toHaveCount(0);
+  await expect(page.locator("[data-x-post] a[href]")).toHaveCount(1);
+  await expect(page.locator("[data-x-post] blockquote")).toHaveCount(0);
 });
 
-test('oEmbed が blockquote でない html を返したら、差し込まない — /references/', async ({ page }) => {
-  await page.route(OEMBED, (route) => route.fulfill({ headers: CORS, json: { html: '<img src="x" alt="">' } }));
-  await page.goto('/references/', { waitUntil: 'networkidle' });
+test("oEmbed が blockquote でない html を返したら、差し込まない — /references/", async ({
+  page,
+}) => {
+  await page.route(OEMBED, (route) =>
+    route.fulfill({ headers: CORS, json: { html: '<img src="x" alt="">' } }),
+  );
+  await page.goto("/references/", { waitUntil: "networkidle" });
 
-  await expect(page.locator('[data-x-post] a[href]')).toHaveCount(1);
-  await expect(page.locator('[data-x-post] img')).toHaveCount(0);
+  await expect(page.locator("[data-x-post] a[href]")).toHaveCount(1);
+  await expect(page.locator("[data-x-post] img")).toHaveCount(0);
 });

@@ -5,9 +5,7 @@
   "pkg": "rurino-nemo-fansite",
   "globalName": "RurinoNemo",
   "tsconfig": ".design-sync/tsconfig.sync.json",
-  "extraEntries": [
-    "./.design-sync/entry.ts"
-  ],
+  "extraEntries": ["./.design-sync/entry.ts"],
   "componentSrcMap": {
     "SkebWorks": "src/unreleased/_parts/SkebWorks.tsx",
     "Butterfly": "src/components/Butterfly.tsx",
@@ -35,10 +33,7 @@
     "YouTubeThumbnail": "src/components/YouTubeThumbnail.tsx"
   },
   "buildCmd": "node node_modules/typescript/bin/tsc -p .design-sync/tsconfig.types.json",
-  "guidelinesGlob": [
-    "docs/DESIGN.md",
-    "docs/CONCEPT.md"
-  ],
+  "guidelinesGlob": ["docs/DESIGN.md", "docs/CONCEPT.md"],
   "readmeHeader": ".design-sync/conventions.md",
   "overrides": {
     "NemophilaField": {

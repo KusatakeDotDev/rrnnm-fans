@@ -6,16 +6,21 @@
  */
 
 /** どのリールの帯もこの順に並ぶ。i 本めの当たりは WORD[i]。 */
-export const WORD = ['ク', 'ソ', 'バ', 'カ'] as const;
+export const WORD = ["ク", "ソ", "バ", "カ"] as const;
 
 /** そろうまでの1〜3本めで鳴らすセリフ。名前は src/assets/kusobaka-slot/ の mp3 のファイル名。 */
-export const REACTIONS = ['reaction-oo', 'reaction-ooh', 'reaction-o', 'reaction-hya'] as const;
+export const REACTIONS = ["reaction-oo", "reaction-ooh", "reaction-o", "reaction-hya"] as const;
 
 /** 4本そろったときに鳴らすセリフ。 */
-export const CHEERS = ['cheer-omedetou', 'cheer-sonochoushi', 'cheer-panpakapan', 'cheer-ooatari'] as const;
+export const CHEERS = [
+  "cheer-omedetou",
+  "cheer-sonochoushi",
+  "cheer-panpakapan",
+  "cheer-ooatari",
+] as const;
 
 /** 期限を過ぎたあと（目押し）に、そろわなかったときに鳴らすセリフ。 */
-export const MISSES = ['miss-atochotto', 'miss-osshii', 'miss-zannen'] as const;
+export const MISSES = ["miss-atochotto", "miss-osshii", "miss-zannen"] as const;
 
 export type Voice = (typeof REACTIONS)[number] | (typeof CHEERS)[number] | (typeof MISSES)[number];
 
@@ -66,7 +71,7 @@ export function slidePosition(from: number, to: number, elapsed: number, duratio
 }
 
 /** 元ネタのポストの「今日」。この日のうちは、かならずそろう。 */
-export const DEFAULT_UNTIL = '2026-10-18';
+export const DEFAULT_UNTIL = "2026-10-18";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** 元ネタは日本の「今日」なので、どこから開いても日本時間で区切る。 */
@@ -90,5 +95,5 @@ export function deadlineOf(date: string): number | null {
 export const SOUND_LEVEL = 0.4;
 
 export function parseMuted(stored: string | null): boolean {
-  return stored === '1';
+  return stored === "1";
 }

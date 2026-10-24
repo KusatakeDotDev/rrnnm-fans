@@ -33,15 +33,24 @@
  * 属性（`className`・`id`・`aria-*` など）は root の footer にそのまま渡す
  * （docs/adr/0011-react-components-for-design-sync.md「props の決まり」）。
  */
-import type { CSSProperties, HTMLAttributes } from 'react';
-import { BRAND_BOOTH, BRAND_MARSHMALLOW, BRAND_SKEB, BRAND_X, BRAND_YOUTUBE, LOGO_WHITE_OUTLINED } from '@site-assets';
+import type { CSSProperties, HTMLAttributes } from "react";
+import {
+  BRAND_BOOTH,
+  BRAND_MARSHMALLOW,
+  BRAND_SKEB,
+  BRAND_X,
+  BRAND_YOUTUBE,
+  LOGO_WHITE_OUTLINED,
+} from "@site-assets";
 
-import { cx } from '../lib/cx';
-import { OFFICIAL } from '../data/official';
-import styles from './SiteFooter.module.css';
-import type { SiteLink } from '../data/site-navigation';
+import { cx } from "../lib/cx";
+import { OFFICIAL } from "../data/official";
+import styles from "./SiteFooter.module.css";
+import type { SiteLink } from "../data/site-navigation";
 
-type SiteFooterProps = Omit<HTMLAttributes<HTMLElement>, 'children' | 'dangerouslySetInnerHTML'> & { pageLinks?: readonly SiteLink[] };
+type SiteFooterProps = Omit<HTMLAttributes<HTMLElement>, "children" | "dangerouslySetInnerHTML"> & {
+  pageLinks?: readonly SiteLink[];
+};
 
 /* サービスごとの設定はここだけに持つ。スタイルは SiteFooter.module.css の1つのルールで、値はカスタムプロパティで渡す。
      tile  … タイルの下地。各社のアプリアイコンの地に寄せる（色はトークン）。
@@ -50,11 +59,51 @@ type SiteFooterProps = Omit<HTMLAttributes<HTMLElement>, 'children' | 'dangerous
              YouTube の SVG は四方に余白を含むので 1（タイルの幅いっぱい）
    width/height は画像の縦横比で、読み込み前の場所取り用。 */
 const links = [
-  { label: 'YouTube', href: OFFICIAL.youtube, icon: BRAND_YOUTUBE, width: 602, height: 516, tile: 'var(--color-fill-brand-youtube)', scale: 1 },
-  { label: 'X', href: OFFICIAL.x, icon: BRAND_X, width: 1200, height: 1227, tile: 'var(--color-fill-brand-x)', scale: 0.5 },
-  { label: 'マシュマロ', href: OFFICIAL.marshmallow, icon: BRAND_MARSHMALLOW, width: 311, height: 311, tile: 'var(--color-fill-brand-marshmallow)', scale: 0.8 },
-  { label: 'BOOTH', href: OFFICIAL.booth, icon: BRAND_BOOTH, width: 1024, height: 1024, tile: 'transparent', scale: 1 },
-  { label: 'Skeb', href: OFFICIAL.skeb, icon: BRAND_SKEB, width: 40, height: 40, tile: 'var(--color-fill-brand-skeb)', scale: 0.8 },
+  {
+    label: "YouTube",
+    href: OFFICIAL.youtube,
+    icon: BRAND_YOUTUBE,
+    width: 602,
+    height: 516,
+    tile: "var(--color-fill-brand-youtube)",
+    scale: 1,
+  },
+  {
+    label: "X",
+    href: OFFICIAL.x,
+    icon: BRAND_X,
+    width: 1200,
+    height: 1227,
+    tile: "var(--color-fill-brand-x)",
+    scale: 0.5,
+  },
+  {
+    label: "マシュマロ",
+    href: OFFICIAL.marshmallow,
+    icon: BRAND_MARSHMALLOW,
+    width: 311,
+    height: 311,
+    tile: "var(--color-fill-brand-marshmallow)",
+    scale: 0.8,
+  },
+  {
+    label: "BOOTH",
+    href: OFFICIAL.booth,
+    icon: BRAND_BOOTH,
+    width: 1024,
+    height: 1024,
+    tile: "transparent",
+    scale: 1,
+  },
+  {
+    label: "Skeb",
+    href: OFFICIAL.skeb,
+    icon: BRAND_SKEB,
+    width: 40,
+    height: 40,
+    tile: "var(--color-fill-brand-skeb)",
+    scale: 0.8,
+  },
 ];
 
 const chain = [
@@ -98,7 +147,11 @@ export default function SiteFooter({ pageLinks = [], className, ...rest }: SiteF
           <li>
             <a href="/">トップ</a>
           </li>
-          {pageLinks.map((link) => <li key={link.href}><a href={link.href}>{link.label}</a></li>)}
+          {pageLinks.map((link) => (
+            <li key={link.href}>
+              <a href={link.href}>{link.label}</a>
+            </li>
+          ))}
           <li>
             <a href="/references/">推し活の資料</a>
           </li>
@@ -125,7 +178,14 @@ export default function SiteFooter({ pageLinks = [], className, ...rest }: SiteF
               focusable="false"
             >
               {petals.map((angle) => (
-                <ellipse key={angle} cx="0" cy="-25" rx="17" ry="25" transform={`rotate(${angle})`} />
+                <ellipse
+                  key={angle}
+                  cx="0"
+                  cy="-25"
+                  rx="17"
+                  ry="25"
+                  transform={`rotate(${angle})`}
+                />
               ))}
               <circle className={styles.heart} r="13" />
             </svg>
@@ -135,7 +195,10 @@ export default function SiteFooter({ pageLinks = [], className, ...rest }: SiteF
 
         {/* id で結ばないのは、コンポーネント一覧がフッターをもう1つ置いて id が重なるため。
             読み上げでもこの見出しの直後にリストが来る。 */}
-        <p className={styles.linksHeading}>瑠璃野ねも 公式アカウント<span className={styles.externalNote}>外部サイト・新しいタブで開きます</span></p>
+        <p className={styles.linksHeading}>
+          瑠璃野ねも 公式アカウント
+          <span className={styles.externalNote}>外部サイト・新しいタブで開きます</span>
+        </p>
         {/* aria-label は、リスト単位で移動する読み上げでも「誰のアカウントか」が伝わるように。
             見出しと id で結ばないのは上のとおり（id が重なる）。 */}
         <ul className={styles.links} aria-label="瑠璃野ねも 公式アカウント" role="list">
@@ -145,7 +208,7 @@ export default function SiteFooter({ pageLinks = [], className, ...rest }: SiteF
                 href={link.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ '--tile-bg': link.tile, '--icon-scale': link.scale } as CSSProperties}
+                style={{ "--tile-bg": link.tile, "--icon-scale": link.scale } as CSSProperties}
               >
                 {/* loading="lazy" にしない。数 KB しかなく、遅らせると色だけの空タイルが先に出る。 */}
                 <img src={link.icon} width={link.width} height={link.height} alt={link.label} />

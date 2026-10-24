@@ -9,13 +9,16 @@
  * 下の3つ以外の属性（`className`・`id`・`aria-*` など）は root の div にそのまま渡す
  * （docs/adr/0011-react-components-for-design-sync.md「props の決まり」）。
  */
-import type { HTMLAttributes } from 'react';
+import type { HTMLAttributes } from "react";
 
-import { cx } from '../lib/cx';
-import FieldValue from './FieldValue.tsx';
-import styles from './StatTile.module.css';
+import { cx } from "../lib/cx";
+import FieldValue from "./FieldValue.tsx";
+import styles from "./StatTile.module.css";
 
-interface StatTileProps extends Omit<HTMLAttributes<HTMLDivElement>, 'children' | 'dangerouslySetInnerHTML'> {
+interface StatTileProps extends Omit<
+  HTMLAttributes<HTMLDivElement>,
+  "children" | "dangerouslySetInnerHTML"
+> {
   /** 上に出す欄名。例: "企画アーカイブ" */
   label: string;
   /** 大きく出す値。未確認は `null`。 */
@@ -26,7 +29,7 @@ interface StatTileProps extends Omit<HTMLAttributes<HTMLDivElement>, 'children' 
 
 export default function StatTile({ label, value, note, className, ...rest }: StatTileProps) {
   return (
-    <div className={cx(styles.root, 'on-paper', className)} {...rest}>
+    <div className={cx(styles.root, "on-paper", className)} {...rest}>
       <span className={styles.label}>{label}</span>
       <span className={styles.value}>
         <FieldValue value={value} />

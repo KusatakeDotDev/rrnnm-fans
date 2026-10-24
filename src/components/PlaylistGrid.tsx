@@ -20,23 +20,31 @@
  * 見出しは `heading` で受け、格子の上に置く。置く面と階層はページ側が決める。
  * それ以外の属性（`className` など）は root の section にそのまま渡す（ADR-0011「props の決まり」）。
  */
-import { useId, type HTMLAttributes, type ReactNode } from 'react';
+import { useId, type HTMLAttributes, type ReactNode } from "react";
 
-import { cx } from '../lib/cx';
-import Flower from './Flower.tsx';
-import { OFFICIAL } from '../data/official';
-import styles from './PlaylistGrid.module.css';
-import { PLAYLISTS, playlistUrl } from '../data/playlists';
-import YouTubeThumbnail from './YouTubeThumbnail.tsx';
+import { cx } from "../lib/cx";
+import Flower from "./Flower.tsx";
+import { OFFICIAL } from "../data/official";
+import styles from "./PlaylistGrid.module.css";
+import { PLAYLISTS, playlistUrl } from "../data/playlists";
+import YouTubeThumbnail from "./YouTubeThumbnail.tsx";
 
-interface PlaylistGridProps extends Omit<HTMLAttributes<HTMLElement>, 'children' | 'dangerouslySetInnerHTML'> {
+interface PlaylistGridProps extends Omit<
+  HTMLAttributes<HTMLElement>,
+  "children" | "dangerouslySetInnerHTML"
+> {
   /** 読み上げでのこの一覧の名前。 */
   label?: string;
   /** 見出し。格子の上に置く。 */
   heading?: ReactNode;
 }
 
-export default function PlaylistGrid({ label = 'YouTube の再生リスト', heading, className, ...rest }: PlaylistGridProps) {
+export default function PlaylistGrid({
+  label = "YouTube の再生リスト",
+  heading,
+  className,
+  ...rest
+}: PlaylistGridProps) {
   // 「すべて見る」の aria-controls が指す先。1ページに2つ置いても重ならないよう、固定の名前にしない。
   const listId = useId();
   return (
@@ -65,7 +73,9 @@ export default function PlaylistGrid({ label = 'YouTube の再生リスト', hea
                 </span>
                 {/* 行き先は画面には書かない（表紙と最後のタイルで分かる）。ただし、リンクの一覧から
                     文脈なしに飛んでくる読み上げの人には、リンクごとに要る。 */}
-                <span className="sr-only">（YouTube の再生リスト。外部サイトを新しいタブで開く）</span>
+                <span className="sr-only">
+                  （YouTube の再生リスト。外部サイトを新しいタブで開く）
+                </span>
               </a>
             </li>
           ))}
@@ -103,9 +113,10 @@ export default function PlaylistGrid({ label = 'YouTube の再生リスト', hea
             `{' '}` で足すと文字と並んで React が間に `<!-- -->` を挟む。
             data-playlists-source は、出典の行があることをテストが探すマーカー。文言は探さない。スクリプトは読まない。 */}
         <p className={styles.source} data-playlists-source="">
-          {'出典：YouTube '}
+          {"出典：YouTube "}
           <a href={OFFICIAL.youtube} target="_blank" rel="noopener noreferrer">
-            瑠璃野ねも<span className="sr-only">（YouTube チャンネル。外部サイトを新しいタブで開く）</span>
+            瑠璃野ねも
+            <span className="sr-only">（YouTube チャンネル。外部サイトを新しいタブで開く）</span>
           </a>
         </p>
       </div>

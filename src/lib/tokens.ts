@@ -13,7 +13,7 @@ const MAX_RESOLVE_DEPTH = 16;
 
 /** CSS のコメントを外す。コメントの中の `--x: y;` を拾わないために要る。 */
 export function stripComments(css: string): string {
-  return css.replace(/\/\*[\s\S]*?\*\//g, '');
+  return css.replace(/\/\*[\s\S]*?\*\//g, "");
 }
 
 /**
@@ -23,7 +23,7 @@ export function stripComments(css: string): string {
 export function parseCustomProperties(css: string): Map<string, string> {
   const tokens = new Map<string, string>();
   for (const [, name, value] of stripComments(css).matchAll(CUSTOM_PROPERTY)) {
-    tokens.set(name!, value!.trim().replace(/\s+/g, ' '));
+    tokens.set(name!, value!.trim().replace(/\s+/g, " "));
   }
   return tokens;
 }
@@ -33,7 +33,7 @@ export function resolve(tokens: ReadonlyMap<string, string>, name: string): stri
   let value = read(tokens, name);
   // Stryker disable next-line EqualityOperator: 守るのは循環参照で止まることで、諦める段数（16 か 17 か）は決めていない
   for (let depth = 0; depth < MAX_RESOLVE_DEPTH; depth += 1) {
-    if (!value.includes('var(')) return value;
+    if (!value.includes("var(")) return value;
     value = value.replace(VAR_REFERENCE, (_, ref: string) => read(tokens, ref));
   }
   throw new Error(`var() の参照が深すぎる。循環している可能性がある: ${name}`);

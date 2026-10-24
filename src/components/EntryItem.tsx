@@ -6,15 +6,18 @@
  * 下の props 以外の属性（`className`・`id`・`aria-*` など）は root の li にそのまま渡す
  * （docs/adr/0011-react-components-for-design-sync.md「props の決まり」）。
  */
-import type { HTMLAttributes } from 'react';
+import type { HTMLAttributes } from "react";
 
-import { cx } from '../lib/cx';
-import CategoryBadge from './CategoryBadge.tsx';
-import styles from './EntryItem.module.css';
-import FieldValue from './FieldValue.tsx';
-import type { Tone } from './tones';
+import { cx } from "../lib/cx";
+import CategoryBadge from "./CategoryBadge.tsx";
+import styles from "./EntryItem.module.css";
+import FieldValue from "./FieldValue.tsx";
+import type { Tone } from "./tones";
 
-interface EntryItemProps extends Omit<HTMLAttributes<HTMLLIElement>, 'title' | 'children' | 'dangerouslySetInnerHTML'> {
+interface EntryItemProps extends Omit<
+  HTMLAttributes<HTMLLIElement>,
+  "title" | "children" | "dangerouslySetInnerHTML"
+> {
   title: string;
   /** 付ければタイトルがリンクになる。 */
   href?: string;
@@ -32,7 +35,17 @@ interface EntryItemProps extends Omit<HTMLAttributes<HTMLLIElement>, 'title' | '
   valueField?: string;
 }
 
-export default function EntryItem({ title, href, abbr, category, tone, value, valueField, className, ...rest }: EntryItemProps) {
+export default function EntryItem({
+  title,
+  href,
+  abbr,
+  category,
+  tone,
+  value,
+  valueField,
+  className,
+  ...rest
+}: EntryItemProps) {
   const hasValueColumn = value !== undefined || valueField !== undefined;
 
   return (

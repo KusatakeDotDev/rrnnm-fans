@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite-plus';
+import { defineConfig } from "vite-plus";
 
 // 単体テスト（tests/unit）とリポジトリの検査（tests/repo）の層。Astro には一切依存させない（→ docs/adr/0003-testing-and-ci.md）。
 // getViteConfig(astro) を噛ませると、ビルドが壊れたときに単体テストまで一緒に赤くなる。
@@ -9,10 +9,10 @@ export default defineConfig({
     tsconfigPaths: true,
   },
   test: {
-    environment: 'node',
+    environment: "node",
     projects: [
-      { extends: true, test: { name: 'unit', include: ['tests/unit/**/*.test.ts'] } },
-      { extends: true, test: { name: 'repo', include: ['tests/repo/**/*.test.ts'] } },
+      { extends: true, test: { name: "unit", include: ["tests/unit/**/*.test.ts"] } },
+      { extends: true, test: { name: "repo", include: ["tests/repo/**/*.test.ts"] } },
     ],
   },
 });

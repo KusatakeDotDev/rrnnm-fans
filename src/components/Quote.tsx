@@ -16,12 +16,12 @@
  * 子（引いた文）は `<blockquote>` に入る。下の3つと子以外の属性（`className`・`id`・`aria-*` など）は
  * root の figure にそのまま渡す（docs/adr/0011-react-components-for-design-sync.md「props の決まり」）。
  */
-import type { HTMLAttributes } from 'react';
+import type { HTMLAttributes } from "react";
 
-import { cx } from '../lib/cx';
-import styles from './Quote.module.css';
+import { cx } from "../lib/cx";
+import styles from "./Quote.module.css";
 
-interface QuoteProps extends Omit<HTMLAttributes<HTMLElement>, 'dangerouslySetInnerHTML'> {
+interface QuoteProps extends Omit<HTMLAttributes<HTMLElement>, "dangerouslySetInnerHTML"> {
   /** 引用元のURL。`<blockquote cite>` にも入る。 */
   url: string;
   /** 出典の名前。例: "公式YouTubeチャンネル 概要欄" */
@@ -37,7 +37,7 @@ export default function Quote({ url, label, retrieved, children, className, ...r
         {children}
       </blockquote>
       <figcaption className={styles.source}>
-        {'出典: '}
+        {"出典: "}
         {/* 文字列は1つにまとめて渡す。`{label} ↗` と書くと React が間に `<!-- -->` を挟んで
             テキストが2つに割れ、字の並べ方（アンチエイリアス）が変わる。 */}
         <a href={url} target="_blank" rel="noopener noreferrer">

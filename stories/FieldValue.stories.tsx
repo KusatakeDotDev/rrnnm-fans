@@ -1,9 +1,11 @@
-import type { Meta, StoryObj } from '@storybook/react-vite';
+import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import FieldValue from '../src/components/FieldValue.tsx';
-import { pad } from './shared/layout.ts';
+import FieldValue from "../src/components/FieldValue.tsx";
+import { pad } from "./shared/layout.ts";
 
-const meta = { title: 'General/FieldValue', component: FieldValue } satisfies Meta<typeof FieldValue>;
+const meta = { title: "General/FieldValue", component: FieldValue } satisfies Meta<
+  typeof FieldValue
+>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
@@ -13,7 +15,13 @@ export const ValueAndUnknown: Story = {
   render: () => (
     <div
       className="on-paper"
-      style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '1rem 1.5rem', padding: pad }}
+      style={{
+        display: "flex",
+        flexWrap: "wrap",
+        alignItems: "center",
+        gap: "1rem 1.5rem",
+        padding: pad,
+      }}
     >
       <FieldValue value="7:15:25" />
       <FieldValue value="2026.09.05" />

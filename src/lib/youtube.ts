@@ -15,7 +15,7 @@ export interface OEmbed {
 }
 
 /** ADR-0008 の例外が掛かるのは、YouTube が配信する画像だけ。 */
-const THUMBNAIL_ORIGIN = 'https://i.ytimg.com';
+const THUMBNAIL_ORIGIN = "https://i.ytimg.com";
 
 /** `url`（動画の視聴ページ、または再生リストのページ）の oEmbed を返すエンドポイント。 */
 export function oembedUrl(url: string): string {
@@ -26,14 +26,14 @@ export function oembedUrl(url: string): string {
  * oEmbed の応答として読んでよい形か。200 でも、中身が期待した形（部分的な JSON・エラーペイロード等）でないことがある。
  */
 export function isOEmbed(value: unknown): value is OEmbed {
-  if (typeof value !== 'object' || value === null) return false;
+  if (typeof value !== "object" || value === null) return false;
   const v = value as Record<string, unknown>;
   return (
-    typeof v.title === 'string' &&
-    typeof v.provider_name === 'string' &&
-    typeof v.thumbnail_url === 'string' &&
-    typeof v.thumbnail_width === 'number' &&
-    typeof v.thumbnail_height === 'number'
+    typeof v.title === "string" &&
+    typeof v.provider_name === "string" &&
+    typeof v.thumbnail_url === "string" &&
+    typeof v.thumbnail_width === "number" &&
+    typeof v.thumbnail_height === "number"
   );
 }
 

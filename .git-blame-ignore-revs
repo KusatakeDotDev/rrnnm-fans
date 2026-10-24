@@ -1,0 +1,4 @@
+# 整形だけのコミット。git blame で飛ばす（GitHub の blame はこのファイルを読む。手元は git config blame.ignoreRevsFile .git-blame-ignore-revs）
+
+# Oxfmt でリポジトリ全体を整形した（RRNNM-108）
+580790d5bb81791a16630e24d03a101d591adc66

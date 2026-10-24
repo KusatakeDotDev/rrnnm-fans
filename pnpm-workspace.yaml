@@ -13,33 +13,33 @@ catalogMode: strict
 # catalog に入れず、package.json に直接書くもの（tests/repo/catalog-specifiers.test.ts がこの一覧を読む）:
 # （今は無い）
 catalog:
-  '@astrojs/check': ^0.9.10
-  '@astrojs/react': ^7.0.1
-  '@astrojs/sitemap': ^3.7.4
-  '@axe-core/playwright': ^4.13.0
-  '@fontsource/zen-maru-gothic': ^5.3.1
+  "@astrojs/check": ^0.9.10
+  "@astrojs/react": ^7.0.1
+  "@astrojs/sitemap": ^3.7.4
+  "@axe-core/playwright": ^4.13.0
+  "@fontsource/zen-maru-gothic": ^5.3.1
 
   # Why: CI のイメージのタグ（ci.yml の container:）と同じバージョンにする（ADR-0013 の決定）
   # RemoveWhen: ADR-0013「見直す条件」で、イメージのタグを手で直さなくてよくなったとき
-  '@playwright/test': ^1.63.0
+  "@playwright/test": ^1.63.0
 
-  '@storybook/addon-a11y': ^10.6.1
-  '@storybook/addon-docs': ^10.6.1
-  '@storybook/addon-vitest': ^10.6.1
-  '@storybook/react-vite': ^10.6.1
-  '@stryker-mutator/core': ^10.1.1
-  '@stryker-mutator/vitest-runner': ^10.1.1
-  '@types/node': ^26.6.5
-  '@types/react': ^19.3.0
-  '@types/react-dom': ^19.3.0
+  "@storybook/addon-a11y": ^10.6.1
+  "@storybook/addon-docs": ^10.6.1
+  "@storybook/addon-vitest": ^10.6.1
+  "@storybook/react-vite": ^10.6.1
+  "@stryker-mutator/core": ^10.1.1
+  "@stryker-mutator/vitest-runner": ^10.1.1
+  "@types/node": ^26.6.5
+  "@types/react": ^19.3.0
+  "@types/react-dom": ^19.3.0
 
   # Why: addon-vitest が optional peer として読み込むので、直接持つ（ADR-0003「導入した依存」）。バージョンは vite-plus の中のものと同じにする（ADR-0031「Vitest と Vite のバージョンは、vite-plus の中のものにそろえる」）
   # RemoveWhen: addon-vitest が @vitest/browser/context を読み込まなくなるか、依存として持つようになったとき
-  '@vitest/browser': 5.0.5
+  "@vitest/browser": 5.0.5
 
   # Why: vite-plus がブラウザーモードの peer として求める。バージョンは vite-plus が求めるものと同じにする（ADR-0031「Vitest と Vite のバージョンは、vite-plus の中のものにそろえる」）
   # RemoveWhen: コンポーネントのテストを、Vitest のブラウザーモードで回さなくなったとき
-  '@vitest/browser-playwright': 5.0.5
+  "@vitest/browser-playwright": 5.0.5
 
   astro: ^7.3.8
   fast-check: ^4.10.2
@@ -83,8 +83,8 @@ catalog:
 # Vitest は peer の Vite ごとに別のものとして入るので、Vite もそろえないと、テストのファイルが登録する先と Stryker が回すものが別になる
 # （ADR-0031「Vitest と Vite のバージョンは、vite-plus の中のものにそろえる」）
 overrides:
-  'vite@*': 'catalog:'
-  'vitest@*': 'catalog:'
+  "vite@*": "catalog:"
+  "vitest@*": "catalog:"
 
 # peer の Vite の範囲（^8 など）が、vite-plus-core のバージョン（1.x）と比べられて外れるため。中の Vite のバージョンは tests/repo/vite-plus.test.ts が見る
 peerDependencyRules:
@@ -98,8 +98,8 @@ peerDependencyRules:
 # このバージョンだけ例外にする（主の判断（2026-10-24））。公開から1日経てば、例外にしなくても入る。
 # TODO(RRNNM-108): 2026-10-24T19:17Z を過ぎたら、この一覧を消す。
 minimumReleaseAgeExclude:
-  - '@stryker-mutator/api@10.1.1'
-  - '@stryker-mutator/core@10.1.1'
-  - '@stryker-mutator/instrumenter@10.1.1'
-  - '@stryker-mutator/util@10.1.1'
-  - '@stryker-mutator/vitest-runner@10.1.1'
+  - "@stryker-mutator/api@10.1.1"
+  - "@stryker-mutator/core@10.1.1"
+  - "@stryker-mutator/instrumenter@10.1.1"
+  - "@stryker-mutator/util@10.1.1"
+  - "@stryker-mutator/vitest-runner@10.1.1"

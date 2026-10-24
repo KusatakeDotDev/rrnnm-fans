@@ -1,9 +1,9 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync } from "node:fs";
 
-import { expect, test } from '@playwright/test';
-import postcss from 'postcss';
+import { expect, test } from "@playwright/test";
+import postcss from "postcss";
 
-import { builtPages, pageStyles } from '../helpers/dist';
+import { builtPages, pageStyles } from "../helpers/dist";
 
 /**
  * ビルドした各ページで、CSS のレイヤーが src/styles/layers.css の順に並ぶか
@@ -15,8 +15,8 @@ import { builtPages, pageStyles } from '../helpers/dist';
 function layerOrder(css: string[]): string[] {
   const names: string[] = [];
   for (const text of css) {
-    postcss.parse(text).walkAtRules('layer', (rule) => {
-      for (const name of rule.params.split(',').map((part) => part.trim())) {
+    postcss.parse(text).walkAtRules("layer", (rule) => {
+      for (const name of rule.params.split(",").map((part) => part.trim())) {
         if (name && !names.includes(name)) names.push(name);
       }
     });
@@ -24,10 +24,12 @@ function layerOrder(css: string[]): string[] {
   return names;
 }
 
-const DECLARED = layerOrder([readFileSync(new URL('../../src/styles/layers.css', import.meta.url), 'utf8')]);
+const DECLARED = layerOrder([
+  readFileSync(new URL("../../src/styles/layers.css", import.meta.url), "utf8"),
+]);
 
-test('layers.css に、順の宣言がある', () => {
-  expect(DECLARED.length, 'layers.css から順を読めない').toBeGreaterThan(0);
+test("layers.css に、順の宣言がある", () => {
+  expect(DECLARED.length, "layers.css から順を読めない").toBeGreaterThan(0);
 });
 
 for (const { route, file } of builtPages()) {

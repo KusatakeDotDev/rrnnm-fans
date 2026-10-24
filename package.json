@@ -1,21 +1,9 @@
 {
   "name": "rrnnm-fans",
-  "type": "module",
   "version": "0.0.0",
   "private": true,
   "license": "UNLICENSED",
-  "devEngines": {
-    "runtime": {
-      "name": "node",
-      "version": "26.8.1",
-      "onFail": "download"
-    },
-    "packageManager": {
-      "name": "pnpm",
-      "version": "11.25.0",
-      "onFail": "download"
-    }
-  },
+  "type": "module",
   "scripts": {
     "skeb:summary": "node scripts/skeb-summary.ts",
     "dev": "astro dev",
@@ -79,5 +67,17 @@
     "vite-plus": "catalog:",
     "vitest": "catalog:",
     "wrangler": "catalog:"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "11.25.0",
+      "onFail": "download"
+    },
+    "runtime": {
+      "name": "node",
+      "version": "26.8.1",
+      "onFail": "download"
+    }
   }
 }

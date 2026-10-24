@@ -18,24 +18,24 @@ const FONT_FACE = /@font-face\s*\{[^}]*\}/g;
 /** CSS テキストの `@font-face` を、書かれた順に返す。 */
 export function fontFaceRules(css: string): FontFaceRule[] {
   return (css.match(FONT_FACE) ?? []).map((block) => {
-    const src = declarationValue(block, 'src');
+    const src = declarationValue(block, "src");
     const url = src?.match(/url\(\s*(['"]?)([^'")]+)\1\s*\)/)?.[2] ?? null;
     return {
-      family: unquote(declarationValue(block, 'font-family')),
+      family: unquote(declarationValue(block, "font-family")),
       url,
-      unicodeRange: declarationValue(block, 'unicode-range'),
+      unicodeRange: declarationValue(block, "unicode-range"),
     };
   });
 }
 
 /** CSS テキストから `@font-face` を外したもの。性能予算が、webfont の CSS とそれ以外を分けて測るのに使う。 */
 export function withoutFontFaces(css: string): string {
-  return css.replace(FONT_FACE, '');
+  return css.replace(FONT_FACE, "");
 }
 
 /** CSS テキストの `@font-face` だけをつないだもの。 */
 export function onlyFontFaces(css: string): string {
-  return (css.match(FONT_FACE) ?? []).join('');
+  return (css.match(FONT_FACE) ?? []).join("");
 }
 
 /** CSS テキストが `@font-face` で定義しているフォントファミリ名の一覧（書かれた順・重複あり）。 */
@@ -56,7 +56,7 @@ function declarationValue(block: string, property: string): string | null {
 }
 
 function unquote(value: string | null): string | null {
-  return value === null ? null : value.replace(/^['"]|['"]$/g, '');
+  return value === null ? null : value.replace(/^['"]|['"]$/g, "");
 }
 
 /** コードポイントの範囲（両端を含む）。 */
@@ -67,10 +67,10 @@ export type CodePointRange = readonly [start: number, end: number];
  * 集合に展開しないのは、範囲の広い面（日本語のチャンクや、`unicode-range` の無い面）で数万から百万を超える要素になるため。
  */
 export function parseUnicodeRange(range: string): CodePointRange[] {
-  return range.split(',').map((part) => {
+  return range.split(",").map((part) => {
     // `-` の前後の空白は落とさなくてよい。parseInt が前後の空白を読み飛ばす。
     // Stryker disable next-line Regex: 各項目は trim 済みで U+ は先頭にしか無いので、アンカーを外しても結果が同じ
-    const [startHex, endHex] = part.trim().replace(/^U\+/i, '').split('-');
+    const [startHex, endHex] = part.trim().replace(/^U\+/i, "").split("-");
     const start = Number.parseInt(startHex, 16);
     return [start, endHex === undefined ? start : Number.parseInt(endHex, 16)] as const;
   });

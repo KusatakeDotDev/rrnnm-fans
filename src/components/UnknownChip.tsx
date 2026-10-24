@@ -10,12 +10,15 @@
  * `field` 以外の属性（`className`・`id`・`aria-*` など）は root の span にそのまま渡す
  * （docs/adr/0011-react-components-for-design-sync.md「props の決まり」）。
  */
-import type { HTMLAttributes } from 'react';
+import type { HTMLAttributes } from "react";
 
-import { cx } from '../lib/cx';
-import styles from './UnknownChip.module.css';
+import { cx } from "../lib/cx";
+import styles from "./UnknownChip.module.css";
 
-interface UnknownChipProps extends Omit<HTMLAttributes<HTMLSpanElement>, 'children' | 'dangerouslySetInnerHTML'> {
+interface UnknownChipProps extends Omit<
+  HTMLAttributes<HTMLSpanElement>,
+  "children" | "dangerouslySetInnerHTML"
+> {
   /** 何が未確認かを前に付ける。例: "尺" → 「尺 未確認」 */
   field?: string;
 }
@@ -23,7 +26,7 @@ interface UnknownChipProps extends Omit<HTMLAttributes<HTMLSpanElement>, 'childr
 export default function UnknownChip({ field, className, ...rest }: UnknownChipProps) {
   return (
     <span className={cx(styles.root, className)} {...rest}>
-      {field ? `${field} 未確認` : '未確認'}
+      {field ? `${field} 未確認` : "未確認"}
     </span>
   );
 }

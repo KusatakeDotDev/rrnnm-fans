@@ -7,7 +7,7 @@
  */
 
 /** WCAG 2.x の A と AA（docs/DESIGN.md §6）。 */
-export const AXE_TAGS = ['wcag2a', 'wcag2aa'];
+export const AXE_TAGS = ["wcag2a", "wcag2aa"];
 
 /**
  * 第三者の埋め込み（YouTube）。axe は Playwright 経由だと cross-origin の iframe の中まで降りていくが、中は第三者の出力で

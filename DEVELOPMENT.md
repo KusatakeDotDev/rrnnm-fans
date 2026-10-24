@@ -31,8 +31,8 @@ pnpm dev
 | `pnpm build` | 実データで `dist/` に書き出す。ビルドの記録 `dist.receipt.json` も書く |
 | `pnpm typecheck` | 型チェック |
 | `pnpm lint:css` | CSS の lint（Stylelint） |
-| `pnpm check` | JS・TS の lint（Vite+ の `vp check`。Oxlint）。警告でも落ちる |
-| `pnpm check:fix` | `pnpm check` で直せるものを直す |
+| `pnpm check` | JS・TS などの整形の検査（Oxfmt）と lint（Oxlint）。Vite+ の `vp check`。lint は警告でも落ちる。CSS と Markdown は整形しない |
+| `pnpm check:fix` | 整形し、`pnpm check` の lint で直せるものを直す |
 | `pnpm test` | ユニットテストとリポジトリの検査（Vite+ の `vp test`。`tests/unit/` と `tests/repo/`） |
 | `pnpm test:storybook` | コンポーネントのテスト。story を1つずつ Chromium で描き、アクセシビリティの検査（axe）を回す |
 | `pnpm test:ci` | CI と同じ Playwright のテスト。`.test-dist/` に固定応答でビルドしてから回す。付けなければ、下の `on`・`off` を順に両方回す |

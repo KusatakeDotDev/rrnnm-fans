@@ -2,7 +2,7 @@
  * Skeb の作品一覧の、ピックアップ・並べ替え・タグの絞り込み（src/unreleased/_parts/SkebWorks.astro）。
  * DOM に触らない（ADR-0003「層1 — 純関数だけを置く」）。
  */
-import { shuffle } from './shuffle';
+import { shuffle } from "./shuffle";
 
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
@@ -13,7 +13,8 @@ export function jstDateKey(now: Date): string {
 
 /** その日のピックアップの位置。同じ日に見た人には同じ作品を出すため、日付だけから決める（FNV-1a）。 */
 export function dailyIndex(dateKey: string, length: number): number {
-  if (!Number.isInteger(length) || length < 1) throw new RangeError('length must be a positive integer');
+  if (!Number.isInteger(length) || length < 1)
+    throw new RangeError("length must be a positive integer");
   let hash = 0x811c9dc5;
   for (let i = 0; i < dateKey.length; i++) {
     hash ^= dateKey.charCodeAt(i);
@@ -32,16 +33,21 @@ export function drawOther(length: number, current: number, random: () => number)
   return pick >= current ? pick + 1 : pick;
 }
 
-export type WorkOrder = 'asc' | 'desc' | 'shuffle';
+export type WorkOrder = "asc" | "desc" | "shuffle";
 
 export function isWorkOrder(value: string): value is WorkOrder {
-  return value === 'asc' || value === 'desc' || value === 'shuffle';
+  return value === "asc" || value === "desc" || value === "shuffle";
 }
 
 /** 作品番号の順（`asc`・`desc`）か、混ぜた順に並べる。渡した配列は書き換えない。 */
-export function arrange<T>(items: readonly T[], numberOf: (item: T) => number, order: WorkOrder, random: () => number): T[] {
-  if (order === 'shuffle') return shuffle(items, random);
-  const sign = order === 'asc' ? 1 : -1;
+export function arrange<T>(
+  items: readonly T[],
+  numberOf: (item: T) => number,
+  order: WorkOrder,
+  random: () => number,
+): T[] {
+  if (order === "shuffle") return shuffle(items, random);
+  const sign = order === "asc" ? 1 : -1;
   return [...items].sort((a, b) => {
     const diff = numberOf(a) - numberOf(b);
     // Stryker disable next-line ArithmeticOperator: 作品番号は作品ごとに違い、差が 0 にならないので、掛けても割っても符号が同じ
@@ -53,7 +59,9 @@ export function arrange<T>(items: readonly T[], numberOf: (item: T) => number, o
  * 絞り込みに出すタグ。2作品以上に付いたものを多い順（同数なら先に出た順）に並べる。
  * 1作品だけのタグで絞っても1件しか残らず、ボタンが並ぶだけになるため。
  */
-export function sharedTags(tagLists: readonly (readonly string[])[]): { tag: string; count: number }[] {
+export function sharedTags(
+  tagLists: readonly (readonly string[])[],
+): { tag: string; count: number }[] {
   const counts = new Map<string, number>();
   for (const tags of tagLists) {
     for (const tag of new Set(tags)) counts.set(tag, (counts.get(tag) ?? 0) + 1);

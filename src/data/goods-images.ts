@@ -17,8 +17,8 @@
  * 取りに行く形は schedule-oembed.ts と同じだが、共通の関数にはしない。取れなかったときの落ち方が
  * 違い（予定のカードは1件まるごとリンクに落ち、こちらは商品ごとに画像だけを落とす）、共通にする分が少ないため。
  */
-import { boothItemImage } from '../lib/booth';
-import { BOOTH_GOODS, boothItemUrl, type BoothGoods } from './goods';
+import { boothItemImage } from "../lib/booth";
+import { BOOTH_GOODS, boothItemUrl, type BoothGoods } from "./goods";
 
 // BOOTH 側の応答が詰まった場合に astro build がブロックされ続けないための上限（schedule-oembed.ts と同じ）。
 const FETCH_TIMEOUT_MS = 5_000;
@@ -52,8 +52,9 @@ async function fetchImage(id: number): Promise<string | null> {
   } catch (error) {
     // ビルド環境のネットワーク不調・タイムアウトなど。画像の無いカードに落ちる。
     // Node の fetch は、届かなかった理由（名前解決・接続・TLS）を cause に入れ、本体は「fetch failed」とだけ言う。
-    // oxlint-disable-next-line typescript/no-base-to-string -- cause は Node の fetch が入れる Error で、String で名前と理由が出る
-    const cause =error instanceof Error && error.cause !== undefined ? `（${String(error.cause)}）` : '';
+    const cause =
+      // oxlint-disable-next-line typescript/no-base-to-string -- cause は Node の fetch が入れる Error で、String で名前と理由が出る
+      error instanceof Error && error.cause !== undefined ? `（${String(error.cause)}）` : "";
     console.warn(`[goods] ${url} の画像を取れなかった: ${String(error)}${cause}`);
     return null;
   }
@@ -61,7 +62,11 @@ async function fetchImage(id: number): Promise<string | null> {
 
 async function fetchGoods(): Promise<BoothGoodsCard[]> {
   return Promise.all(
-    BOOTH_GOODS.map(async (item) => ({ ...item, url: boothItemUrl(item.id), image: await fetchImage(item.id) })),
+    BOOTH_GOODS.map(async (item) => ({
+      ...item,
+      url: boothItemUrl(item.id),
+      image: await fetchImage(item.id),
+    })),
   );
 }
 

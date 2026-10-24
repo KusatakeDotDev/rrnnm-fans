@@ -1,6 +1,6 @@
-import { defineConfig, mergeConfig } from 'vite-plus';
+import { defineConfig, mergeConfig } from "vite-plus";
 
-import base from './vitest.config';
+import base from "./vitest.config";
 
 /**
  * Stryker から回すとき専用の設定。テストの内容は vitest.config.ts と同じ。
@@ -14,7 +14,7 @@ export default mergeConfig(
   base,
   defineConfig({
     test: {
-      reporters: ['default'],
+      reporters: ["default"],
     },
   }),
 );

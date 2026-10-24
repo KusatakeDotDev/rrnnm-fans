@@ -27,7 +27,7 @@ export interface DevIdleState {
   readonly lastRequestAt: number;
 }
 
-export type DevIdleReason = 'idle' | 'max';
+export type DevIdleReason = "idle" | "max";
 
 /**
  * 止めるなら、当たった決まり（`idle` か `max`）を返す。まだなら null。
@@ -35,8 +35,8 @@ export type DevIdleReason = 'idle' | 'max';
  */
 export function devIdleReason(state: DevIdleState, limits: DevIdleLimits): DevIdleReason | null {
   const lastUsedAt = Math.max(state.lastBrowserAt, state.lastRequestAt);
-  if (state.browsers === 0 && state.now - lastUsedAt >= limits.idleMs) return 'idle';
-  if (state.now - state.lastRequestAt >= limits.maxMs) return 'max';
+  if (state.browsers === 0 && state.now - lastUsedAt >= limits.idleMs) return "idle";
+  if (state.now - state.lastRequestAt >= limits.maxMs) return "max";
   return null;
 }
 
@@ -77,8 +77,8 @@ const DECIMAL_MINUTES = /^\d+(?:\.\d+)?$/;
  * 数でない・負の値は、黙って既定に戻さず投げる（打ち間違えたまま止まらない・すぐ止まる、を避ける）。
  */
 export function parseIdleMinutes(value: string | undefined, fallbackMinutes: number): number {
-  const text = value?.trim() ?? '';
-  if (text === '') return fallbackMinutes * 60_000;
+  const text = value?.trim() ?? "";
+  if (text === "") return fallbackMinutes * 60_000;
   // Number() に任せると `0x10`（16 分）や `1e-9` も通ってしまうので、形を先に見る。
   if (!DECIMAL_MINUTES.test(text)) {
     throw new TypeError(`分は 0 以上の数で書く（0 で止めない）: ${value}`);

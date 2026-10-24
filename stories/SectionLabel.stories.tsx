@@ -1,11 +1,13 @@
-import type { Meta, StoryObj } from '@storybook/react-vite';
+import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import EntryItem from '../src/components/EntryItem.tsx';
-import EntryList from '../src/components/EntryList.tsx';
-import SectionLabel from '../src/components/SectionLabel.tsx';
-import { column } from './shared/layout.ts';
+import EntryItem from "../src/components/EntryItem.tsx";
+import EntryList from "../src/components/EntryList.tsx";
+import SectionLabel from "../src/components/SectionLabel.tsx";
+import { column } from "./shared/layout.ts";
 
-const meta = { title: 'General/SectionLabel', component: SectionLabel } satisfies Meta<typeof SectionLabel>;
+const meta = { title: "General/SectionLabel", component: SectionLabel } satisfies Meta<
+  typeof SectionLabel
+>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
@@ -18,7 +20,13 @@ export const AboveList: Story = {
       <EntryList>
         <EntryItem abbr="耐" category="耐久" tone="violet" title="セミのモノマネ耐久" href="#a" />
         <EntryItem abbr="朗" category="朗読" tone="blue" title="民法読み上げASMR" href="#b" />
-        <EntryItem abbr="記" category="記念" tone="pink" title="8万人記念！知識0で尺八吹く" href="#c" />
+        <EntryItem
+          abbr="記"
+          category="記念"
+          tone="pink"
+          title="8万人記念！知識0で尺八吹く"
+          href="#c"
+        />
       </EntryList>
     </div>
   ),

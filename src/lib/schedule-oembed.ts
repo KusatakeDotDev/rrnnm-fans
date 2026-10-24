@@ -34,7 +34,7 @@ export interface ScheduleOEmbed {
 // これから始まるライブ（待機所）の oEmbed は title などを返さず、題名は html の iframe にだけある（RRNNM-106）。
 // 属性値のエスケープ（&amp;・&#39; など）は1段で、1回戻すと title の項目と一致する。2回戻すと、題名に書かれた「&amp;」まで変わる。
 const IFRAME_TITLE = /<iframe\b[^>]*\stitle="([^"]+)"/;
-const NAMED_ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"' } as const;
+const NAMED_ENTITIES = { amp: "&", lt: "<", gt: ">", quot: '"' } as const;
 
 function iframeTitle(html: unknown): string | undefined {
   const match = IFRAME_TITLE.exec(String(html));
@@ -49,10 +49,13 @@ function iframeTitle(html: unknown): string | undefined {
 
 /** 文字列でない・空白だけの作者名は、無いものとして扱う（出典の行では決まった名前に替える。ADR-0004「出典の行に作者名を出す」）。 */
 function authorName(value: unknown): string | undefined {
-  return typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined;
+  return typeof value === "string" && value.trim() !== "" ? value.trim() : undefined;
 }
 
-export function readScheduleOEmbed(response: Status, body: string): { ok: true; oembed: ScheduleOEmbed } | Failure {
+export function readScheduleOEmbed(
+  response: Status,
+  body: string,
+): { ok: true; oembed: ScheduleOEmbed } | Failure {
   if (!response.ok) return { ok: false, reason: `HTTP ${response.status}` };
   let json: unknown;
   try {
@@ -62,8 +65,9 @@ export function readScheduleOEmbed(response: Status, body: string): { ok: true; 
   }
   // 数や文字列の JSON はプロパティが無いだけで済むので、落とすのは null だけでよい。
   const v = (json ?? {}) as Record<string, unknown>;
-  const title = typeof v.title === 'string' ? v.title : iframeTitle(v.html);
-  if (typeof v.provider_name !== 'string' || title === undefined) return { ok: false, reason: 'oEmbed の形でない' };
+  const title = typeof v.title === "string" ? v.title : iframeTitle(v.html);
+  if (typeof v.provider_name !== "string" || title === undefined)
+    return { ok: false, reason: "oEmbed の形でない" };
   const { thumbnail_url: url, thumbnail_width: width, thumbnail_height: height } = v;
   return {
     ok: true,
@@ -72,17 +76,24 @@ export function readScheduleOEmbed(response: Status, body: string): { ok: true; 
       author_name: authorName(v.author_name),
       provider_name: v.provider_name,
       thumbnail:
-        typeof url === 'string' && typeof width === 'number' && typeof height === 'number' ? { url, width, height } : undefined,
+        typeof url === "string" && typeof width === "number" && typeof height === "number"
+          ? { url, width, height }
+          : undefined,
     },
   };
 }
 
-export function readMaxresHead(head: Status & { contentLength: string | null }): { ok: true } | Failure {
+export function readMaxresHead(
+  head: Status & { contentLength: string | null },
+): { ok: true } | Failure {
   if (!head.ok) return { ok: false, reason: `HTTP ${head.status}` };
-  if (head.contentLength === null) return { ok: false, reason: 'content-length が無い' };
+  if (head.contentLength === null) return { ok: false, reason: "content-length が無い" };
   // 数として読めない長さも、小さいほうに倒す（NaN はどの比較も偽）。
   if (!(Number(head.contentLength) > MIN_MAXRES_BYTES)) {
-    return { ok: false, reason: `${head.contentLength} バイトしかない（未生成のプレースホルダー）` };
+    return {
+      ok: false,
+      reason: `${head.contentLength} バイトしかない（未生成のプレースホルダー）`,
+    };
   }
   return { ok: true };
 }
