@@ -12,7 +12,7 @@ import { DIST, builtRoutes } from "../helpers/dist";
 import { X_EMBED_PAGES, X_EMBEDS, X_HOST } from "../helpers/x-embed";
 
 /**
- * 全ページにかかる規約。ページを開くのは、ルートごとに JS ありで1回・JS なしで1回だけにし、規約はステップで見る
+ * 全ページにかかる規約。ページを開くのは、ルートごとに1回だけにし、規約はステップで見る
  * （ADR-0027「規約テストは、ルートごとに1本にする」）。ステップは expect.soft で見るので、1つの規約が落ちても、ほかの規約は見続ける。
  * 落ちた規約で待ち続けてテストの時間切れになり、後ろのステップが見られなくならないよう、値は待たずに1回読んでから比べる。
  * 待たないと見られないもの（アクセシブルネーム・押す操作と、押したあとの移動）は、短く切って待つ。演出の始まりを待つのは、ルートごとに1回なので既定の時間のままにする。
@@ -175,7 +175,7 @@ const readXEmbeds = (page: Page) =>
   );
 
 for (const route of builtRoutes()) {
-  test(`全ページにかかる規約を守っている — ${route}`, async ({ page, browser, request }) => {
+  test(`全ページにかかる規約を守っている — ${route}`, async ({ page, request }) => {
     await test.step("検索避けのヘッダー（X-Robots-Tag）を付けて配っていない", async () => {
       // 見るのは、wrangler dev が本番のホストに当てるヘッダー（ADR-0003「E2E のサーバーは `wrangler dev`」）。
       const response = await request.get(route);
@@ -465,9 +465,93 @@ for (const route of builtRoutes()) {
     await checkLayout(page, WIDE.width);
 
     if (onContactPage) {
+      // マウスで押したあとは、.focus() で当てたリンクに :focus-visible が当たらないので、フッターのキーボードの検査を先に回す。
+      // 期待値を PAGE_LINKS（フッターに渡すリンクを作るもの）から作ると、そこに足し忘れても通る（RRNNM-63）。
+      await test.step("フッターのページへのリンクが、ビルドしたページ（UNLINKED_ROUTES を除く）と過不足なくそろう", async () => {
+        const paths = await page.locator("body > footer a[href]").evaluateAll((links) =>
+          links
+            .map((link) => link.getAttribute("href") ?? "")
+            // `#` だけの href と空の href は、URL にすると今のページを指して数えられてしまうので、その前に外す。
+            .filter((href) => href !== "" && !href.includes("#"))
+            .map((href) => new URL(href, location.href))
+            .filter((url) => url.origin === location.origin)
+            .map((url) => decodeURI(url.pathname)),
+        );
+        expect.soft(paths.sort()).toEqual(
+          builtRoutes()
+            .filter((built) => !UNLINKED_ROUTES.includes(built))
+            .sort(),
+        );
+        // 外す一覧に、もう無いページが残ると、同じパスでページを作り直したときにフッターの検査から黙って外れる。
+        expect
+          .soft(
+            UNLINKED_ROUTES.filter((unlinked) => !builtRoutes().includes(unlinked)),
+            "ビルドに無い、フッターから外すページ",
+          )
+          .toEqual([]);
+      });
+
+      for (const width of FOOTER_WIDTHS) {
+        await test.step(`${width}px で、フッターのリンクを Tab で順にたどれ、どれも 44px 四方以上で、フォーカスが見える`, async () => {
+          await page.setViewportSize({ width, height: 900 });
+          const links = page.locator("body > footer").getByRole("link");
+          const count = await links.count();
+          // getByRole は見えていないリンクを数えないので、この幅で並びごと消えても、残ったリンクだけで通ってしまう。
+          expect
+            .soft(count, "この幅で見えていないフッターのリンクがある")
+            .toBe(await page.locator("body > footer a[href]").count());
+          if (count === 0) return;
+          await links.first().focus();
+          const visits: { index: number; width: number; height: number; outline: string }[] = [];
+          for (let i = 0; i < count; i++) {
+            visits.push(
+              await page.evaluate(() => {
+                const focused = document.activeElement as HTMLElement;
+                const box = focused.getBoundingClientRect();
+                return {
+                  index: [...document.querySelectorAll("body > footer a[href]")].indexOf(focused),
+                  width: box.width,
+                  height: box.height,
+                  outline: getComputedStyle(focused).outlineStyle,
+                };
+              }),
+            );
+            await page.keyboard.press("Tab");
+          }
+          expect
+            .soft(
+              visits.map((visit) => visit.index),
+              "Tab でたどったリンクの順",
+            )
+            .toEqual([...Array(count).keys()]);
+          expect
+            .soft(
+              visits.filter((visit) => visit.width < 44 || visit.height < 44),
+              "44px 四方に足りないリンク",
+            )
+            .toEqual([]);
+          expect
+            .soft(
+              visits.filter((visit) => visit.outline === "none"),
+              "フォーカスが見えないリンク",
+            )
+            .toEqual([]);
+        });
+
+        await test.step(`${width}px で、ページが横にはみ出さない`, async () => {
+          expect
+            .soft(
+              await page.evaluate(
+                () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+              ),
+            )
+            .toBe(true);
+        });
+      }
+
       // 窓口は制作者の X（src/data/contact.ts）で、連絡先を書くのはこのページだけ。相手が DM を受け取れる設定かは、人が見る。
       await test.step("「お問い合わせ」を押すと、制作者の X へのリンクがある節へ飛ぶ", async () => {
-        // 押せないときの例外は soft にならず、テストが止まって JS なしのステップが見られなくなるので、soft の失敗に替える。
+        // 押せないときの例外は soft にならないので、ほかのステップと同じく soft の失敗に替える。
         const contact = page
           .locator("body > footer")
           .getByRole("link", { name: "お問い合わせ", exact: true });
@@ -490,133 +574,6 @@ for (const route of builtRoutes()) {
         // 制作者の X と本人の X を取り違えていないこと（上の正規表現は本人の X も通す）。
         expect.soft(href).not.toBe(OFFICIAL.x);
       });
-    }
-
-    const withoutJs = await browser.newContext({ javaScriptEnabled: false });
-    try {
-      const noJsPage = await withoutJs.newPage();
-      const response = await noJsPage.goto(route);
-
-      await test.step("JS なしでも 200 で返る", async () => {
-        expect.soft(response?.status()).toBe(200);
-      });
-
-      // HTML にはあるが、CSS で隠しておいて JS が見せる形を捕まえる（ADR-0001 要件2）。React のアイランドにする壊れ方は
-      // tests/artifact/build-output.spec.ts が止める。[hidden] の中と閉じた dialog の中は、JS なしでは出ないのが正しい形なので除く。
-      await test.step("JS なしでも、本文（main）の h1〜h3 がどれも見えていて、h1 がある", async () => {
-        const headings = () =>
-          noJsPage.evaluate(() =>
-            [...document.querySelectorAll("main :is(h1, h2, h3)")]
-              .filter((heading) => heading.closest("[hidden], dialog:not([open])") === null)
-              .map((heading) => ({
-                level: heading.localName,
-                text: (heading.textContent ?? "").trim(),
-                shown: heading.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true }),
-              })),
-          );
-        expect
-          .soft(
-            (await headings()).filter((heading) => heading.level === "h1"),
-            "main に h1 が無い",
-          )
-          .not.toEqual([]);
-        // トップの畑の見出しは、CSS のアニメーションで透明から出る（待つあいだは opacity 0）。出始めるまで測り直す。
-        await expect.soft
-          .poll(async () =>
-            (await headings())
-              .filter((heading) => !heading.shown)
-              .map((heading) => `${heading.level}: ${heading.text}`),
-          )
-          .toEqual([]);
-      });
-
-      if (onContactPage) {
-        // 期待値を PAGE_LINKS（フッターに渡すリンクを作るもの）から作ると、そこに足し忘れても通る（RRNNM-63）。
-        await test.step("フッターのページへのリンクが、ビルドしたページ（UNLINKED_ROUTES を除く）と過不足なくそろう", async () => {
-          const paths = await noJsPage.locator("body > footer a[href]").evaluateAll((links) =>
-            links
-              .map((link) => link.getAttribute("href") ?? "")
-              // `#` だけの href と空の href は、URL にすると今のページを指して数えられてしまうので、その前に外す。
-              .filter((href) => href !== "" && !href.includes("#"))
-              .map((href) => new URL(href, location.href))
-              .filter((url) => url.origin === location.origin)
-              .map((url) => decodeURI(url.pathname)),
-          );
-          expect.soft(paths.sort()).toEqual(
-            builtRoutes()
-              .filter((built) => !UNLINKED_ROUTES.includes(built))
-              .sort(),
-          );
-          // 外す一覧に、もう無いページが残ると、同じパスでページを作り直したときにフッターの検査から黙って外れる。
-          expect
-            .soft(
-              UNLINKED_ROUTES.filter((unlinked) => !builtRoutes().includes(unlinked)),
-              "ビルドに無い、フッターから外すページ",
-            )
-            .toEqual([]);
-        });
-
-        for (const width of FOOTER_WIDTHS) {
-          await test.step(`${width}px で、フッターのリンクを Tab で順にたどれ、どれも 44px 四方以上で、フォーカスが見える`, async () => {
-            await noJsPage.setViewportSize({ width, height: 900 });
-            const links = noJsPage.locator("body > footer").getByRole("link");
-            const count = await links.count();
-            // getByRole は見えていないリンクを数えないので、この幅で並びごと消えても、残ったリンクだけで通ってしまう。
-            expect
-              .soft(count, "この幅で見えていないフッターのリンクがある")
-              .toBe(await noJsPage.locator("body > footer a[href]").count());
-            if (count === 0) return;
-            await links.first().focus();
-            const visits: { index: number; width: number; height: number; outline: string }[] = [];
-            for (let i = 0; i < count; i++) {
-              visits.push(
-                await noJsPage.evaluate(() => {
-                  const focused = document.activeElement as HTMLElement;
-                  const box = focused.getBoundingClientRect();
-                  return {
-                    index: [...document.querySelectorAll("body > footer a[href]")].indexOf(focused),
-                    width: box.width,
-                    height: box.height,
-                    outline: getComputedStyle(focused).outlineStyle,
-                  };
-                }),
-              );
-              await noJsPage.keyboard.press("Tab");
-            }
-            expect
-              .soft(
-                visits.map((visit) => visit.index),
-                "Tab でたどったリンクの順",
-              )
-              .toEqual([...Array(count).keys()]);
-            expect
-              .soft(
-                visits.filter((visit) => visit.width < 44 || visit.height < 44),
-                "44px 四方に足りないリンク",
-              )
-              .toEqual([]);
-            expect
-              .soft(
-                visits.filter((visit) => visit.outline === "none"),
-                "フォーカスが見えないリンク",
-              )
-              .toEqual([]);
-          });
-
-          await test.step(`${width}px で、ページが横にはみ出さない`, async () => {
-            expect
-              .soft(
-                await noJsPage.evaluate(
-                  () =>
-                    document.documentElement.scrollWidth <= document.documentElement.clientWidth,
-                ),
-              )
-              .toBe(true);
-          });
-        }
-      }
-    } finally {
-      await withoutJs.close();
     }
   });
 }

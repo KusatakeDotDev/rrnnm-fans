@@ -3,7 +3,7 @@
  *
  * **JS と WebGL2 があれば畑を描き**（src/components/field-renderer.ts）、無ければ CSS のグラデーションの畑のまま止まる。
  * **見出しと配信のピルは HTML** なので、どちらの場合も同じものが読める
- * （docs/adr/0001-tech-stack.md 要件2、ADR-0009「どこまで崩すか」）。
+ * （ADR-0009「どこまで崩すか」）。
  *
  * **ここは見た目だけ。** 畑を描くスクリプト（`mountField`）はラッパーの NemophilaField.astro が持つ
  * （ADR-0011「スクリプトの扱い」）。これ（default export）を直に置くと、CSS のグラデーションの畑のまま止まり、

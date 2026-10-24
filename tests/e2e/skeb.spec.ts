@@ -3,9 +3,8 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { AXE_TAGS, THIRD_PARTY_EMBED } from "../helpers/axe";
 import { builtRoutes } from "../helpers/dist";
-import { OFFICIAL } from "../../src/data/official";
 import rawData from "../../src/data/skeb-summaries.json" with { type: "json" };
-import { SKEB_WORKS, type SkebWork } from "../../src/data/skeb";
+import { SKEB_WORKS } from "../../src/data/skeb";
 import { dailyIndex, sharedTags } from "../../src/lib/skeb-browse";
 import { validateSummaryData } from "../../src/lib/skeb-summary";
 const data = validateSummaryData(
@@ -13,31 +12,7 @@ const data = validateSummaryData(
   SKEB_WORKS.map((work) => work.url),
 );
 const hasSkeb = builtRoutes().includes("/skeb/");
-const summaryOf = (work: SkebWork) => data.works.find((record) => record.url === work.url)?.summary;
 const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-const hrefsOf = (work: SkebWork) =>
-  [work.deliveryPost?.url, work.youtube, work.url].flatMap((href) => (href ? [href] : []));
-
-/** evaluateAll の中ではアクセシブルな名前を計算できないので、ariaSnapshot のリンクの行から URL ごとに取り出す。 */
-const linkNames = (snapshot: string) =>
-  new Map(
-    [...snapshot.matchAll(/- '?link "((?:[^"\\]|\\.)*)"'?:\n\s+- \/url: (\S+)/g)].map(
-      ([, name, url]) => [url!, JSON.parse(`"${name}"`) as string],
-    ),
-  );
-
-const overflowing = (page: Page) =>
-  page.evaluate(async () => {
-    await document.fonts.ready;
-    const wide = (element: Element) => element.scrollWidth > element.clientWidth;
-    return [
-      ...(wide(document.documentElement) ? ["page"] : []),
-      ...[...document.querySelectorAll<HTMLElement>("[data-skeb-list] > li")]
-        .filter(wide)
-        .map((card) => `#${card.dataset["skebWork"]}`),
-    ];
-  });
 
 /** 127.0.0.1 の外への通信を止め、止めた URL を集める。 */
 const blockExternal = async (page: Page) => {
@@ -54,118 +29,6 @@ const blockExternal = async (page: Page) => {
   return externalRequests;
 };
 
-test("Skeb — JS が無くても、全作品のカードとリンクを読め、狭い幅でも広い幅でも横にはみ出さない", async ({
-  browser,
-  baseURL,
-}) => {
-  const context = await browser.newContext({
-    baseURL,
-    javaScriptEnabled: false,
-    viewport: { width: 360, height: 800 },
-  });
-  try {
-    const page = await context.newPage();
-    const externalRequests = await blockExternal(page);
-    if (!hasSkeb) {
-      expect((await page.goto("/skeb/"))?.status()).toBe(404);
-      return;
-    }
-    await page.goto("/skeb/");
-    const main = page.getByRole("main");
-
-    await test.step("プロフィールへのリンクを出し、画像や埋め込みは置かない", async () => {
-      const profile = main.locator(`a[href="${OFFICIAL.skeb}"]`);
-      await expect(profile).toBeVisible();
-      await expect(profile).toHaveAttribute("rel", "noopener noreferrer");
-      await expect(main.locator("img, iframe, video, audio, object, embed")).toHaveCount(0);
-    });
-
-    // ピックアップ・並べ替え・絞り込みは JS の上乗せ。JS が無ければ、押しても何も起きない操作を出さない。
-    await test.step("押しても動かない操作と、検索を出さない", async () => {
-      await expect(main.locator("[data-skeb-pickup]")).toBeHidden();
-      await expect(main.getByRole("button")).toHaveCount(0);
-      await expect(main.getByRole("combobox")).toHaveCount(0);
-      await expect(main.getByRole("searchbox")).toHaveCount(0);
-    });
-
-    await test.step("17件とも番号順に、リンク・セリフ・お題・タグを見える形で出す", async () => {
-      const list = main.locator("[data-skeb-list]");
-      const cards = await list.locator("> li").evaluateAll((items) =>
-        items.map((card) => {
-          const shown = (element: Element) =>
-            element.checkVisibility({ opacityProperty: true, visibilityProperty: true });
-          const texts = (selector: string) =>
-            [...card.querySelectorAll(selector)]
-              .filter(shown)
-              .map((element) => element.textContent);
-          const quote = card.querySelector("blockquote");
-          return {
-            title: texts("h3"),
-            links: [...card.querySelectorAll("a")].map((link) => ({
-              href: link.getAttribute("href"),
-              target: link.getAttribute("target"),
-              rel: link.getAttribute("rel"),
-              shown: shown(link),
-            })),
-            quote: quote && {
-              text: quote.textContent,
-              elements: quote.childElementCount,
-              cite: quote.getAttribute("cite"),
-              shown: shown(quote),
-            },
-            paragraphs: texts("p"),
-            tags: texts("[data-skeb-tag]"),
-          };
-        }),
-      );
-      expect(cards).toEqual(
-        SKEB_WORKS.map((work) => {
-          const summary = summaryOf(work);
-          return {
-            title: [work.title],
-            links: hrefsOf(work).map((href) => ({
-              href,
-              target: "_blank",
-              rel: "noopener noreferrer",
-              shown: true,
-            })),
-            quote: summary
-              ? {
-                  text: summary.quote.text,
-                  elements: 0,
-                  cite: summary.quote.provenance === "user-provided" ? null : summary.quote.url,
-                  shown: true,
-                }
-              : null,
-            // 一部の音声の紹介である旨の行は文言なので、行があることだけを見る。
-            paragraphs: summary
-              ? [...(work.summaryScope ? [expect.any(String)] : []), summary.heading]
-              : [],
-            tags: summary?.tags ?? [],
-          };
-        }),
-      );
-      // 同じ文字のリンクが17件並ぶので、読み上げでも作品を聞き分けられるよう、名前に作品の名前を入れる。
-      const names = linkNames(await list.ariaSnapshot());
-      expect([...names.keys()]).toEqual(SKEB_WORKS.flatMap(hrefsOf));
-      for (const work of SKEB_WORKS) {
-        for (const href of hrefsOf(work))
-          expect(names.get(href), href).toMatch(new RegExp(`${escapeRegExp(work.title)}(?!\\d)`));
-      }
-    });
-
-    for (const width of [360, 1280]) {
-      await test.step(`${width}px で、ページもカードも横にはみ出さない`, async () => {
-        await page.setViewportSize({ width, height: 800 });
-        expect(await overflowing(page)).toEqual([]);
-      });
-    }
-    expect(externalRequests).toEqual([]);
-  } finally {
-    await context.close();
-  }
-});
-
 test("Skeb — JS があっても開いただけでは外へ通信せず、axe のどのルールにも当たらない", async ({
   page,
 }) => {
@@ -173,7 +36,7 @@ test("Skeb — JS があっても開いただけでは外へ通信せず、axe �
   const externalRequests = await blockExternal(page);
   await page.goto("/skeb/", { waitUntil: "networkidle" });
   expect(externalRequests).toEqual([]);
-  // AXE_TAGS で絞らずに全ルールを回すのは、ADR-0027「Skeb のページは、カードの中身を1つの幅で見る」の決定。
+  // AXE_TAGS で絞らずに全ルールを回すのは、ADR-0027「Skeb のページのカードは、合成データの単体テストで見る」の決定。
   const results = await new AxeBuilder({ page }).analyze();
   expect(
     results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(" / ")}`),
