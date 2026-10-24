@@ -465,32 +465,7 @@ for (const route of builtRoutes()) {
     await checkLayout(page, WIDE.width);
 
     if (onContactPage) {
-      // 窓口は制作者の X（src/data/contact.ts）で、連絡先を書くのはこのページだけ。相手が DM を受け取れる設定かは、人が見る。
-      await test.step("「お問い合わせ」を押すと、制作者の X へのリンクがある節へ飛ぶ", async () => {
-        // 押せないときの例外は soft にならず、テストが止まって後ろのフッターのステップが見られなくなるので、soft の失敗に替える。
-        const contact = page
-          .locator("body > footer")
-          .getByRole("link", { name: "お問い合わせ", exact: true });
-        const clickError = await contact.click({ timeout: 2_000 }).then(
-          () => "",
-          (error: unknown) => String(error),
-        );
-        expect.soft(clickError, "「お問い合わせ」を押せない").toBe("");
-        if (clickError) return;
-        // 飛んだ先の見出し（:target）を持つ節。
-        const section = page.locator("section:has(> :target)");
-        await quick(section).toHaveCount(1);
-        const link = section.getByRole("link");
-        const count = await link.count();
-        expect.soft(count, "節のリンクが1つでない").toBe(1);
-        if (count !== 1) return;
-        expect.soft(await link.isVisible(), "節のリンクが見えていない").toBe(true);
-        const href = (await link.getAttribute("href")) ?? "";
-        expect.soft(href).toMatch(/^https:\/\/x\.com\/[^/]+$/);
-        // 制作者の X と本人の X を取り違えていないこと（上の正規表現は本人の X も通す）。
-        expect.soft(href).not.toBe(OFFICIAL.x);
-      });
-
+      // マウスで押したあとは、.focus() で当てたリンクに :focus-visible が当たらないので、フッターのキーボードの検査を先に回す。
       // 期待値を PAGE_LINKS（フッターに渡すリンクを作るもの）から作ると、そこに足し忘れても通る（RRNNM-63）。
       await test.step("フッターのページへのリンクが、ビルドしたページ（UNLINKED_ROUTES を除く）と過不足なくそろう", async () => {
         const paths = await page.locator("body > footer a[href]").evaluateAll((links) =>
@@ -573,6 +548,32 @@ for (const route of builtRoutes()) {
             .toBe(true);
         });
       }
+
+      // 窓口は制作者の X（src/data/contact.ts）で、連絡先を書くのはこのページだけ。相手が DM を受け取れる設定かは、人が見る。
+      await test.step("「お問い合わせ」を押すと、制作者の X へのリンクがある節へ飛ぶ", async () => {
+        // 押せないときの例外は soft にならないので、ほかのステップと同じく soft の失敗に替える。
+        const contact = page
+          .locator("body > footer")
+          .getByRole("link", { name: "お問い合わせ", exact: true });
+        const clickError = await contact.click({ timeout: 2_000 }).then(
+          () => "",
+          (error: unknown) => String(error),
+        );
+        expect.soft(clickError, "「お問い合わせ」を押せない").toBe("");
+        if (clickError) return;
+        // 飛んだ先の見出し（:target）を持つ節。
+        const section = page.locator("section:has(> :target)");
+        await quick(section).toHaveCount(1);
+        const link = section.getByRole("link");
+        const count = await link.count();
+        expect.soft(count, "節のリンクが1つでない").toBe(1);
+        if (count !== 1) return;
+        expect.soft(await link.isVisible(), "節のリンクが見えていない").toBe(true);
+        const href = (await link.getAttribute("href")) ?? "";
+        expect.soft(href).toMatch(/^https:\/\/x\.com\/[^/]+$/);
+        // 制作者の X と本人の X を取り違えていないこと（上の正規表現は本人の X も通す）。
+        expect.soft(href).not.toBe(OFFICIAL.x);
+      });
     }
   });
 }
