@@ -97,15 +97,21 @@ function decode(value: string): string {
 export function readDescription(html: string): string {
   const descriptions: string[] = [];
   const stripped = html
-    // Stryker disable next-line StringLiteral: コメントと script・style はタグの外にしか無いので、外した跡に何を置いても、読む <meta> と </head> は変わらない
-    .replace(/<!--[\s\S]*?-->/g, "")
-    // Stryker disable next-line StringLiteral: コメントと script・style はタグの外にしか無いので、外した跡に何を置いても、読む <meta> と </head> は変わらない
-    .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, "");
+    .replace(
+      /<!--[\s\S]*?-->/g,
+      // Stryker disable next-line StringLiteral: コメントと script・style はタグの外にしか無いので、外した跡に何を置いても、読む <meta> と </head> は変わらない
+      "",
+    )
+    .replace(
+      /<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi,
+      // Stryker disable next-line StringLiteral: コメントと script・style はタグの外にしか無いので、外した跡に何を置いても、読む <meta> と </head> は変わらない
+      "",
+    );
   const head = stripped.split(/<body\b|<\/head\s*>/i)[0];
   for (const match of head.matchAll(/<meta\b(?:[^>"']|"[^"]*"|'[^']*')*>/gi)) {
     const attributes: Record<string, string> = {};
+    // Stryker disable next-line MethodExpression: `<meta` と閉じの `>` は属性の形（名前の後ろに `=`）に当たらないので、切り落とさなくても読む属性が同じ
     for (const attr of match[0]
-      // Stryker disable next-line MethodExpression: `<meta` と閉じの `>` は属性の形（名前の後ろに `=`）に当たらないので、切り落とさなくても読む属性が同じ
       .slice(5, -1)
       .matchAll(/([^\s=/>]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/g)) {
       const key = attr[1].toLowerCase();
