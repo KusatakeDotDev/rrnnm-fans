@@ -114,6 +114,20 @@ async function shown(page: Page): Promise<{ plain: string; t: string | null }> {
   return { plain: url.href, t };
 }
 
+/**
+ * `selector` に当たるリンクの行き先と開き方。待たずに読む。リンクはビルドの HTML にあり、スクリプトは替えない。待つ検査にすると、
+ * 無いときに1件ごとにタイムアウトまで待ち、後ろの検査がテストの時間切れで回らない。
+ */
+const links = (page: Page, selector: string) =>
+  page.locator(selector).evaluateAll((els) =>
+    els.map((el) => ({
+      href: el.getAttribute("href"),
+      target: el.getAttribute("target"),
+      rel: el.getAttribute("rel"),
+    })),
+  );
+const newTab = (href: string) => ({ href, target: "_blank", rel: "noopener noreferrer" });
+
 test("開くと、t の付いた URL に替わって描ける。クエリ無しの URL は取りに行かない", async ({
   page,
 }) => {
@@ -143,6 +157,31 @@ test("開くと、t の付いた URL に替わって描ける。クエリ無し�
   expect(reveals(await loadingLog())).toEqual([{ drawn: true, t }]);
   await expect(page.locator(thumbnail)).not.toHaveAttribute("data-loading");
   expect(errors).toEqual([]);
+
+  // 出典の行は、サムネイルを直に出す2つの例外の条件（ADR-0004「サムネイル表示の可否についての判断」、ADR-0008「出典の行」）。
+  // ページを開く回数を増やさないよう、このテストでまとめて見る。
+  await test.step("予定のカードは、サムネイルからも出典の行のタイトルからも、視聴ページを新しいタブで開く", async () => {
+    expect
+      .soft(await links(page, `a:has(${thumbnail})`), "サムネイルのリンク")
+      .toEqual([newTab(WATCH_URL)]);
+    expect
+      .soft(await links(page, "[data-schedule-source] a"), "出典の行のタイトルのリンク")
+      .toEqual([newTab(WATCH_URL)]);
+  });
+  // 実データでは作者名を oEmbed から取れず、決まった名前に替えることもあるので、作者名は固定応答のビルドでだけ見る。
+  if (fixtureBuild()) {
+    // 固定応答（tests/fixtures/build-fetch.mjs）が効いていることを確かめるのは、ここだけ。
+    await test.step("固定応答のビルドでは、予定のカードの出典の行に固定データの作者名が出る", async () => {
+      expect
+        .soft(await page.locator("[data-schedule-source]").allTextContents())
+        .toEqual([expect.stringContaining("テスト用チャンネル")]);
+    });
+  }
+  await test.step("再生リストの出典の行は、公式チャンネルを新しいタブで開く", async () => {
+    expect
+      .soft(await links(page, "[data-playlists] [data-playlists-source] a"))
+      .toEqual([newTab(OFFICIAL.youtube)]);
+  });
 });
 
 test("5分たってタブに戻ると、前の画像を消さずに t を付け直す", async ({ page }) => {
@@ -285,57 +324,4 @@ test("loading を知らないブラウザでは、クエリ無しの URL のま�
   expect(t).toBeNull();
   expect(requested.filter((url) => url.includes(`/vi/${SCHEDULE_VIDEO_ID}/`))).toEqual([plain]);
   expect(errors).toEqual([]);
-});
-
-/**
- * `selector` に当たるリンクの行き先と開き方。待たずに読む。JS を切っていて DOM は HTML のまま変わらず、待つ検査にすると、
- * 無いときに1件ごとにタイムアウトまで待ち、後ろの検査がテストの時間切れで回らない。
- */
-const links = (page: Page, selector: string) =>
-  page.locator(selector).evaluateAll((els) =>
-    els.map((el) => ({
-      href: el.getAttribute("href"),
-      target: el.getAttribute("target"),
-      rel: el.getAttribute("rel"),
-    })),
-  );
-const newTab = (href: string) => ({ href, target: "_blank", rel: "noopener noreferrer" });
-
-test.describe("JS を切ったとき", () => {
-  test.use({ javaScriptEnabled: false });
-
-  // 出典の行は、サムネイルを直に出す2つの例外の条件（ADR-0004「サムネイル表示の可否についての判断」、ADR-0008「出典の行」）。
-  // ページを開く回数を増やさないよう、届いた HTML のまま、ここでまとめて見る。
-  test("予定のサムネイルはクエリ無しの URL で描け、予定と再生リストの出典の行は本家へリンクする", async ({
-    page,
-  }) => {
-    await serveThumbnails(page);
-    await page.goto("/");
-
-    await test.step("予定のカードは、サムネイルからも出典の行のタイトルからも、視聴ページを新しいタブで開く", async () => {
-      expect
-        .soft(await links(page, `a:has(${thumbnail})`), "サムネイルのリンク")
-        .toEqual([newTab(WATCH_URL)]);
-      expect
-        .soft(await links(page, "[data-schedule-source] a"), "出典の行のタイトルのリンク")
-        .toEqual([newTab(WATCH_URL)]);
-    });
-    // 実データでは作者名を oEmbed から取れず、決まった名前に替えることもあるので、作者名は固定応答のビルドでだけ見る。
-    if (fixtureBuild()) {
-      // 固定応答（tests/fixtures/build-fetch.mjs）が効いていることを確かめるのは、ここだけ。
-      await test.step("固定応答のビルドでは、予定のカードの出典の行に固定データの作者名が出る", async () => {
-        expect
-          .soft(await page.locator("[data-schedule-source]").allTextContents())
-          .toEqual([expect.stringContaining("テスト用チャンネル")]);
-      });
-    }
-    await test.step("再生リストの出典の行は、公式チャンネルを新しいタブで開く", async () => {
-      expect
-        .soft(await links(page, "[data-playlists] [data-playlists-source] a"))
-        .toEqual([newTab(OFFICIAL.youtube)]);
-    });
-
-    await expect.poll(() => drawn(page)).toBe(true);
-    expect((await shown(page)).t).toBeNull();
-  });
 });

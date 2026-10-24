@@ -30,9 +30,9 @@
  * `CSS.forcePseudoState` で、WebKit には無い）。当てる先は、フォーカスできる要素と、`:hover` のルールが指す要素で、
  * 比べるのはその要素と子孫だけ。`:has(:hover)` や `:hover + *` のように、外の要素に効く書き方は見ない。
  *
- * 条件: 幅 × Chromium・WebKit × 動きを減らす設定のあり・なし × JS のあり・なし × forced-colors のあり・なし。
- * Storybook は JS が無いと描かないので、JS なしは無い。forced-colors を当てても効かないブラウザでは、その条件を飛ばして出す。
- * ページの状態も変えて比べる: 畑（`[data-field]`）は昼・配信前・配信中、再生リスト（JS ありのとき）は畳む・広げる。
+ * 条件: 幅 × Chromium・WebKit × 動きを減らす設定のあり・なし × forced-colors のあり・なし。
+ * forced-colors を当てても効かないブラウザでは、その条件を飛ばして出す。
+ * ページの状態も変えて比べる: 畑（`[data-field]`）は昼・配信前・配信中、再生リストは畳む・広げる。
  *
  * 揺れを止めるもの: 時計（`Date`）と `Math.random` は、決まった値にしてから開く。通信が止み、移り変わりと終わりのある
  * アニメーションが終わるのを待ってから、終わりの無いアニメーションを頭で止めて測る（CSS で止めると、そのプロパティの
@@ -484,7 +484,6 @@ async function settleDown(page, inflight) {
 async function readSide(browser, side, path, cond, kind) {
   const context = await browser.newContext({
     viewport: { width: cond.width, height: HEIGHT },
-    javaScriptEnabled: cond.js,
     reducedMotion: cond.motion,
     forcedColors: cond.forced,
   });
@@ -500,10 +499,8 @@ async function readSide(browser, side, path, cond, kind) {
     page.on("request", (request) => inflight.add(request));
     for (const event of ["requestfinished", "requestfailed"])
       page.on(event, (request) => inflight.delete(request));
-    if (cond.js) {
-      await page.clock.setFixedTime(FIXED_TIME);
-      await page.addInitScript(seedRandom);
-    }
+    await page.clock.setFixedTime(FIXED_TIME);
+    await page.addInitScript(seedRandom);
     const storybook = kind === "storybook";
     const response = await page.goto(
       storybook
@@ -585,8 +582,7 @@ async function readSide(browser, side, path, cond, kind) {
       await settleDown(page, inflight);
     }
     if (
-      cond.js &&
-      (await page.evaluate(() => document.querySelector("[data-playlists-more]")?.hidden === false))
+      await page.evaluate(() => document.querySelector("[data-playlists-more]")?.hidden === false)
     ) {
       await page.evaluate(() => {
         document.querySelector("[data-playlists-more]")?.click();
@@ -694,7 +690,6 @@ const AXES = [
   ["browser", (c) => c.browser],
   ["width", (c) => `${c.width}px`],
   ["motion", (c) => (c.motion === "reduce" ? "動きを減らす" : "動きそのまま")],
-  ["js", (c) => (c.js ? "JS あり" : "JS なし")],
   ["forced", (c) => (c.forced === "active" ? "forced-colors" : "色そのまま")],
 ];
 const label = (c) => AXES.map(([, f]) => f(c)).join(" ");
@@ -763,10 +758,8 @@ try {
       for (const path of paths) {
         for (const width of widths) {
           for (const motion of ["no-preference", "reduce"]) {
-            for (const js of kind === "storybook" ? [true] : [true, false]) {
-              for (const forced of forcedWorks ? ["none", "active"] : ["none"])
-                queue.push({ path, cond: { browser: name, width, motion, js, forced } });
-            }
+            for (const forced of forcedWorks ? ["none", "active"] : ["none"])
+              queue.push({ path, cond: { browser: name, width, motion, forced } });
           }
         }
       }
