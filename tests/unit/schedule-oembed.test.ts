@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import { SCHEDULE_AUTHOR, SCHEDULE_VIDEO_ID } from '../../src/data/schedule';
 import { fetchErrorReason, readMaxresHead, readScheduleOEmbed } from '../../src/lib/schedule-oembed';

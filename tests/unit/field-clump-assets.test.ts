@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 import { loadClumpAssets } from '../../src/components/field-renderer';
 import type { FieldMesh } from '../../src/lib/field';
 import { parseFieldBundle } from '../../src/lib/field-bundle-source';

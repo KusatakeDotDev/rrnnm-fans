@@ -1,4 +1,4 @@
-import { expect, it } from 'vitest';
+import { expect, it } from 'vite-plus/test';
 
 import { SKEB_WORKS } from '../../src/data/skeb';
 import { X_EMBEDS } from '../helpers/x-embed';

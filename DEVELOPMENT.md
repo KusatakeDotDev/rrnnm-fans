@@ -31,7 +31,7 @@ pnpm dev
 | `pnpm build` | 実データで `dist/` に書き出す。ビルドの記録 `dist.receipt.json` も書く |
 | `pnpm typecheck` | 型チェック |
 | `pnpm lint:css` | CSS の lint（Stylelint） |
-| `pnpm test` | ユニットテストとリポジトリの検査（Vitest。`tests/unit/` と `tests/repo/`） |
+| `pnpm test` | ユニットテストとリポジトリの検査（Vite+ の `vp test`。`tests/unit/` と `tests/repo/`） |
 | `pnpm test:storybook` | コンポーネントのテスト。story を1つずつ Chromium で描き、アクセシビリティの検査（axe）を回す |
 | `pnpm test:ci` | CI と同じ Playwright のテスト。`.test-dist/` に固定応答でビルドしてから回す。付けなければ、下の `on`・`off` を順に両方回す |
 | `pnpm test:ci on` | 未公開のページも出すビルドに、Playwright のテストを全部掛ける |

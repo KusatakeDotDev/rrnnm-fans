@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 import postcss, { type Rule } from 'postcss';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 
 import { COPIED_FROM_CSS, MEASURED_WITH_TOKENS } from '../../src/components/Marquee';
 import { parseCustomProperties, resolve } from '../../src/lib/tokens';

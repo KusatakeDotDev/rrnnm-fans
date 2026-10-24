@@ -1,6 +1,6 @@
 import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
-import { playwright } from '@vitest/browser-playwright';
-import { defineConfig } from 'vitest/config';
+import { playwright } from 'vite-plus/test/browser-playwright';
+import { defineConfig } from 'vite-plus';
 
 // コンポーネントのテストの層（Issue rurino-nemo-fansite#100）。story を1つずつ Chromium で描き、addon-a11y の axe を回す。
 // 単体テスト（vitest.config.ts）とは設定を分ける。あちらは Node で動き、Stryker もそれを読む

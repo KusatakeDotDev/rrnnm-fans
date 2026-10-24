@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { parseFieldBundle } from '../../src/lib/field-bundle-source';
 
 const hasPrivate = existsSync(new URL('../../src/lib/field-bundle.ts', import.meta.url));

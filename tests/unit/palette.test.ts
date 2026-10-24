@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 import postcss from 'postcss';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 
 import { TONES, DARK_TONES } from '../../src/components/tones';
 import { contrastRatio, meetsAA } from '../../src/lib/contrast';

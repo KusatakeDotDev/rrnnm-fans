@@ -27,19 +27,19 @@ catalog:
   '@storybook/addon-docs': ^10.6.1
   '@storybook/addon-vitest': ^10.6.1
   '@storybook/react-vite': ^10.6.1
-  '@stryker-mutator/core': ^10.0.0
-  '@stryker-mutator/vitest-runner': ^10.0.0
+  '@stryker-mutator/core': ^10.1.1
+  '@stryker-mutator/vitest-runner': ^10.1.1
   '@types/node': ^26.6.5
   '@types/react': ^19.3.0
   '@types/react-dom': ^19.3.0
 
-  # Why: addon-vitest が optional peer として読み込むので、直接持つ（ADR-0003「導入した依存」）。メジャーは下の vitest にそろえる
+  # Why: addon-vitest が optional peer として読み込むので、直接持つ（ADR-0003「導入した依存」）。バージョンは vite-plus の中のものと同じにする（ADR-0031「Vitest と Vite のバージョンは、vite-plus の中のものにそろえる」）
   # RemoveWhen: addon-vitest が @vitest/browser/context を読み込まなくなるか、依存として持つようになったとき
-  '@vitest/browser': ^4.1.11
+  '@vitest/browser': 5.0.5
 
-  # Why: メジャーを下の vitest にそろえて 4 に留める
-  # RemoveWhen: 下の vitest を 5 に上げるとき
-  '@vitest/browser-playwright': ^4.1.11
+  # Why: vite-plus がブラウザーモードの peer として求める。バージョンは vite-plus が求めるものと同じにする（ADR-0031「Vitest と Vite のバージョンは、vite-plus の中のものにそろえる」）
+  # RemoveWhen: コンポーネントのテストを、Vitest のブラウザーモードで回さなくなったとき
+  '@vitest/browser-playwright': 5.0.5
 
   astro: ^7.3.8
   fast-check: ^4.10.2
@@ -66,8 +66,30 @@ catalog:
   # RemoveWhen: ADR-0003「TypeScript は 6 系に留める」の見直しの条件を満たしたとき
   typescript: ^6.0.3
 
-  # Why: メジャーを 4 に留める。5 では Stryker のミューテーションスコアが、エラーを出さずに落ちる（ADR-0003「ミューテーションテストを nightly に逃がさない」）
-  # RemoveWhen: vitest 5 に上げる Dependabot の PR で、ミューテーションスコアが落ちなくなったとき
-  vitest: ^4.1.11
+  # Why: overrides で、Astro・Storybook・Vitest が使う Vite を、vite-plus の中のもの（vite-plus-core）にする。バージョンは vite-plus と同じにする（ADR-0031「Vitest と Vite のバージョンは、vite-plus の中のものにそろえる」）
+  # RemoveWhen: ADR-0031「見直す条件」で、Vite+ をやめるとき
+  vite: npm:@voidzero-dev/vite-plus-core@1.4.0
+
+  # Why: vitest・@vitest/* と overrides の行き先を、このバージョンの中のものにそろえるので、範囲にしない（ADR-0031「Vitest と Vite のバージョンは、vite-plus の中のものにそろえる」）
+  # RemoveWhen: ADR-0031「見直す条件」で、Vite+ をやめるとき
+  vite-plus: 1.4.0
+
+  # Why: Stryker と addon-vitest が peer として読むので、直接持つ。バージョンは vite-plus の中のものと同じにし、overrides で1つにする（ADR-0031「Vitest と Vite のバージョンは、vite-plus の中のものにそろえる」）
+  # RemoveWhen: Stryker と addon-vitest が vitest を peer として読まなくなったとき
+  vitest: 5.0.5
 
   wrangler: ^4.149.0
+
+# Vitest は peer の Vite ごとに別のものとして入るので、Vite もそろえないと、テストのファイルが登録する先と Stryker が回すものが別になる
+# （ADR-0031「Vitest と Vite のバージョンは、vite-plus の中のものにそろえる」）
+overrides:
+  'vite@*': 'catalog:'
+  'vitest@*': 'catalog:'
+
+# peer の Vite の範囲（^8 など）が、vite-plus-core のバージョン（1.x）と比べられて外れるため。中の Vite のバージョンは tests/repo/vite-plus.test.ts が見る
+peerDependencyRules:
+  allowAny:
+    - vite
+  # Storybook の optional peer の範囲が 0.x のままで外れるため。Storybook は vite-plus/versions を読むだけで、1.x にもある
+  allowedVersions:
+    storybook>vite-plus: ^1.4.0

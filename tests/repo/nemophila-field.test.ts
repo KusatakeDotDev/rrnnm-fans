@@ -1,6 +1,6 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 
 import NemophilaField, { NemophilaFieldWithSnapshot } from '../../src/components/NemophilaField.tsx';
 import { SNAPSHOT_IMAGE_ITEM } from '../../src/components/field-snapshot';
