@@ -40,7 +40,7 @@ Pull Request は、今のところお受けしていません。
 - [Astro](https://astro.build/) で静的なページを書き出し、[Cloudflare Workers](https://developers.cloudflare.com/workers/static-assets/)（Static Assets）で配信しています
 - コンポーネントは React（`.tsx`）で書いていますが、使うのはビルドのときだけで、ブラウザには React を配っていません。同じコンポーネントを Claude Design（デザインツール）に同期して、見た目を作るためです
 - トップのネモフィラ畑は、ライブラリを使わずに WebGL2 で描いています
-- テストは Vitest・Playwright・Storybook で、ミューテーションテストに Stryker を使っています
+- テストは [Vite+](https://viteplus.dev/)（Vitest）・Playwright・Storybook で、ミューテーションテストに Stryker を使っています
 
 手元で動かす手順と、コードのコメントにある `ADR-0011` や `RRNNM-49` などの参照の意味は、[`DEVELOPMENT.md`](DEVELOPMENT.md) にあります。
 

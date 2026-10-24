@@ -25,10 +25,10 @@
     "deploy": "node scripts/deploy-dist.mjs production",
     "typecheck": "astro check && tsc --noEmit",
     "lint:css": "stylelint \"src/**/*.{css,astro}\"",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "test": "vp test run",
+    "test:watch": "vp test",
     "test:e2e": "playwright test",
-    "test:storybook": "vitest run --config vitest.storybook.config.ts",
+    "test:storybook": "vp test run --config vitest.storybook.config.ts",
     "test:mutation": "stryker run",
     "test:mutation:floors": "node scripts/check-mutation-floors.mjs",
     "assets:pull": "node scripts/private-assets.mjs",
@@ -74,6 +74,7 @@
     "stylelint": "catalog:",
     "stylelint-plugin-use-baseline": "catalog:",
     "typescript": "catalog:",
+    "vite-plus": "catalog:",
     "vitest": "catalog:",
     "wrangler": "catalog:"
   }

@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig } from 'vite-plus';
 
 // 単体テスト（tests/unit）とリポジトリの検査（tests/repo）の層。Astro には一切依存させない（→ docs/adr/0003-testing-and-ci.md）。
 // getViteConfig(astro) を噛ませると、ビルドが壊れたときに単体テストまで一緒に赤くなる。

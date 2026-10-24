@@ -16,6 +16,11 @@ updates:
       playwright:
         patterns: ['playwright', '@playwright/*']
         update-types: [minor, patch]
+      # vite-plus と、その中のものにそろえる vitest・@vitest/*・vite も別の PR にする。ずれると tests/repo/vite-plus.test.ts で落ちるので、
+      # ほかの更新を止めないため（ADR-0031「Vitest と Vite のバージョンは、vite-plus の中のものにそろえる」）。
+      vite-plus:
+        patterns: ['vite-plus', 'vitest', '@vitest/*', 'vite']
+        update-types: [minor, patch]
       minor-and-patch:
         patterns: ['*']
         update-types: [minor, patch]

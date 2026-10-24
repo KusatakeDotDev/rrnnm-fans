@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 
 import { DEV_IDLE_SLEEP_FACTOR, devIdleReason, isOwnLockFile, parseIdleMinutes, sleptSince } from '../../src/lib/dev-idle';
 

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 
 /**
  * 検索避けを外したこと（Issue rurino-nemo-fansite#31 の一般公開）が、静的ファイルで戻っていないことを見る。

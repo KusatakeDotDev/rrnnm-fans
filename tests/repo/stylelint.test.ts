@@ -1,7 +1,7 @@
 import { fileURLToPath } from 'node:url';
 
 import stylelint from 'stylelint';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 
 /**
  * stylelint.config.mjs の自前の構文とルール、disable の決まりが効くかを、本物の設定で見る（ADR-0025「既知の例外は、
