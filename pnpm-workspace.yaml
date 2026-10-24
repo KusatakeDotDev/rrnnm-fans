@@ -93,3 +93,13 @@ peerDependencyRules:
   # Storybook の optional peer の範囲が 0.x のままで外れるため。Storybook は vite-plus/versions を読むだけで、1.x にもある
   allowedVersions:
     storybook>vite-plus: ^1.4.0
+
+# Vitest 5 に対応した Stryker 10.1.1 は、公開（2026-10-23）から pnpm の minimumReleaseAge（1日）が経っていないので、
+# このバージョンだけ例外にする（主の判断（2026-10-24））。公開から1日経てば、例外にしなくても入る。
+# TODO(RRNNM-108): 2026-10-24T19:17Z を過ぎたら、この一覧を消す。
+minimumReleaseAgeExclude:
+  - '@stryker-mutator/api@10.1.1'
+  - '@stryker-mutator/core@10.1.1'
+  - '@stryker-mutator/instrumenter@10.1.1'
+  - '@stryker-mutator/util@10.1.1'
+  - '@stryker-mutator/vitest-runner@10.1.1'
