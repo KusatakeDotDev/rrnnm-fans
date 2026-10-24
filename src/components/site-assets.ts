@@ -13,10 +13,10 @@
  *
  * 外部サービスのロゴ（BRAND_*）の利用条件は public/brand/NOTICE.txt と docs/BRAND_ASSETS.md。
  */
-export const LOGO_OUTLINED = '/logo/rrnnm-fans-logo-outlined.svg';
-export const LOGO_WHITE_OUTLINED = '/logo/rrnnm-fans-logo-white-outlined.svg';
-export const BRAND_YOUTUBE = '/brand/youtube-icon-red.svg';
-export const BRAND_X = '/brand/x-logo-white.svg';
-export const BRAND_MARSHMALLOW = '/brand/marshmallow-logo.svg';
-export const BRAND_BOOTH = '/brand/booth-logo-icon.svg';
-export const BRAND_SKEB = '/brand/skeb-icon.svg';
+export const LOGO_OUTLINED = "/logo/rrnnm-fans-logo-outlined.svg";
+export const LOGO_WHITE_OUTLINED = "/logo/rrnnm-fans-logo-white-outlined.svg";
+export const BRAND_YOUTUBE = "/brand/youtube-icon-red.svg";
+export const BRAND_X = "/brand/x-logo-white.svg";
+export const BRAND_MARSHMALLOW = "/brand/marshmallow-logo.svg";
+export const BRAND_BOOTH = "/brand/booth-logo-icon.svg";
+export const BRAND_SKEB = "/brand/skeb-icon.svg";

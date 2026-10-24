@@ -7,23 +7,34 @@
  * （docs/adr/0011-react-components-for-design-sync.md「props の決まり」）。
  * `style` を渡すと、傾き（`--tilt`）と一緒に当たる。
  */
-import type { CSSProperties, HTMLAttributes } from 'react';
+import type { CSSProperties, HTMLAttributes } from "react";
 
-import { cx } from '../lib/cx';
-import styles from './StickerHeading.module.css';
+import { cx } from "../lib/cx";
+import styles from "./StickerHeading.module.css";
 
-interface StickerHeadingProps extends Omit<HTMLAttributes<HTMLHeadingElement>, 'dangerouslySetInnerHTML'> {
+interface StickerHeadingProps extends Omit<
+  HTMLAttributes<HTMLHeadingElement>,
+  "dangerouslySetInnerHTML"
+> {
   /** 面の色。 */
-  tone?: 'pink' | 'lavender';
+  tone?: "pink" | "lavender";
   /** 傾き（deg）。渡さなければ、既定の傾き（tokens.css の --tilt-sticker）。 */
   tilt?: number;
 }
 
-export default function StickerHeading({ tone = 'pink', tilt, className, style, ...rest }: StickerHeadingProps) {
+export default function StickerHeading({
+  tone = "pink",
+  tilt,
+  className,
+  style,
+  ...rest
+}: StickerHeadingProps) {
   return (
     <h2
       className={cx(styles.root, styles[tone], className)}
-      style={{ ...(tilt === undefined ? {} : { '--tilt': `${tilt}deg` }), ...style } as CSSProperties}
+      style={
+        { ...(tilt === undefined ? {} : { "--tilt": `${tilt}deg` }), ...style } as CSSProperties
+      }
       {...rest}
     />
   );

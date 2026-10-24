@@ -1,4 +1,4 @@
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig, devices } from "@playwright/test";
 
 /**
  * 規約テスト（conformance）の層。→ docs/adr/0003-testing-and-ci.md
@@ -13,7 +13,7 @@ import { defineConfig, devices } from '@playwright/test';
  * wrangler は既に devDependency なので、依存は増えない。
  */
 // ポートは scripts/test-ci.mjs が選んで渡す。Playwright はワーカーでも config を読み直すので、ここで選ぶとワーカーごとに変わる。
-const PORT = Number(process.env['E2E_PORT'] || 4321);
+const PORT = Number(process.env["E2E_PORT"] || 4321);
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 
 /**
@@ -34,7 +34,12 @@ const BASE_URL = `http://127.0.0.1:${PORT}`;
  * X の遮断は tests/e2e/references-x-embed.spec.ts、YouTube の遮断は tests/e2e/playlist-oembed.spec.ts、BOOTH の遮断は tests/e2e/booth-images.spec.ts が見る。
  */
 const BLOCK_EXTERNAL_EMBEDS = {
-  launchOptions: { executablePath: process.env['PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH'], args: ['--host-resolver-rules=MAP platform.x.com ~NOTFOUND, MAP publish.x.com ~NOTFOUND, MAP www.youtube.com ~NOTFOUND, MAP i.ytimg.com ~NOTFOUND, MAP booth.pximg.net ~NOTFOUND'] },
+  launchOptions: {
+    executablePath: process.env["PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH"],
+    args: [
+      "--host-resolver-rules=MAP platform.x.com ~NOTFOUND, MAP publish.x.com ~NOTFOUND, MAP www.youtube.com ~NOTFOUND, MAP i.ytimg.com ~NOTFOUND, MAP booth.pximg.net ~NOTFOUND",
+    ],
+  },
 };
 
 /**
@@ -42,7 +47,7 @@ const BLOCK_EXTERNAL_EMBEDS = {
  * 止めているかを見る検査は conformance でだけ回るので、プロジェクトごとに BLOCK_EXTERNAL_EMBEDS を書くと、
  * webfont の側だけ外しても誰も気付かない。
  */
-const CHROME_WITH_WEBFONT = { ...devices['Desktop Chrome'], ...BLOCK_EXTERNAL_EMBEDS };
+const CHROME_WITH_WEBFONT = { ...devices["Desktop Chrome"], ...BLOCK_EXTERNAL_EMBEDS };
 
 /**
  * webfont（Zen Maru Gothic）も読ませない。ページの字が当たるチャンクをページを開くたびに数十本読み、
@@ -52,45 +57,50 @@ const CHROME_WITH_WEBFONT = { ...devices['Desktop Chrome'], ...BLOCK_EXTERNAL_EM
  */
 const CHROME = {
   ...CHROME_WITH_WEBFONT,
-  launchOptions: { ...BLOCK_EXTERNAL_EMBEDS.launchOptions, args: [...BLOCK_EXTERNAL_EMBEDS.launchOptions.args, '--disable-remote-fonts'] },
+  launchOptions: {
+    ...BLOCK_EXTERNAL_EMBEDS.launchOptions,
+    args: [...BLOCK_EXTERNAL_EMBEDS.launchOptions.args, "--disable-remote-fonts"],
+  },
 };
 
 export default defineConfig({
   fullyParallel: true,
-  forbidOnly: !!process.env['CI'],
+  forbidOnly: !!process.env["CI"],
   retries: 0,
   // 規約は、ルートごとのテストのステップで見る（tests/conformance/routes.spec.ts）。ステップの名前を規約の一覧として出す。
-  reporter: process.env['CI'] ? [['github'], ['list', { printSteps: true }]] : [['list', { printSteps: true }]],
+  reporter: process.env["CI"]
+    ? [["github"], ["list", { printSteps: true }]]
+    : [["list", { printSteps: true }]],
   use: {
     baseURL: BASE_URL,
-    trace: 'retain-on-failure',
+    trace: "retain-on-failure",
   },
   webServer: {
-    command: `pnpm exec wrangler dev --port ${PORT} --ip 127.0.0.1 --assets ${process.env['TEST_DIST'] ?? 'dist'}`,
+    command: `pnpm exec wrangler dev --port ${PORT} --ip 127.0.0.1 --assets ${process.env["TEST_DIST"] ?? "dist"}`,
     url: BASE_URL,
     reuseExistingServer: false,
     // workerd の起動は速くない。CI の遅いランナーでも足りる幅を取る。
     timeout: 120_000,
-    env: { WRANGLER_SEND_METRICS: 'false' },
+    env: { WRANGLER_SEND_METRICS: "false" },
   },
   projects: [
     {
       // ビルド成果物そのものへの検査。ブラウザを使わない。
-      name: 'artifact',
-      testDir: 'tests/artifact',
+      name: "artifact",
+      testDir: "tests/artifact",
     },
     {
       // 全ページにかかる規約（tests/conformance）と、ページの機能のシナリオ（tests/e2e）。1回だけ回す。
-      name: 'conformance',
-      testDir: 'tests',
-      testMatch: ['conformance/*.spec.ts', 'e2e/*.spec.ts'],
+      name: "conformance",
+      testDir: "tests",
+      testMatch: ["conformance/*.spec.ts", "e2e/*.spec.ts"],
       testIgnore: /webfont\.spec\.ts/,
       use: CHROME,
     },
     {
       // webfont を止めずに、読まれることだけを見る。
-      name: 'webfont',
-      testDir: 'tests/conformance',
+      name: "webfont",
+      testDir: "tests/conformance",
       testMatch: /webfont\.spec\.ts/,
       use: CHROME_WITH_WEBFONT,
     },

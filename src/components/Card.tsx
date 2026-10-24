@@ -12,16 +12,21 @@
  * 下の1つと `className` 以外の属性（`id`・`aria-*`・`data-*` など）は root の div にそのまま渡す
  * （docs/adr/0011-react-components-for-design-sync.md「props の決まり」）。
  */
-import type { HTMLAttributes } from 'react';
+import type { HTMLAttributes } from "react";
 
-import { cx } from '../lib/cx';
-import styles from './Card.module.css';
+import { cx } from "../lib/cx";
+import styles from "./Card.module.css";
 
-interface CardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'dangerouslySetInnerHTML'> {
+interface CardProps extends Omit<HTMLAttributes<HTMLDivElement>, "dangerouslySetInnerHTML"> {
   /** 上の縁に見出しのステッカー（StickerHeading）を重ねて置く。重なる分だけ上の余白を広く取る。 */
   headingOverlap?: boolean;
 }
 
 export default function Card({ headingOverlap = false, className, ...rest }: CardProps) {
-  return <div className={cx(styles.root, headingOverlap && styles.headingOverlap, 'on-paper', className)} {...rest} />;
+  return (
+    <div
+      className={cx(styles.root, headingOverlap && styles.headingOverlap, "on-paper", className)}
+      {...rest}
+    />
+  );
 }

@@ -1,10 +1,10 @@
-import type { Meta, StoryObj } from '@storybook/react-vite';
+import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import Card from '../src/components/Card.tsx';
-import StickerHeading from '../src/components/StickerHeading.tsx';
-import { column } from './shared/layout.ts';
+import Card from "../src/components/Card.tsx";
+import StickerHeading from "../src/components/StickerHeading.tsx";
+import { column } from "./shared/layout.ts";
 
-const meta = { title: 'General/Card', component: Card } satisfies Meta<typeof Card>;
+const meta = { title: "General/Card", component: Card } satisfies Meta<typeof Card>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
@@ -26,9 +26,12 @@ export const OnGround: Story = {
 // 上の縁に見出しのステッカーを重ねる形（トップの配信予定）。重なる分だけ、カードが上の余白を広く取る。
 export const HeadingOverlap: Story = {
   render: () => (
-    <div className="on-ground" style={{ ...column, paddingTop: '3rem' }}>
-      <div style={{ position: 'relative' }}>
-        <StickerHeading tilt={-4} style={{ position: 'absolute', zIndex: 1, top: '-1.875rem', left: '-1.125rem' }}>
+    <div className="on-ground" style={{ ...column, paddingTop: "3rem" }}>
+      <div style={{ position: "relative" }}>
+        <StickerHeading
+          tilt={-4}
+          style={{ position: "absolute", zIndex: 1, top: "-1.875rem", left: "-1.125rem" }}
+        >
           今週の配信予定
         </StickerHeading>
         <Card headingOverlap>

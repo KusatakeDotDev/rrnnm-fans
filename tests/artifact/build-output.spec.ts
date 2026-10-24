@@ -1,14 +1,23 @@
-import { readFileSync } from 'node:fs';
-import path from 'node:path';
+import { readFileSync } from "node:fs";
+import path from "node:path";
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from "@playwright/test";
 
-import { SNAPSHOT_IMAGE_ITEM } from '../../src/components/field-snapshot';
-import { BOOTH_GOODS, boothItemUrl } from '../../src/data/goods';
-import { SCHEDULE_VIDEO_ID } from '../../src/data/schedule';
-import { builtPages, DIST, distTextFiles, fixtureBuild, isJsonScript, PAGE_ORIGIN, scriptSrcs, toRoute } from '../helpers/dist';
-import { stringLiterals } from '../helpers/string-literals';
-import { X_EMBED_PAGES, X_EMBEDS } from '../helpers/x-embed';
+import { SNAPSHOT_IMAGE_ITEM } from "../../src/components/field-snapshot";
+import { BOOTH_GOODS, boothItemUrl } from "../../src/data/goods";
+import { SCHEDULE_VIDEO_ID } from "../../src/data/schedule";
+import {
+  builtPages,
+  DIST,
+  distTextFiles,
+  fixtureBuild,
+  isJsonScript,
+  PAGE_ORIGIN,
+  scriptSrcs,
+  toRoute,
+} from "../helpers/dist";
+import { stringLiterals } from "../helpers/string-literals";
+import { X_EMBED_PAGES, X_EMBEDS } from "../helpers/x-embed";
 
 /**
  * ビルド成果物そのものに対する検査。ブラウザを開かない
@@ -19,7 +28,7 @@ import { X_EMBED_PAGES, X_EMBEDS } from '../helpers/x-embed';
  */
 const builtFiles = distTextFiles();
 
-test('dist に中身がある', () => {
+test("dist に中身がある", () => {
   expect(builtFiles.length).toBeGreaterThan(0);
 });
 
@@ -28,28 +37,26 @@ test('dist に中身がある', () => {
  *   ビルド成果物を grep してキーが含まれていないことをCIで確認する」(Issue rurino-nemo-fansite#12)
  * docs/CONCEPT.md §7「APIキーがビルド成果物に漏れていない」
  */
-test.describe('APIキーが漏れていない', () => {
+test.describe("APIキーが漏れていない", () => {
   const leakPatterns = [
-    { name: 'Google API キー', pattern: /AIza[0-9A-Za-z_-]{35}/ },
-    { name: 'YOUTUBE_API_KEY という変数名ごとの埋め込み', pattern: /YOUTUBE_API_KEY/ },
+    { name: "Google API キー", pattern: /AIza[0-9A-Za-z_-]{35}/ },
+    { name: "YOUTUBE_API_KEY という変数名ごとの埋め込み", pattern: /YOUTUBE_API_KEY/ },
     // Astro が import.meta.env を丸ごと吐いてしまう事故を見る。
-    { name: 'PUBLIC_ でない env の埋め込み', pattern: /\bCLOUDFLARE_API_TOKEN\b/ },
+    { name: "PUBLIC_ でない env の埋め込み", pattern: /\bCLOUDFLARE_API_TOKEN\b/ },
   ];
 
   for (const { name, pattern } of leakPatterns) {
     test(name, () => {
-      const found = builtFiles
-        .filter((f) => pattern.test(f.text))
-        .map((f) => f.rel);
+      const found = builtFiles.filter((f) => pattern.test(f.text)).map((f) => f.rel);
       expect(found).toEqual([]);
     });
   }
 
   // ビルド時に実キーを渡している場合、その値そのものが出ていないことも見る。
   // ローカルで未設定なら何もしない（CI では Secrets から渡る想定）。
-  test('実際に渡された APIキーの値が出ていない', () => {
-    const realKey = process.env['YOUTUBE_API_KEY'];
-    test.skip(!realKey, 'YOUTUBE_API_KEY が未設定');
+  test("実際に渡された APIキーの値が出ていない", () => {
+    const realKey = process.env["YOUTUBE_API_KEY"];
+    test.skip(!realKey, "YOUTUBE_API_KEY が未設定");
     const found = builtFiles.filter((f) => f.text.includes(realKey!)).map((f) => f.rel);
     expect(found).toEqual([]);
   });
@@ -71,7 +78,7 @@ test.describe('APIキーが漏れていない', () => {
  * `hqdefault.jpg` 以外の派生パス（`/vi_webp/` 等）が紛れ込んでも見逃さないため。
  * SCHEDULE_VIDEO_ID を書き換えたときは、意図した差し替えかどうかがここにも表れる。
  */
-test.describe('配信スケジュールのサムネイル（i.ytimg.com）', () => {
+test.describe("配信スケジュールのサムネイル（i.ytimg.com）", () => {
   const allowedThumbnail = `i.ytimg.com/vi/${SCHEDULE_VIDEO_ID}/`;
 
   const occurrences = builtFiles.flatMap((f) => {
@@ -79,7 +86,7 @@ test.describe('配信スケジュールのサムネイル（i.ytimg.com）', () 
     return matches.map((url) => ({ rel: f.rel, url }));
   });
 
-  test('配信スケジュール動画1本以外の直リンクが無い', () => {
+  test("配信スケジュール動画1本以外の直リンクが無い", () => {
     const disallowed = occurrences
       .filter((o) => !o.url.includes(allowedThumbnail))
       .map((o) => `${o.rel}: ${o.url}`);
@@ -91,7 +98,7 @@ test.describe('配信スケジュールのサムネイル（i.ytimg.com）', () 
    * 静かに切り替わる設計にしてある（ScheduleCard.astro）。ビルドが成功したまま
    * トップページの主要な絵が消えるのを、ここで検知する。
    */
-  test('oEmbed 取得が成功し、サムネイルが実際に出ている', () => {
+  test("oEmbed 取得が成功し、サムネイルが実際に出ている", () => {
     const found = occurrences.filter((o) => o.url.includes(allowedThumbnail));
     expect(found.length).toBeGreaterThan(0);
   });
@@ -107,8 +114,8 @@ test.describe('配信スケジュールのサムネイル（i.ytimg.com）', () 
  * `pximg.net` を広く拾ってから許可分を引く（`booth.` に限定しない）。pixiv の画像（`i.pximg.net`）が
  * 紛れ込んでも見逃さないため。
  */
-test.describe('BOOTH の商品の画像（booth.pximg.net）', () => {
-  const GOODS_PAGE = 'goods/index.html';
+test.describe("BOOTH の商品の画像（booth.pximg.net）", () => {
+  const GOODS_PAGE = "goods/index.html";
 
   const occurrences = builtFiles.flatMap((f) => {
     const matches = [...f.text.matchAll(/[a-zA-Z0-9.-]*pximg\.net\/[^"'\s)]+/g)].map((m) => m[0]);
@@ -125,12 +132,12 @@ test.describe('BOOTH の商品の画像（booth.pximg.net）', () => {
     return file.text;
   };
 
-  test('グッズのページの、一覧に書いた商品の画像だけ', () => {
+  test("グッズのページの、一覧に書いた商品の画像だけ", () => {
     const disallowed = occurrences
       .filter(
         (o) =>
           o.rel !== GOODS_PAGE ||
-          !o.url.startsWith('booth.pximg.net/') ||
+          !o.url.startsWith("booth.pximg.net/") ||
           !BOOTH_GOODS.some((item) => o.url.includes(`/i/${item.id}/`)),
       )
       .map((o) => `${o.rel}: ${o.url}`);
@@ -144,21 +151,27 @@ test.describe('BOOTH の商品の画像（booth.pximg.net）', () => {
    * **`<img src>` の形で拾えなかった出方を、黙って通さない。** グッズのページに出た `pximg.net` の数と、
    * ここで見た `<img src>` の数を突き合わせる。`srcset`・CSS の背景・引用符の違う `src` などで出ると数が合わず、落ちる。
    */
-  test('画像は、その商品の商品ページへのリンクの中にだけある', () => {
-    test.skip(!hasGoods, 'グッズのページを出さないビルド');
+  test("画像は、その商品の商品ページへのリンクの中にだけある", () => {
+    test.skip(!hasGoods, "グッズのページを出さないビルド");
     const html = goodsHtml();
     const images = [...html.matchAll(/<img\b[^>]*\ssrc="([^"]*pximg\.net[^"]*)"[^>]*>/g)];
-    expect(images.length, '<img src> で出ている画像の数が、ページに出た pximg.net の数と合わない').toBe(
-      occurrences.filter((o) => o.rel === GOODS_PAGE).length,
-    );
+    expect(
+      images.length,
+      "<img src> で出ている画像の数が、ページに出た pximg.net の数と合わない",
+    ).toBe(occurrences.filter((o) => o.rel === GOODS_PAGE).length);
 
     const misplaced = images.flatMap((m) => {
       const before = html.slice(0, m.index);
       const open = Math.max(...[...before.matchAll(/<a[\s>]/g)].map((a) => a.index), -1);
-      const anchor = open === -1 || before.slice(open).includes('</a>') ? null : /^<a\b[^>]*>/.exec(before.slice(open));
+      const anchor =
+        open === -1 || before.slice(open).includes("</a>")
+          ? null
+          : /^<a\b[^>]*>/.exec(before.slice(open));
       const href = anchor ? /\shref="([^"]*)"/.exec(anchor[0])?.[1] : undefined;
       const item = BOOTH_GOODS.find((g) => href === boothItemUrl(g.id));
-      return item && m[1].includes(`/i/${item.id}/`) ? [] : [`${m[1]}（リンク: ${href ?? 'なし'}）`];
+      return item && m[1].includes(`/i/${item.id}/`)
+        ? []
+        : [`${m[1]}（リンク: ${href ?? "なし"}）`];
     });
     expect(misplaced).toEqual([]);
   });
@@ -167,11 +180,15 @@ test.describe('BOOTH の商品の画像（booth.pximg.net）', () => {
    * 画像の下には、いつも花を敷く（src/unreleased/goods.astro）。画像が取れなかったときだけ花を出す形に戻すと、
    * ブラウザで画像が読めなかったとき（お店が差し替えた・コンテンツブロッカーが止めたなど）に、下地の色だけの四角になる。
    */
-  test('どのカードの画像の場所にも、花が敷いてある', () => {
-    test.skip(!hasGoods, 'グッズのページを出さないビルド');
+  test("どのカードの画像の場所にも、花が敷いてある", () => {
+    test.skip(!hasGoods, "グッズのページを出さないビルド");
     // 画像の場所（class が image の span）から、次の </span> までを見る。花は Flower.tsx の svg（viewBox="0 0 40 40"）。
-    const frames = [...goodsHtml().matchAll(/<span\b[^>]*\sclass="image(?:\s[^"]*)?"[^>]*>([\s\S]*?)<\/span>/g)].map((m) => m[1]);
-    expect(frames.length, '画像の場所の数が、一覧に書いた商品の数と合わない').toBe(BOOTH_GOODS.length);
+    const frames = [
+      ...goodsHtml().matchAll(/<span\b[^>]*\sclass="image(?:\s[^"]*)?"[^>]*>([\s\S]*?)<\/span>/g),
+    ].map((m) => m[1]);
+    expect(frames.length, "画像の場所の数が、一覧に書いた商品の数と合わない").toBe(
+      BOOTH_GOODS.length,
+    );
     expect(frames.filter((inner) => !/<svg\b[^>]*\sviewBox="0 0 40 40"/.test(inner))).toEqual([]);
   });
 
@@ -181,12 +198,15 @@ test.describe('BOOTH の商品の画像（booth.pximg.net）', () => {
    * 実データのビルド（Release）では、BOOTH の調子で配布を止めないよう、ここでは見ず、scripts/verify-release.mjs が注意を出す
    * （docs/adr/0020-booth-goods-images.md「払うもの」）。一部の商品だけ出なくなったときは、どちらでも落とさない（docs/OPERATIONS.md §6）。
    */
-  test('OGP の取得が成功し、画像が実際に出ている', () => {
-    test.skip(!hasGoods, 'グッズのページを出さないビルド');
-    test.skip(!fixtureBuild(), '実データのビルドでは見ない。scripts/verify-release.mjs が注意を出す');
+  test("OGP の取得が成功し、画像が実際に出ている", () => {
+    test.skip(!hasGoods, "グッズのページを出さないビルド");
+    test.skip(
+      !fixtureBuild(),
+      "実データのビルドでは見ない。scripts/verify-release.mjs が注意を出す",
+    );
     expect(
       occurrences.length,
-      '固定応答のビルドで、BOOTH の商品ページから画像を1枚も取れていない。取れなかった理由は、ビルドのログの [goods] の行にある',
+      "固定応答のビルドで、BOOTH の商品ページから画像を1枚も取れていない。取れなかった理由は、ビルドのログの [goods] の行にある",
     ).toBeGreaterThan(0);
   });
 });
@@ -213,11 +233,11 @@ test.describe('BOOTH の商品の画像（booth.pximg.net）', () => {
  * 差し込むので、ここには出てこない。CONCEPT §3 で例外として許し、
  * ダッシュボードの設定は人が見る（Issue rurino-nemo-fansite#132）。
  */
-test('外部スクリプトは許可したホストだけ', () => {
-  const allowed = ['platform.x.com'];
+test("外部スクリプトは許可したホストだけ", () => {
+  const allowed = ["platform.x.com"];
 
   const loadedHosts = builtFiles.flatMap((f) =>
-    (f.rel.endsWith('.html')
+    (f.rel.endsWith(".html")
       ? scriptSrcs(f.text, f.rel)
       : [...f.text.matchAll(/<script[^>]*\ssrc=["']([^"']+)["']/g)].map((m) => m[1]!)
     )
@@ -250,26 +270,32 @@ test('外部スクリプトは許可したホストだけ', () => {
  *     dist の JS は全部読むので、import の先を辿らなくてよい。実行されない JSON の script（構造化データなど）は見ない。
  *     `twttr` は、イベントの属性や `javascript:` の URL にも書けるので、HTML 全体（style とコメントを除く）でも見る
  */
-test('X の埋め込みのスクリプトは許したページだけが読み、JS は oEmbed を差し込むほかに埋め込みを作らない', () => {
+test("X の埋め込みのスクリプトは許したページだけが読み、JS は oEmbed を差し込むほかに埋め込みを作らない", () => {
   // ルートと中身を、builtFiles の同じ1件から取る（読み直さず、引き損ねもしない）。
   const loading = builtFiles
-    .filter(({ rel, text }) =>
-      rel.endsWith('.html') && scriptSrcs(text, rel).some((src) => new URL(src, PAGE_ORIGIN).host === 'platform.x.com'),
+    .filter(
+      ({ rel, text }) =>
+        rel.endsWith(".html") &&
+        scriptSrcs(text, rel).some((src) => new URL(src, PAGE_ORIGIN).host === "platform.x.com"),
     )
     .map(({ path: file }) => toRoute(file));
   // 成果物はファイル名の順、許す一覧は書いた順に並ぶので、並べ替えてから比べる。
-  expect(loading.sort(), 'widgets.js を開いた時点で読むページ').toEqual(X_EMBED_PAGES.filter((route) => X_EMBEDS[route]!.load === 'open').sort());
+  expect(loading.sort(), "widgets.js を開いた時点で読むページ").toEqual(
+    X_EMBED_PAGES.filter((route) => X_EMBEDS[route]!.load === "open").sort(),
+  );
 
   // route は、HTML の中の script・template のときだけ。dist の JS ファイルは、どのページから読まれるかを問わない。
-  const scripts = builtFiles.flatMap<{ where: string; route: string | null; body: string }>(({ path: file, rel, text }) => {
-    if (/\.m?js$/.test(rel)) return [{ where: rel, route: null, body: text }];
-    if (!rel.endsWith('.html')) return [];
-    const route = toRoute(file);
-    return [...text.matchAll(/<(script|template)\b([^>]*)>([\s\S]*?)<\/\1\s*>/gi)]
-      .filter(([, name, attrs]) => !(name!.toLowerCase() === 'script' && isJsonScript(attrs!)))
-      .map(([, , , body]) => ({ where: rel, route, body: body! }));
-  });
-  expect(scripts.length, 'JS が0件。検査が空振りしている').toBeGreaterThan(0);
+  const scripts = builtFiles.flatMap<{ where: string; route: string | null; body: string }>(
+    ({ path: file, rel, text }) => {
+      if (/\.m?js$/.test(rel)) return [{ where: rel, route: null, body: text }];
+      if (!rel.endsWith(".html")) return [];
+      const route = toRoute(file);
+      return [...text.matchAll(/<(script|template)\b([^>]*)>([\s\S]*?)<\/\1\s*>/gi)]
+        .filter(([, name, attrs]) => !(name!.toLowerCase() === "script" && isJsonScript(attrs!)))
+        .map(([, , , body]) => ({ where: rel, route, body: body! }));
+    },
+  );
+  expect(scripts.length, "JS が0件。検査が空振りしている").toBeGreaterThan(0);
   const onEmbedPage = (route: string | null) => route !== null && X_EMBED_PAGES.includes(route);
 
   // twttr は、許したページの HTML の script で、描かせ直す呼び出し（twttr.widgets.load。`?.` で書いてもよい）にだけ使う。
@@ -277,9 +303,12 @@ test('X の埋め込みのスクリプトは許したページだけが読み、
   const twttrMisuse = (route: string | null) =>
     onEmbedPage(route) ? /\btwttr\b(?!\??\.widgets\??\.load\b)/ : /\btwttr\b/;
   const found = scripts
-    .filter(({ route, body }) => /twitter-|data-tweet-id|\/status(?:es)?\/\d/i.test(body) || twttrMisuse(route).test(body))
+    .filter(
+      ({ route, body }) =>
+        /twitter-|data-tweet-id|\/status(?:es)?\/\d/i.test(body) || twttrMisuse(route).test(body),
+    )
     .map(({ where }) => where);
-  expect(found, 'X の埋め込みの語を持つ JS').toEqual([]);
+  expect(found, "X の埋め込みの語を持つ JS").toEqual([]);
 
   // X の埋め込みのコードやポストの中身を返すところ。oEmbed（publish.x.com と、旧ホストの publish.twitter.com）と、
   // 埋め込みの iframe が中で使うポストの JSON（syndication）。どれも許したページの HTML の script にだけ書く。
@@ -287,48 +316,60 @@ test('X の埋め込みのスクリプトは許したページだけが読み、
   const oembed = scripts.filter(({ body }) => X_EMBED_SOURCE.test(body));
   expect(
     oembed.filter(({ route }) => !onEmbedPage(route)).map(({ where }) => where),
-    '許していないところで X の埋め込みのコードを取る JS',
+    "許していないところで X の埋め込みのコードを取る JS",
   ).toEqual([]);
-  expect(oembed.length, 'oEmbed を取るスクリプトが0件。検査が空振りしている').toBeGreaterThan(0);
+  expect(oembed.length, "oEmbed を取るスクリプトが0件。検査が空振りしている").toBeGreaterThan(0);
 
   // 押したときに読むページは、widgets.js をページの script から足すので、`<script src>` の検査に掛からない。URL を書いてよいのは、
   // そのページの HTML の script だけにする。開いた時点で読むページの `<script src>` は中身が空なので、ここには当たらない。
-  const clickPage = (route: string | null) => route !== null && X_EMBEDS[route]?.load === 'click';
+  const clickPage = (route: string | null) => route !== null && X_EMBEDS[route]?.load === "click";
   expect(
-    scripts.filter(({ route, body }) => /platform\.(?:x|twitter)\.com/i.test(body) && !clickPage(route)).map(({ where }) => where),
-    '押したときに読むページのほかで、widgets.js の URL を書いた JS',
+    scripts
+      .filter(({ route, body }) => /platform\.(?:x|twitter)\.com/i.test(body) && !clickPage(route))
+      .map(({ where }) => where),
+    "押したときに読むページのほかで、widgets.js の URL を書いた JS",
   ).toEqual([]);
   // 押したときに読むページを作ったビルドでは、そのページに widgets.js を足すスクリプトがある。無ければ上の検査が空振りしている。
-  const builtClickPages = X_EMBED_PAGES.filter((route) => clickPage(route) && scripts.some((script) => script.route === route));
+  const builtClickPages = X_EMBED_PAGES.filter(
+    (route) => clickPage(route) && scripts.some((script) => script.route === route),
+  );
   expect(
-    builtClickPages.filter((route) => !scripts.some((script) => script.route === route && /platform\.x\.com\/widgets\.js/.test(script.body))),
-    '押したときに widgets.js を読むスクリプトが無いページ',
+    builtClickPages.filter(
+      (route) =>
+        !scripts.some(
+          (script) => script.route === route && /platform\.x\.com\/widgets\.js/.test(script.body),
+        ),
+    ),
+    "押したときに widgets.js を読むスクリプトが無いページ",
   ).toEqual([]);
 
   const callsTwttr = builtFiles
-    .filter(({ rel }) => rel.endsWith('.html'))
+    .filter(({ rel }) => rel.endsWith(".html"))
     .filter(({ path: file, text }) =>
-      twttrMisuse(toRoute(file)).test(text.replace(/<style\b[\s\S]*?<\/style\s*>/gi, '').replace(/<!--[\s\S]*?-->/g, '')),
+      twttrMisuse(toRoute(file)).test(
+        text.replace(/<style\b[\s\S]*?<\/style\s*>/gi, "").replace(/<!--[\s\S]*?-->/g, ""),
+      ),
     )
     .map(({ rel }) => rel);
-  expect(callsTwttr, 'twttr を、許したページの twttr.widgets.load のほかに使うページ').toEqual([]);
+  expect(callsTwttr, "twttr を、許したページの twttr.widgets.load のほかに使うページ").toEqual([]);
 });
 
 /**
  * docs/CONCEPT.md §5「広告・アフィリエイトによる収益化」をしない
  * docs/adr/0001-tech-stack.md「アクセス解析 — Cloudflare Web Analytics」（Cookie なし・PII なし）
  */
-test('広告・アフィリエイト・第三者トラッカーのスクリプトが無い', () => {
+test("広告・アフィリエイト・第三者トラッカーのスクリプトが無い", () => {
   const blockedHosts = [
-    'googletagmanager.com',
-    'google-analytics.com',
-    'doubleclick.net',
-    'adservice.google',
-    'amazon-adsystem.com',
-    'a8.net',
+    "googletagmanager.com",
+    "google-analytics.com",
+    "doubleclick.net",
+    "adservice.google",
+    "amazon-adsystem.com",
+    "a8.net",
   ];
-  const found = builtFiles
-    .flatMap((f) => blockedHosts.filter((h) => f.text.includes(h)).map((h) => `${f.rel}: ${h}`));
+  const found = builtFiles.flatMap((f) =>
+    blockedHosts.filter((h) => f.text.includes(h)).map((h) => `${f.rel}: ${h}`),
+  );
   expect(found).toEqual([]);
 });
 
@@ -343,12 +384,12 @@ test('広告・アフィリエイト・第三者トラッカーのスクリプ�
  * React かどうかを文字列から確実には読めない。今はクライアントアイランドが1つも無いので「無い」を見れば足りる。
  * クライアントアイランドにしてよいコンポーネントが要るようになったら、この検査を外さず、名指しで許す形にし、新しい ADR を立てる。React の JS を配ることになり、ADR-0011 の決定が守っているものを一部手放すため。
  */
-test('公開ページにクライアントアイランド（astro-island）が無い', () => {
+test("公開ページにクライアントアイランド（astro-island）が無い", () => {
   const pages = builtPages();
-  expect(pages.length, 'ページが0枚。検査が空振りしている').toBeGreaterThan(0);
+  expect(pages.length, "ページが0枚。検査が空振りしている").toBeGreaterThan(0);
 
   const withIsland = pages
-    .filter(({ file }) => readFileSync(file, 'utf8').includes('<astro-island'))
+    .filter(({ file }) => readFileSync(file, "utf8").includes("<astro-island"))
     .map(({ route }) => route);
   expect(withIsland).toEqual([]);
 });
@@ -372,33 +413,33 @@ test('公開ページにクライアントアイランド（astro-island）が�
  * スクリプトにマーカーを足したら、ここにも足す。スクリプトが自分で付け外しするマーカー（`data-loading`）は、
  * コンポーネントの出力には出ないので入れない。
  */
-test('ラッパーのスクリプトが探すマーカーが、コンポーネントの出力とスクリプトの両方にある', () => {
+test("ラッパーのスクリプトが探すマーカーが、コンポーネントの出力とスクリプトの両方にある", () => {
   const HOOKS = [
-    'data-playlists',
-    'data-playlists-list',
-    'data-playlists-item',
-    'data-playlists-more',
-    'data-playlists-tile',
-    'data-playlists-title',
-    'data-youtube-thumbnail',
-    'data-x-post',
-    'data-slot',
-    'data-slot-count',
-    'data-slot-reel',
-    'data-slot-start',
-    'data-slot-status',
-    'data-slot-stop',
-    'data-slot-until',
-    'data-slot-mute',
+    "data-playlists",
+    "data-playlists-list",
+    "data-playlists-item",
+    "data-playlists-more",
+    "data-playlists-tile",
+    "data-playlists-title",
+    "data-youtube-thumbnail",
+    "data-x-post",
+    "data-slot",
+    "data-slot-count",
+    "data-slot-reel",
+    "data-slot-start",
+    "data-slot-status",
+    "data-slot-stop",
+    "data-slot-until",
+    "data-slot-mute",
   ];
   const scriptTag = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
   const pages = builtPages().map(({ file }) => {
-    const html = readFileSync(file, 'utf8');
+    const html = readFileSync(file, "utf8");
     const scripts = [...html.matchAll(scriptTag)].map(([, attrs, body]) => {
       const src = /\ssrc="(\/[^"]+)"/.exec(attrs)?.[1];
-      return stringLiterals(src ? readFileSync(path.join(DIST, src), 'utf8') : body);
+      return stringLiterals(src ? readFileSync(path.join(DIST, src), "utf8") : body);
     });
-    return { markup: html.replace(scriptTag, ''), scripts };
+    return { markup: html.replace(scriptTag, ""), scripts };
   });
 
   // スクリプトの側は、文字列リテラルの中に属性セレクタ（`[data-…]`・`[data-…=…]` など）として書いてあることを見る。
@@ -406,11 +447,13 @@ test('ラッパーのスクリプトが探すマーカーが、コンポーネ�
     (hook) =>
       !pages.some(
         ({ markup, scripts }) =>
-          new RegExp(`<[a-z][^<>]*\\s${hook}(?:=|[\\s>/])`, 'i').test(markup) &&
-          scripts.some((literals) => literals.some((text) => new RegExp(`\\[${hook}(?:[\\]=~|^$*])`).test(text))),
+          new RegExp(`<[a-z][^<>]*\\s${hook}(?:=|[\\s>/])`, "i").test(markup) &&
+          scripts.some((literals) =>
+            literals.some((text) => new RegExp(`\\[${hook}(?:[\\]=~|^$*])`).test(text)),
+          ),
       ),
   );
-  expect(missing, 'HTML とスクリプトの両方に出ているページが無いマーカー').toEqual([]);
+  expect(missing, "HTML とスクリプトの両方に出ているページが無いマーカー").toEqual([]);
 });
 
 /**
@@ -424,31 +467,35 @@ test('ラッパーのスクリプトが探すマーカーが、コンポーネ�
  * 枠の中身は、枠の `<span>` を閉じる `</span>` までで区切る（中に `<span>` を足しても区切りがずれないよう、
  * 入れ子を数える）。以前は枠の最後にあった帯の文言で区切っていたが、帯は無くした。
  */
-test('ビルド時に画像を入れたサムネイルの枠には、読み込みを待つスクリプトがある', () => {
+test("ビルド時に画像を入れたサムネイルの枠には、読み込みを待つスクリプトがある", () => {
   const frames = builtPages().flatMap(({ file, route }) => {
-    const html = readFileSync(file, 'utf8');
-    return [...html.matchAll(/<span\b[^>]*\sdata-youtube-thumbnail(?:=|[\s>/])[^>]*>/g)].map((m) => {
-      const start = m.index + m[0].length;
-      const tag = /<(\/?)span\b[^>]*>/g;
-      tag.lastIndex = start;
-      let depth = 1;
-      let end = -1;
-      for (let t = tag.exec(html); t; t = tag.exec(html)) {
-        depth += t[1] ? -1 : 1;
-        if (depth === 0) {
-          end = t.index;
-          break;
+    const html = readFileSync(file, "utf8");
+    return [...html.matchAll(/<span\b[^>]*\sdata-youtube-thumbnail(?:=|[\s>/])[^>]*>/g)].map(
+      (m) => {
+        const start = m.index + m[0].length;
+        const tag = /<(\/?)span\b[^>]*>/g;
+        tag.lastIndex = start;
+        let depth = 1;
+        let end = -1;
+        for (let t = tag.exec(html); t; t = tag.exec(html)) {
+          depth += t[1] ? -1 : 1;
+          if (depth === 0) {
+            end = t.index;
+            break;
+          }
         }
-      }
-      // 閉じが見つからない枠を空として飛ばすと、検査する枠が黙って減る（ADR-0003 §5）。
-      if (end === -1) throw new Error(`${route}: サムネイルの枠の </span> が見つからない`);
-      return { route, inner: html.slice(start, end) };
-    });
+        // 閉じが見つからない枠を空として飛ばすと、検査する枠が黙って減る（ADR-0003 §5）。
+        if (end === -1) throw new Error(`${route}: サムネイルの枠の </span> が見つからない`);
+        return { route, inner: html.slice(start, end) };
+      },
+    );
   });
-  expect(frames.length, 'サムネイルの枠が0個。検査が空振りしている').toBeGreaterThan(0);
+  expect(frames.length, "サムネイルの枠が0個。検査が空振りしている").toBeGreaterThan(0);
 
   const withImage = frames.filter(({ inner }) => /<img\b/i.test(inner));
-  expect(withImage.length, 'ビルド時に画像が入った枠が0個。検査が空振りしている').toBeGreaterThan(0);
+  expect(withImage.length, "ビルド時に画像が入った枠が0個。検査が空振りしている").toBeGreaterThan(
+    0,
+  );
 
   const unguarded = withImage
     .filter(({ inner }) => !/<script\b[^>]*>[\s\S]*data-loading[\s\S]*?<\/script>/i.test(inner))
@@ -480,16 +527,17 @@ test('ビルド時に画像を入れたサムネイルの枠には、読み込�
  * （性能予算が `<link>`・`<script>` だけを見るため）ので、値の中の `>` を越えられない。
  * こちらに寄せると予算の側の読み方が変わり、ほかの検査の意味まで動く。
  */
-const TAG = /<([a-zA-Z][^\s/>]*)((?:\s+[^\s"'>/=]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?)*)\s*\/?>/g;
+const TAG =
+  /<([a-zA-Z][^\s/>]*)((?:\s+[^\s"'>/=]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?)*)\s*\/?>/g;
 const ATTR = /\s+([^\s"'>/=]+)(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?/g;
 
 /** HTML の属性として読む部分だけを残す（`<template>`・`<script>`・`<style>` の中とコメントを外す）。 */
 const markupOf = (file: string) =>
-  readFileSync(file, 'utf8')
-    .replace(/<(template|script|style)\b[\s\S]*?<\/\1\s*>/gi, '')
-    .replace(/<!--[\s\S]*?-->/g, '');
+  readFileSync(file, "utf8")
+    .replace(/<(template|script|style)\b[\s\S]*?<\/\1\s*>/gi, "")
+    .replace(/<!--[\s\S]*?-->/g, "");
 
-test('ページに slot 属性が無い', () => {
+test("ページに slot 属性が無い", () => {
   const pages = builtPages();
   const unreadable: string[] = [];
   const withSlot = pages.flatMap(({ file, route }) => {
@@ -500,13 +548,16 @@ test('ページに slot 属性が無い', () => {
     const read = new Set(spans.map(([start]) => start));
     const insideTag = (at: number) => spans.some(([start, end]) => at > start && at < end);
     for (const { index } of html.matchAll(/<[a-zA-Z]/g)) {
-      if (!read.has(index) && !insideTag(index)) unreadable.push(`${route}: ${html.slice(index, index + 80)}`);
+      if (!read.has(index) && !insideTag(index))
+        unreadable.push(`${route}: ${html.slice(index, index + 80)}`);
     }
     return tags
-      .filter(([, , attrs]) => [...attrs.matchAll(ATTR)].some(([, name]) => name.toLowerCase() === 'slot'))
+      .filter(([, , attrs]) =>
+        [...attrs.matchAll(ATTR)].some(([, name]) => name.toLowerCase() === "slot"),
+      )
       .map(([tag]) => `${route}: ${tag.slice(0, 80)}`);
   });
-  expect(unreadable, '読めない形の開始タグがある。検査が静かに減る').toEqual([]);
+  expect(unreadable, "読めない形の開始タグがある。検査が静かに減る").toEqual([]);
   expect(withSlot).toEqual([]);
 });
 
@@ -523,7 +574,7 @@ test('ページに slot 属性が無い', () => {
  * `@astrojs/react` のバージョンアップやコンポーネントへの渡し方の変更で出てくるようになったら、ここで落とす。
  * `<template>`・`<script>`・`<style>` の中は見ない。
  */
-test('ページに astro-static-slot が無い', () => {
+test("ページに astro-static-slot が無い", () => {
   const wrapped = builtPages()
     .filter(({ file }) => /<astro-static-slot\b/i.test(markupOf(file)))
     .map(({ route }) => route);
@@ -542,30 +593,30 @@ test('ページに astro-static-slot が無い', () => {
  *
  * `.copy` のクラス名は CSS Modules でビルドごとに変わるので、`_copy_` で始まる名前で探す。
  */
-test('畑のラッパーの出力: 敷くスクリプトが root の最初の子、見出しが .copy の直接の子', () => {
+test("畑のラッパーの出力: 敷くスクリプトが root の最初の子、見出しが .copy の直接の子", () => {
   const fields = builtPages().flatMap(({ file, route }) => {
-    const html = readFileSync(file, 'utf8');
+    const html = readFileSync(file, "utf8");
     return [...html.matchAll(/<section\b[^>]*\sdata-field=""[^>]*>/g)].map((m) => ({
       route,
       after: html.slice((m.index ?? 0) + m[0].length),
     }));
   });
-  expect(fields.length, '畑が1つも無い。検査が空振りしている').toBeGreaterThan(0);
+  expect(fields.length, "畑が1つも無い。検査が空振りしている").toBeGreaterThan(0);
 
   // 保存先の名前はスクリプトと同じところから読む（名前を変えても、検査だけが落ちることは無い）。
   const snapshotRead = `sessionStorage.getItem('${SNAPSHOT_IMAGE_ITEM}')`;
   const snapshotNotFirst = fields
     .filter(({ after }) => !/^<script>([^<]*)/.exec(after)?.[1]?.includes(snapshotRead))
     .map(({ route, after }) => `${route}: ${after.slice(0, 80)}`);
-  expect(snapshotNotFirst, '敷くスクリプトが section の最初の子に無い').toEqual([]);
+  expect(snapshotNotFirst, "敷くスクリプトが section の最初の子に無い").toEqual([]);
 
   const headingNotDirect = fields
     .map(({ route, after }) => {
       const copy = /<div class="_copy_[^"]*"[^>]*>/.exec(after);
       const start = copy ? (copy.index ?? 0) + copy[0].length : -1;
-      return { route, next: copy ? after.slice(start, start + 80) : '(.copy が無い)' };
+      return { route, next: copy ? after.slice(start, start + 80) : "(.copy が無い)" };
     })
     .filter(({ next }) => !/^<h[12][\s>]/.test(next))
     .map(({ route, next }) => `${route}: ${next}`);
-  expect(headingNotDirect, '見出しが .copy の直接の子に無い').toEqual([]);
+  expect(headingNotDirect, "見出しが .copy の直接の子に無い").toEqual([]);
 });

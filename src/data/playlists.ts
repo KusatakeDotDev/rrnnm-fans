@@ -18,18 +18,18 @@
  * JS を切ったときだけ、この順で並ぶ。
  */
 export const PLAYLISTS = [
-  { id: 'PLZFTCP6YjAYl_A2nzgmp92FJlW_-80FkP', label: 'ASMR' },
-  { id: 'PLZFTCP6YjAYkgJu__kqN29B0IPTvXc0ff', label: '単発ゲーム配信🎮' },
-  { id: 'PLZFTCP6YjAYkWah0TMg_Qn0ImJSncs4LW', label: 'マシュマロ雑談' },
-  { id: 'PLZFTCP6YjAYmk8rDihd3liPBxlCeeOhp_', label: '歌枠配信🎶' },
-  { id: 'PLZFTCP6YjAYkm62lYJPKLQsBYwdD_8fXt', label: '朗読配信📚' },
-  { id: 'PLZFTCP6YjAYnqLtrDPYcdHwd7XmflZjVj', label: '雑談配信・企画配信🌸' },
-  { id: 'PLZFTCP6YjAYlAPvFDrfyF-ecBgIGpPtNw', label: '見やすいやつ！' },
+  { id: "PLZFTCP6YjAYl_A2nzgmp92FJlW_-80FkP", label: "ASMR" },
+  { id: "PLZFTCP6YjAYkgJu__kqN29B0IPTvXc0ff", label: "単発ゲーム配信🎮" },
+  { id: "PLZFTCP6YjAYkWah0TMg_Qn0ImJSncs4LW", label: "マシュマロ雑談" },
+  { id: "PLZFTCP6YjAYmk8rDihd3liPBxlCeeOhp_", label: "歌枠配信🎶" },
+  { id: "PLZFTCP6YjAYkm62lYJPKLQsBYwdD_8fXt", label: "朗読配信📚" },
+  { id: "PLZFTCP6YjAYnqLtrDPYcdHwd7XmflZjVj", label: "雑談配信・企画配信🌸" },
+  { id: "PLZFTCP6YjAYlAPvFDrfyF-ecBgIGpPtNw", label: "見やすいやつ！" },
   // 本家の名前に合わせて「🤝」（2026-09-13 に oEmbed で確認）。
-  { id: 'PLZFTCP6YjAYkyUeqVD19XvsOgH2LZTJMS', label: 'コラボ配信・動画🤝' },
-  { id: 'PLZFTCP6YjAYl7icdkPgnAZqlo9AIFY8w_', label: '歌ってみた動画' },
-  { id: 'PLZFTCP6YjAYl9GQHwU4xFFkQmZVu8p4Y3', label: 'おすすめ動画5選' },
-  { id: 'PLZFTCP6YjAYl-bXgD6wCsEhdR0J0_ovMf', label: 'おすすめ配信5選' },
+  { id: "PLZFTCP6YjAYkyUeqVD19XvsOgH2LZTJMS", label: "コラボ配信・動画🤝" },
+  { id: "PLZFTCP6YjAYl7icdkPgnAZqlo9AIFY8w_", label: "歌ってみた動画" },
+  { id: "PLZFTCP6YjAYl9GQHwU4xFFkQmZVu8p4Y3", label: "おすすめ動画5選" },
+  { id: "PLZFTCP6YjAYl-bXgD6wCsEhdR0J0_ovMf", label: "おすすめ配信5選" },
 ] as const;
 
 export const playlistUrl = (id: string): string => `https://www.youtube.com/playlist?list=${id}`;

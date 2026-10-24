@@ -19,12 +19,12 @@
  *
  * リンクの名前は置く側が持つ。props は ADR-0011「props の決まり」。
  */
-import type { HTMLAttributes } from 'react';
+import type { HTMLAttributes } from "react";
 
-import { cx } from '../lib/cx';
-import styles from './YouTubeThumbnail.module.css';
+import { cx } from "../lib/cx";
+import styles from "./YouTubeThumbnail.module.css";
 
-type YouTubeThumbnailProps = Omit<HTMLAttributes<HTMLSpanElement>, 'dangerouslySetInnerHTML'>;
+type YouTubeThumbnailProps = Omit<HTMLAttributes<HTMLSpanElement>, "dangerouslySetInnerHTML">;
 
 export default function YouTubeThumbnail({ className, children, ...rest }: YouTubeThumbnailProps) {
   return (

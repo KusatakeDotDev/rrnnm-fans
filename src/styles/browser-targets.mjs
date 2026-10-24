@@ -6,4 +6,4 @@
 /** iOS だけ、ほかより下げた下限。上げる条件は ADR-0025「見直す条件」。 */
 export const IOS_FLOOR = 18;
 
-export const cssTarget = ['chrome152', 'edge152', 'firefox155', 'safari26.5', `ios${IOS_FLOOR}`];
+export const cssTarget = ["chrome152", "edge152", "firefox155", "safari26.5", `ios${IOS_FLOOR}`];

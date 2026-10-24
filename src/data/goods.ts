@@ -15,7 +15,7 @@
  * 在庫の無いものも、お店に並んでいる限りは載せる。
  * 商品が増えた・消えたかは、定期確認で人が見る（docs/OPERATIONS.md §6）。
  */
-import { OFFICIAL } from './official';
+import { OFFICIAL } from "./official";
 
 /**
  * ページで商品を分けて並べるグループと、その並び（src/unreleased/goods.astro）。
@@ -31,23 +31,39 @@ import { OFFICIAL } from './official';
  *                なるので出さない。kinds を足したら、出すかを見直す
  */
 export const GOODS_GROUPS = [
-  { title: 'ボイス', kinds: ['ボイス'], showKind: false },
-  { title: 'フィジカルグッズ', kinds: ['Tシャツ', 'アクリルフィギュア'], showKind: true },
+  { title: "ボイス", kinds: ["ボイス"], showKind: false },
+  { title: "フィジカルグッズ", kinds: ["Tシャツ", "アクリルフィギュア"], showKind: true },
 ] as const;
 
 export interface BoothGoods {
   id: number;
   name: string;
-  kind: (typeof GOODS_GROUPS)[number]['kinds'][number];
+  kind: (typeof GOODS_GROUPS)[number]["kinds"][number];
 }
 
 export const BOOTH_GOODS: readonly BoothGoods[] = [
-  { id: 8543162, name: '瑠璃野ねも ジューンブライドボイス(滑り込み)', kind: 'ボイス' },
-  { id: 6244428, name: '【アラーム】うるさい♪ニワトリのモノマネ目覚ましボイス【瑠璃野ねも】', kind: 'ボイス' },
-  { id: 5252441, name: 'ゴミ書き順Tシャツ', kind: 'Tシャツ' },
-  { id: 4046441, name: '【システムボイス】瑠璃野ねもの！とっても可憐なシステムボイス', kind: 'ボイス' },
-  { id: 3744180, name: '瑠璃野ねも アクリルスタンド！(キービジュアル)', kind: 'アクリルフィギュア' },
-  { id: 2870780, name: '【ボイス】瑠璃野ねもとデート ～ネモフィラの花畑編～【Vtuber】', kind: 'ボイス' },
+  { id: 8543162, name: "瑠璃野ねも ジューンブライドボイス(滑り込み)", kind: "ボイス" },
+  {
+    id: 6244428,
+    name: "【アラーム】うるさい♪ニワトリのモノマネ目覚ましボイス【瑠璃野ねも】",
+    kind: "ボイス",
+  },
+  { id: 5252441, name: "ゴミ書き順Tシャツ", kind: "Tシャツ" },
+  {
+    id: 4046441,
+    name: "【システムボイス】瑠璃野ねもの！とっても可憐なシステムボイス",
+    kind: "ボイス",
+  },
+  {
+    id: 3744180,
+    name: "瑠璃野ねも アクリルスタンド！(キービジュアル)",
+    kind: "アクリルフィギュア",
+  },
+  {
+    id: 2870780,
+    name: "【ボイス】瑠璃野ねもとデート ～ネモフィラの花畑編～【Vtuber】",
+    kind: "ボイス",
+  },
 ];
 
 /** 商品ページの URL。リンクの行き先と、OGP を取りに行く先を同じにする。 */

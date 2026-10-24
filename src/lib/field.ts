@@ -7,7 +7,7 @@
  */
 
 /** 畑の状態。ふだん／配信前／配信中。 */
-export const FIELD_STATES = ['day', 'soon', 'live'] as const;
+export const FIELD_STATES = ["day", "soon", "live"] as const;
 
 /**
  * 畑の時計が1コマで進む上限（秒）。重いコマのあとで、動きが一度に飛ばないようにする。
@@ -24,7 +24,7 @@ export type FieldState = (typeof FIELD_STATES)[number];
  * 何かが間違った値を書いても、畑が壊れずにふだんの色へ落ちるようにしておく。
  */
 export function parseFieldState(value: string | null | undefined): FieldState {
-  return FIELD_STATES.find((state) => state === value) ?? 'day';
+  return FIELD_STATES.find((state) => state === value) ?? "day";
 }
 
 /** 0〜1 の RGB。WebGL の uniform にそのまま渡せる形。 */
@@ -92,7 +92,8 @@ export function openingGust(t: number): Gust {
     // Stryker disable next-line EqualityOperator: progress がちょうど 0 なら、下の式でも先頭は GUST_FROM_Z・強さは 0 で、返す値が同じ
     progress <= 0 ||
     progress >= 1
-  ) return { front: GUST_FROM_Z, strength: 0 };
+  )
+    return { front: GUST_FROM_Z, strength: 0 };
   const eased = 1 - (1 - progress) ** 2;
   return {
     front: GUST_FROM_Z + eased * (GUST_TO_Z - GUST_FROM_Z),
@@ -139,7 +140,8 @@ export const RIPPLE_GONE = 0.01;
 
 /** 波紋の残り（0〜1）。叩いてからの弱まりと、手放してからの消え方を掛けたもの。立ち上がりは含まない。 */
 export function rippleLeft(ripple: Ripple, now: number): number {
-  const release = ripple.released === null ? 1 : Math.max(0, 1 - (now - ripple.released) / RIPPLE_RELEASE_S);
+  const release =
+    ripple.released === null ? 1 : Math.max(0, 1 - (now - ripple.released) / RIPPLE_RELEASE_S);
   return Math.exp(-(now - ripple.born) * RIPPLE_DECAY) * release;
 }
 
@@ -175,7 +177,8 @@ export function addRipple(ripples: Ripple[], ripple: Ripple): void {
     ripples.length < RIPPLE_SLOTS ||
     // Stryker disable next-line EqualityOperator: 残りがちょうど RIPPLE_GONE になる波紋は、Math.exp の丸めしだいでしか作れない
     ripples.some((r) => rippleLeft(r, now) < RIPPLE_GONE)
-  ) return;
+  )
+    return;
   let oldest: Ripple | undefined;
   for (const r of ripples) {
     if (
@@ -183,7 +186,8 @@ export function addRipple(ripples: Ripple[], ripple: Ripple): void {
       r.released === null &&
       // Stryker disable next-line EqualityOperator: 同じ時刻に叩いた波紋が並んだとき、どれを手放すかは決めていない（どれもいちばん古い）
       (!oldest || r.born < oldest.born)
-    ) oldest = r;
+    )
+      oldest = r;
   }
   if (oldest) oldest.released = now;
 }

@@ -14,11 +14,11 @@
  * 名前で列挙すると、`@astrojs/react` のバージョンアップで出力の名前が変わったときに黙って効かなくなる。
  * 「ルートを列挙しない」（tests/helpers/dist.ts）と同じ考え方。
  */
-import { existsSync, readdirSync, readFileSync, rmSync } from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const DIST = path.resolve(process.argv[2] ?? fileURLToPath(new URL('../dist', import.meta.url)));
+const DIST = path.resolve(process.argv[2] ?? fileURLToPath(new URL("../dist", import.meta.url)));
 
 function fail(reason) {
   console.error(`参照されないアセットを掃けなかった: ${reason}`);
@@ -26,11 +26,11 @@ function fail(reason) {
 }
 
 if (!existsSync(DIST)) {
-  fail('dist/ が無い。先に astro build を実行する。');
+  fail("dist/ が無い。先に astro build を実行する。");
 }
 
 /** ビルド成果物のディレクトリ。ページから参照される CSS などはここに出る。 */
-const ASSETS_DIR = '_astro';
+const ASSETS_DIR = "_astro";
 
 /**
  * 中身を読んで参照を探せるファイル。**tests/helpers/dist.ts の並びと合わせる**。
@@ -40,11 +40,11 @@ const ASSETS_DIR = '_astro';
  * 最後の検査は見ていなかった。検査ごとに対象ファイルが違うと、
  * 「参照としては数えるが、検査では見ない」ファイルができる。
  */
-const TEXT_EXTENSIONS = ['.html', '.js', '.mjs', '.css', '.json', '.txt', '.xml', '.svg', ''];
+const TEXT_EXTENSIONS = [".html", ".js", ".mjs", ".css", ".json", ".txt", ".xml", ".svg", ""];
 
 const isTextFile = (f) => TEXT_EXTENSIONS.includes(path.extname(f));
 const inAssetsDir = (f) => path.relative(DIST, f).split(path.sep)[0] === ASSETS_DIR;
-const toUrlPath = (f) => path.relative(DIST, f).split(path.sep).join('/');
+const toUrlPath = (f) => path.relative(DIST, f).split(path.sep).join("/");
 
 /**
  * **「誰かに名前を呼ばれているか」では足りない。** それだとアセットが2つあって互いの名前を
@@ -57,7 +57,7 @@ const assets = allFiles(DIST).filter(inAssetsDir);
 const reachable = new Set();
 const toScan = allFiles(DIST).filter((f) => !inAssetsDir(f) && isTextFile(f));
 while (toScan.length > 0) {
-  const text = readFileSync(toScan.pop(), 'utf8');
+  const text = readFileSync(toScan.pop(), "utf8");
   for (const asset of assets) {
     if (reachable.has(asset) || !text.includes(path.basename(asset))) continue;
     reachable.add(asset);
@@ -82,7 +82,7 @@ for (const f of orphans) {
 }
 
 if (orphans.length > 0) {
-  console.log(`参照されないアセットを落とした: ${orphans.map(toUrlPath).join(', ')}`);
+  console.log(`参照されないアセットを落とした: ${orphans.map(toUrlPath).join(", ")}`);
 }
 
 function allFiles(dir) {

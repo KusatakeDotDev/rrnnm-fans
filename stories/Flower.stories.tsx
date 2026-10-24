@@ -1,9 +1,9 @@
-import type { Meta, StoryObj } from '@storybook/react-vite';
+import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import Flower from '../src/components/Flower.tsx';
-import { row } from './shared/layout.ts';
+import Flower from "../src/components/Flower.tsx";
+import { row } from "./shared/layout.ts";
 
-const meta = { title: 'General/Flower', component: Flower } satisfies Meta<typeof Flower>;
+const meta = { title: "General/Flower", component: Flower } satisfies Meta<typeof Flower>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
@@ -21,9 +21,9 @@ export const Sizes: Story = {
 export const Colored: Story = {
   render: () => (
     <div className="on-paper" style={row}>
-      <Flower size="2.5rem" style={{ color: 'var(--color-fill-blue)' }} />
-      <Flower size="2.5rem" style={{ color: 'var(--color-accent)' }} />
-      <Flower size="2.5rem" style={{ color: 'var(--color-fill-pink)' }} />
+      <Flower size="2.5rem" style={{ color: "var(--color-fill-blue)" }} />
+      <Flower size="2.5rem" style={{ color: "var(--color-accent)" }} />
+      <Flower size="2.5rem" style={{ color: "var(--color-fill-pink)" }} />
     </div>
   ),
 };

@@ -7,7 +7,7 @@
  */
 
 /** ADR-0020 の例外が掛かるのは、BOOTH が配信する画像だけ。 */
-const IMAGE_ORIGIN = 'https://booth.pximg.net';
+const IMAGE_ORIGIN = "https://booth.pximg.net";
 
 /** 引用符の中の `>` では、タグを切らない（HTML では属性値に `>` をそのまま書ける）。 */
 const META = /<meta\b(?:[^>"']|"[^"]*"|'[^']*')*>/gi;
@@ -37,10 +37,10 @@ export function boothItemImage(html: string, itemId: number): string | null {
     for (const m of tag.matchAll(ATTR)) {
       attrs.set(m[1].toLowerCase(), m[2] ?? m[3]);
     }
-    if (attrs.get('property') !== 'og:image') continue;
-    const content = attrs.get('content');
+    if (attrs.get("property") !== "og:image") continue;
+    const content = attrs.get("content");
     if (content === undefined) return null;
-    return acceptImage(content.replaceAll('&amp;', '&'), itemId);
+    return acceptImage(content.replaceAll("&amp;", "&"), itemId);
   }
   return null;
 }
@@ -58,7 +58,10 @@ export function boothItemImage(html: string, itemId: number): string | null {
  */
 function headOf(html: string): string {
   // Stryker disable next-line StringLiteral: コメントと script・noscript はタグの外にしか無いので、外した跡に何を置いても、読む <meta> と </head> は変わらない
-  const stripped = html.replace(/<!--(?:-?>|[\s\S]*?--!?>)|<(script|noscript)\b[\s\S]*?<\/\1\s*>/gi, '');
+  const stripped = html.replace(
+    /<!--(?:-?>|[\s\S]*?--!?>)|<(script|noscript)\b[\s\S]*?<\/\1\s*>/gi,
+    "",
+  );
   const end = stripped.search(/<\/head\s*>/i);
   return end === -1 ? stripped : stripped.slice(0, end);
 }

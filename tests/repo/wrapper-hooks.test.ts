@@ -1,10 +1,10 @@
-import { readdirSync, readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { readdirSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
-import ts from 'typescript';
-import { describe, expect, it } from 'vite-plus/test';
+import ts from "typescript";
+import { describe, expect, it } from "vite-plus/test";
 
-import { stringLiterals } from '../helpers/string-literals';
+import { stringLiterals } from "../helpers/string-literals";
 
 /**
  * docs/adr/0011-react-components-for-design-sync.md「スクリプトの扱い」
@@ -24,20 +24,30 @@ import { stringLiterals } from '../helpers/string-literals';
  * ラッパーのスクリプトが、自分で付け外しするマーカー（コンポーネントの側に名前が無いもの）を探すようになると、ここで落ちる。
  * そのときは、そのマーカーをここで名指しで外す。
  */
-const dirs = ['src/components/', 'src/unreleased/_parts/'];
+const dirs = ["src/components/", "src/unreleased/_parts/"];
 const absolute = (file: string) => fileURLToPath(new URL(`../../${file}`, import.meta.url));
-const read = (file: string) => readFileSync(absolute(file), 'utf8');
-const files = dirs.flatMap((dir) => readdirSync(absolute(dir)).sort().map((name) => `${dir}${name}`));
+const read = (file: string) => readFileSync(absolute(file), "utf8");
+const files = dirs.flatMap((dir) =>
+  readdirSync(absolute(dir))
+    .sort()
+    .map((name) => `${dir}${name}`),
+);
 
 /** `.astro` の、フロントマター（`---` の間）より後ろにある `<script>` の中身。フロントマターの注記の `<script>` を拾わない。 */
 const scriptsOf = (astro: string): string[] => {
-  const template = astro.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, '');
+  const template = astro.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, "");
   return [...template.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map(([, body]) => body);
 };
 
 /** `.tsx` の中で、マーカーの名前を書ける所（JSX の属性名と、文字列・テンプレートリテラルの中身）。コメントと JSX の文は数えない。 */
 const writtenNames = (tsx: string): string[] => {
-  const file = ts.createSourceFile('component.tsx', tsx, ts.ScriptTarget.Latest, false, ts.ScriptKind.TSX);
+  const file = ts.createSourceFile(
+    "component.tsx",
+    tsx,
+    ts.ScriptTarget.Latest,
+    false,
+    ts.ScriptKind.TSX,
+  );
   const found: string[] = [];
   const visit = (node: ts.Node): void => {
     if (ts.isJsxAttribute(node)) found.push(node.name.getText(file));
@@ -49,23 +59,27 @@ const writtenNames = (tsx: string): string[] => {
 };
 
 const hooks = files
-  .filter((name) => name.endsWith('.astro'))
+  .filter((name) => name.endsWith(".astro"))
   .flatMap((astro) =>
     scriptsOf(read(astro))
       .flatMap(stringLiterals)
-      .flatMap((text) => [...text.matchAll(/\[(data-[\w-]+)(?=[\]=~|^$*])/g)].map(([, hook]) => `${astro}: ${hook}`)),
+      .flatMap((text) =>
+        [...text.matchAll(/\[(data-[\w-]+)(?=[\]=~|^$*])/g)].map(([, hook]) => `${astro}: ${hook}`),
+      ),
   );
-const componentNames = files.filter((name) => name.endsWith('.tsx')).flatMap((tsx) => writtenNames(read(tsx)));
+const componentNames = files
+  .filter((name) => name.endsWith(".tsx"))
+  .flatMap((tsx) => writtenNames(read(tsx)));
 
-describe('src/components・src/unreleased/_parts — ラッパーのスクリプトが探すマーカー', () => {
-  it('マーカーが1つ以上見つかる', () => {
+describe("src/components・src/unreleased/_parts — ラッパーのスクリプトが探すマーカー", () => {
+  it("マーカーが1つ以上見つかる", () => {
     // 読み方を間違えて空配列になると、下の検査が素通りする。
     expect(hooks.length).toBeGreaterThan(0);
   });
 
-  it('ラッパーのスクリプトが探すマーカーは、どれかのコンポーネント（.tsx）に書かれている', () => {
+  it("ラッパーのスクリプトが探すマーカーは、どれかのコンポーネント（.tsx）に書かれている", () => {
     const missing = [...new Set(hooks)].filter((entry) => {
-      const hook = entry.slice(entry.indexOf(': ') + 2);
+      const hook = entry.slice(entry.indexOf(": ") + 2);
       const written = new RegExp(`(?<![\\w-])${hook}(?![\\w-])`);
       return !componentNames.some((name) => written.test(name));
     });

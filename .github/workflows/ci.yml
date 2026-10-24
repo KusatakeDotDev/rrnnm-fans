@@ -288,7 +288,7 @@ jobs:
         timeout-minutes: 10
         run: ${{ matrix.run }}
         env:
-          WRANGLER_SEND_METRICS: 'false'
+          WRANGLER_SEND_METRICS: "false"
       # artifact の名前はレッグごとに変える。同じ名前は2つ目から上げられず、continue-on-error で黙って消える。
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() && steps.tests.outcome == 'failure' && startsWith(matrix.id, 'e2e-') }}
@@ -362,7 +362,7 @@ jobs:
       # 配る（ADR-0018 の決定）。
       - run: pnpm build
         env:
-          SHOW_UNRELEASED: '1'
+          SHOW_UNRELEASED: "1"
       # versions upload はバージョンを作るだけで、本番トラフィックは動かさない。
       # 100% を切り替えるのはリリース時だけ（→ release.yml）。
       # --preview-alias で URL が main-<worker名>.<subdomain>.workers.dev に固定されるので、
@@ -373,7 +373,7 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          WRANGLER_SEND_METRICS: 'false'
+          WRANGLER_SEND_METRICS: "false"
 
   # PR ごとにプレビューURLを出す。レビューで早く開けるよう、検査を待たずに並べて回す（ADR-0026「PR のプレビューは、検査を待たない」）。
   # 検査が落ちたコミットも出る。
@@ -410,7 +410,7 @@ jobs:
       # main のプレビューと同じ理由で、未公開のものも入れた pnpm build を配る。
       - run: pnpm build
         env:
-          SHOW_UNRELEASED: '1'
+          SHOW_UNRELEASED: "1"
       - name: プレビュー版をアップロードしてURLを取り出す
         id: deploy
         run: |
@@ -425,7 +425,7 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          WRANGLER_SEND_METRICS: 'false'
+          WRANGLER_SEND_METRICS: "false"
           PR_NUMBER: ${{ github.event.pull_request.number }}
       # gh CLI はランナーに標準で入っている（dependabot-auto-merge.yml と同じ道具立て）。
       # author だけでは同じ GITHUB_TOKEN 発の別コメントと区別できないため、

@@ -3,16 +3,8 @@
   "_comment": "ミューテーションテスト。→ ADR-0003「mutation testing の読み方」。対象は純関数だけ（src/lib と scripts/skeb-summary-core.ts）。UI と glue に掛けても生き残りが読めないノイズしか出ない。",
   "packageManager": "pnpm",
   "testRunner": "vitest",
-  "mutate": [
-    "src/lib/**/*.ts",
-    "scripts/skeb-summary-core.ts"
-  ],
-  "reporters": [
-    "html",
-    "json",
-    "clear-text",
-    "progress"
-  ],
+  "mutate": ["src/lib/**/*.ts", "scripts/skeb-summary-core.ts"],
+  "reporters": ["html", "json", "clear-text", "progress"],
   "coverageAnalysis": "perTest",
   "thresholds": {
     "high": 95,
@@ -20,9 +12,7 @@
     "break": 80
   },
   "tempDirName": ".stryker-tmp",
-  "plugins": [
-    "@stryker-mutator/vitest-runner"
-  ],
+  "plugins": ["@stryker-mutator/vitest-runner"],
   "vitest": {
     "configFile": "vitest.stryker.config.ts"
   }

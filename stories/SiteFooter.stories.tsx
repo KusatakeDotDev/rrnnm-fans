@@ -1,9 +1,11 @@
-import type { Meta, StoryObj } from '@storybook/react-vite';
+import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import SiteFooter from '../src/components/SiteFooter.tsx';
-import { PAGE_LINKS } from '../src/data/site-navigation';
+import SiteFooter from "../src/components/SiteFooter.tsx";
+import { PAGE_LINKS } from "../src/data/site-navigation";
 
-const meta = { title: 'General/SiteFooter', component: SiteFooter } satisfies Meta<typeof SiteFooter>;
+const meta = { title: "General/SiteFooter", component: SiteFooter } satisfies Meta<
+  typeof SiteFooter
+>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 

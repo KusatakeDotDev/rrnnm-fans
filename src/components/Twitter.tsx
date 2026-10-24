@@ -11,9 +11,12 @@
  * `className` などの属性（`id`・`aria-*`・`data-*` など）は root の span にそのまま渡す
  * （docs/adr/0011-react-components-for-design-sync.md「props の決まり」）。
  */
-import type { HTMLAttributes } from 'react';
+import type { HTMLAttributes } from "react";
 
-type TwitterProps = Omit<HTMLAttributes<HTMLSpanElement>, 'children' | 'dangerouslySetInnerHTML' | 'title'>;
+type TwitterProps = Omit<
+  HTMLAttributes<HTMLSpanElement>,
+  "children" | "dangerouslySetInnerHTML" | "title"
+>;
 
 export default function Twitter(props: TwitterProps) {
   // title は残りの属性の後ろに置いて上書きさせない。children・dangerouslySetInnerHTML は型で外すだけで、

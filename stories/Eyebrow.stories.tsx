@@ -1,9 +1,9 @@
-import type { Meta, StoryObj } from '@storybook/react-vite';
+import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import Eyebrow from '../src/components/Eyebrow.tsx';
-import { column } from './shared/layout.ts';
+import Eyebrow from "../src/components/Eyebrow.tsx";
+import { column } from "./shared/layout.ts";
 
-const meta = { title: 'General/Eyebrow', component: Eyebrow } satisfies Meta<typeof Eyebrow>;
+const meta = { title: "General/Eyebrow", component: Eyebrow } satisfies Meta<typeof Eyebrow>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 

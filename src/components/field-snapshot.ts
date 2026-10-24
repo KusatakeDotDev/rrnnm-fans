@@ -8,10 +8,10 @@
  * キーと絵を別の項目に置くのは、敷くスクリプトが最初の描画の前に走るため。キーだけ読んで比べ、
  * 合ったときだけ大きい絵を読む。
  */
-export const SNAPSHOT_KEY_ITEM = 'field-snapshot-key';
-export const SNAPSHOT_IMAGE_ITEM = 'field-snapshot';
+export const SNAPSHOT_KEY_ITEM = "field-snapshot-key";
+export const SNAPSHOT_IMAGE_ITEM = "field-snapshot";
 /** 撮る側がキーを読み終えたら root に送るイベント。敷くスクリプトは、これを受けて大きさの監視を外す。 */
-export const SNAPSHOT_READ_EVENT = 'field-snapshot-read';
+export const SNAPSHOT_READ_EVENT = "field-snapshot-read";
 /**
  * ウィンドウの幅と高さの小さい方がこれ未満なら「狭い画面」（花・株の数と解像度の上限を下げる。field-renderer.ts の mountField）。
  * 最初の1枚が変わるので、敷くスクリプトのキーにも入る。両方がここから読むので、しきい値が片方だけずれることは無い。

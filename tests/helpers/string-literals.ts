@@ -1,4 +1,4 @@
-import ts from 'typescript';
+import ts from "typescript";
 
 /**
  * JS のソースから、文字列リテラル（テンプレートリテラルの文字の部分も含む）の中身を取り出す。
@@ -6,7 +6,12 @@ import ts from 'typescript';
  * 文字列の始まりと取り違えないようにする。
  */
 export const stringLiterals = (source: string): string[] => {
-  const scanner = ts.createScanner(ts.ScriptTarget.Latest, true, ts.LanguageVariant.Standard, source);
+  const scanner = ts.createScanner(
+    ts.ScriptTarget.Latest,
+    true,
+    ts.LanguageVariant.Standard,
+    source,
+  );
   const literals: string[] = [];
   // この字句の後ろの `/` は割り算。それ以外の後ろなら正規表現の始まり。
   const endsOperand = new Set<ts.SyntaxKind>([
@@ -26,7 +31,10 @@ export const stringLiterals = (source: string): string[] => {
   let braces = 0;
   let previous = ts.SyntaxKind.Unknown;
   for (let kind = scanner.scan(); kind !== ts.SyntaxKind.EndOfFileToken; kind = scanner.scan()) {
-    if ((kind === ts.SyntaxKind.SlashToken || kind === ts.SyntaxKind.SlashEqualsToken) && !endsOperand.has(previous)) {
+    if (
+      (kind === ts.SyntaxKind.SlashToken || kind === ts.SyntaxKind.SlashEqualsToken) &&
+      !endsOperand.has(previous)
+    ) {
       kind = scanner.reScanSlashToken();
     }
     if (kind === ts.SyntaxKind.OpenBraceToken) braces++;

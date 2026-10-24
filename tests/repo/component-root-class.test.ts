@@ -1,10 +1,10 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { existsSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
-import ts from 'typescript';
-import { describe, expect, it } from 'vite-plus/test';
+import ts from "typescript";
+import { describe, expect, it } from "vite-plus/test";
 
-import { componentPathByName } from '../helpers/components';
+import { componentPathByName } from "../helpers/components";
 
 /**
  * CSS Modules を持つコンポーネントは、root の要素に `.root` を付け、ほかの要素には付けない（RRNNM-77 の主の判断。
@@ -23,9 +23,14 @@ const isDefaultExport = (node: ts.Node) =>
   (ts.getModifiers(node) ?? []).some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
 
 /** 関数が返す、いちばん外の JSX の要素。ファイルの中の関数の呼び出しは、その関数の中まで辿る。 */
-function returnedElements(sf: ts.SourceFile, fn: ts.FunctionLikeDeclaration): ts.JsxOpeningLikeElement[] {
+function returnedElements(
+  sf: ts.SourceFile,
+  fn: ts.FunctionLikeDeclaration,
+): ts.JsxOpeningLikeElement[] {
   const local = new Map(
-    sf.statements.filter(ts.isFunctionDeclaration).flatMap((d) => (d.name ? [[d.name.text, d] as const] : [])),
+    sf.statements
+      .filter(ts.isFunctionDeclaration)
+      .flatMap((d) => (d.name ? [[d.name.text, d] as const] : [])),
   );
   const out: ts.JsxOpeningLikeElement[] = [];
   const unwrap = (expr: ts.Expression): void => {
@@ -33,7 +38,11 @@ function returnedElements(sf: ts.SourceFile, fn: ts.FunctionLikeDeclaration): ts
     if (ts.isConditionalExpression(expr)) return (unwrap(expr.whenTrue), unwrap(expr.whenFalse));
     if (ts.isJsxElement(expr)) return void out.push(expr.openingElement);
     if (ts.isJsxSelfClosingElement(expr)) return void out.push(expr);
-    if (ts.isCallExpression(expr) && ts.isIdentifier(expr.expression) && local.has(expr.expression.text)) {
+    if (
+      ts.isCallExpression(expr) &&
+      ts.isIdentifier(expr.expression) &&
+      local.has(expr.expression.text)
+    ) {
       return void out.push(...returnedElements(sf, local.get(expr.expression.text)!));
     }
     throw new Error(`${sf.fileName}: 返す要素を読めない（${expr.getText().slice(0, 60)}）`);
@@ -48,39 +57,60 @@ function returnedElements(sf: ts.SourceFile, fn: ts.FunctionLikeDeclaration): ts
 }
 
 const classNameOf = (el: ts.JsxOpeningLikeElement) =>
-  el.attributes.properties.find((p): p is ts.JsxAttribute => ts.isJsxAttribute(p) && p.name.getText() === 'className');
+  el.attributes.properties.find(
+    (p): p is ts.JsxAttribute => ts.isJsxAttribute(p) && p.name.getText() === "className",
+  );
 
 const components = Object.entries(componentPathByName)
-  .map(([name, file]) => ({ name, file, css: file.replace(/\.tsx$/, '.module.css') }))
+  .map(([name, file]) => ({ name, file, css: file.replace(/\.tsx$/, ".module.css") }))
   .filter(({ css }) => existsSync(path(css)));
 
-describe('CSS Modules を持つコンポーネントは、root の要素に .root を付ける', () => {
-  it('見るコンポーネントがある', () => {
+describe("CSS Modules を持つコンポーネントは、root の要素に .root を付ける", () => {
+  it("見るコンポーネントがある", () => {
     expect(components.length).toBeGreaterThan(0);
   });
 
-  it.each(components)('$name', ({ file, css }) => {
-    const sf = ts.createSourceFile(file, readFileSync(path(file), 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-    const fn = sf.statements.find((s): s is ts.FunctionDeclaration => ts.isFunctionDeclaration(s) && isDefaultExport(s));
-    expect(fn, 'default export の関数').toBeDefined();
+  it.each(components)("$name", ({ file, css }) => {
+    const sf = ts.createSourceFile(
+      file,
+      readFileSync(path(file), "utf8"),
+      ts.ScriptTarget.Latest,
+      true,
+      ts.ScriptKind.TSX,
+    );
+    const fn = sf.statements.find(
+      (s): s is ts.FunctionDeclaration => ts.isFunctionDeclaration(s) && isDefaultExport(s),
+    );
+    expect(fn, "default export の関数").toBeDefined();
 
     // root が別のコンポーネント（className を渡さない大文字のタグ）なら、そのコンポーネントの .root が付く。
-    const roots = returnedElements(sf, fn!).filter((el) => classNameOf(el) || !/^[A-Z]/.test(el.tagName.getText()));
-    expect(roots.length, '返す要素').toBeGreaterThan(0);
+    const roots = returnedElements(sf, fn!).filter(
+      (el) => classNameOf(el) || !/^[A-Z]/.test(el.tagName.getText()),
+    );
+    expect(roots.length, "返す要素").toBeGreaterThan(0);
     for (const el of roots) {
-      expect(classNameOf(el)?.initializer?.getText() ?? '', `<${el.tagName.getText()}> の className`).toMatch(/\bstyles\.root\b/);
+      expect(
+        classNameOf(el)?.initializer?.getText() ?? "",
+        `<${el.tagName.getText()}> の className`,
+      ).toMatch(/\bstyles\.root\b/);
     }
 
     const withRoot: ts.JsxOpeningLikeElement[] = [];
     const visit = (node: ts.Node): void => {
-      if ((ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) && /\bstyles\.root\b/.test(classNameOf(node)?.getText() ?? '')) {
+      if (
+        (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) &&
+        /\bstyles\.root\b/.test(classNameOf(node)?.getText() ?? "")
+      ) {
         withRoot.push(node);
       }
       ts.forEachChild(node, visit);
     };
     visit(sf);
-    expect(withRoot.filter((el) => !roots.includes(el)).map((el) => el.getText().slice(0, 60)), 'root の外で .root を付けた要素').toEqual([]);
+    expect(
+      withRoot.filter((el) => !roots.includes(el)).map((el) => el.getText().slice(0, 60)),
+      "root の外で .root を付けた要素",
+    ).toEqual([]);
 
-    expect(readFileSync(path(css), 'utf8'), `${css} に .root`).toMatch(/\.root(?![\w-])/);
+    expect(readFileSync(path(css), "utf8"), `${css} に .root`).toMatch(/\.root(?![\w-])/);
   });
 });

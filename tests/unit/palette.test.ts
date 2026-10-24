@@ -1,12 +1,12 @@
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
-import postcss from 'postcss';
-import { describe, expect, it } from 'vite-plus/test';
+import postcss from "postcss";
+import { describe, expect, it } from "vite-plus/test";
 
-import { TONES, DARK_TONES } from '../../src/components/tones';
-import { contrastRatio, meetsAA } from '../../src/lib/contrast';
-import { hasHexColor, parseCustomProperties, resolve, stripComments } from '../../src/lib/tokens';
+import { TONES, DARK_TONES } from "../../src/components/tones";
+import { contrastRatio, meetsAA } from "../../src/lib/contrast";
+import { hasHexColor, parseCustomProperties, resolve, stripComments } from "../../src/lib/tokens";
 
 /**
  * src/styles/tokens.css が docs/DESIGN.md §4 の配色ルールを満たしているか。
@@ -20,25 +20,25 @@ import { hasHexColor, parseCustomProperties, resolve, stripComments } from '../.
  *   - ここ            = 実装のトークンが、置かれる地の上で規約を満たすか（実装の検査）
  */
 const read = (relPath: string) =>
-  readFileSync(fileURLToPath(new URL(`../../${relPath}`, import.meta.url)), 'utf8');
+  readFileSync(fileURLToPath(new URL(`../../${relPath}`, import.meta.url)), "utf8");
 
-const tokens = parseCustomProperties(read('src/styles/tokens.css'));
+const tokens = parseCustomProperties(read("src/styles/tokens.css"));
 const value = (name: string) => resolve(tokens, name);
 
 /** 地。tokens.css の役割名がそのまま「どの地か」を表している。 */
-const paper = value('--color-surface');
-const ground = value('--color-bg');
+const paper = value("--color-surface");
+const ground = value("--color-bg");
 
-describe('src/styles/tokens.css — 色の literal は1箇所だけ', () => {
-  it('パレット（--c-*）以外に16進数が書かれていない', () => {
+describe("src/styles/tokens.css — 色の literal は1箇所だけ", () => {
+  it("パレット（--c-*）以外に16進数が書かれていない", () => {
     const violations = [...tokens]
-      .filter(([name, raw]) => !name.startsWith('--c-') && hasHexColor(raw))
+      .filter(([name, raw]) => !name.startsWith("--c-") && hasHexColor(raw))
       .map(([name, raw]) => `${name}: ${raw}`);
     expect(violations).toEqual([]);
   });
 
-  it('役割トークン（--color-*）は必ずパレットへ辿り着く', () => {
-    const colorRoles = [...tokens.keys()].filter((name) => name.startsWith('--color-'));
+  it("役割トークン（--color-*）は必ずパレットへ辿り着く", () => {
+    const colorRoles = [...tokens.keys()].filter((name) => name.startsWith("--color-"));
     expect(colorRoles.length).toBeGreaterThan(0);
     for (const name of colorRoles) {
       expect(value(name), `${name} が色に解決されない`).toMatch(/^#[0-9a-fA-F]{6}$/);
@@ -46,32 +46,32 @@ describe('src/styles/tokens.css — 色の literal は1箇所だけ', () => {
   });
 });
 
-describe('docs/DESIGN.md §4 — 地ごとに使える色が変わる', () => {
-  it('本文はどちらの地でも AA', () => {
-    expect(meetsAA(contrastRatio(value('--color-text'), paper))).toBe(true);
-    expect(meetsAA(contrastRatio(value('--color-text'), ground))).toBe(true);
+describe("docs/DESIGN.md §4 — 地ごとに使える色が変わる", () => {
+  it("本文はどちらの地でも AA", () => {
+    expect(meetsAA(contrastRatio(value("--color-text"), paper))).toBe(true);
+    expect(meetsAA(contrastRatio(value("--color-text"), ground))).toBe(true);
   });
 
-  it('リンクは地ごとに色を変える — 白地用を青い地に置くと AA を満たさない', () => {
-    expect(meetsAA(contrastRatio(value('--color-link-on-paper'), paper))).toBe(true);
-    expect(meetsAA(contrastRatio(value('--color-link-on-ground'), ground))).toBe(true);
+  it("リンクは地ごとに色を変える — 白地用を青い地に置くと AA を満たさない", () => {
+    expect(meetsAA(contrastRatio(value("--color-link-on-paper"), paper))).toBe(true);
+    expect(meetsAA(contrastRatio(value("--color-link-on-ground"), ground))).toBe(true);
     // 「地が変わったら色も変える」の根拠。ここが真でなくなったら役割を分ける意味が消える。
-    expect(meetsAA(contrastRatio(value('--color-link-on-paper'), ground))).toBe(false);
+    expect(meetsAA(contrastRatio(value("--color-link-on-paper"), ground))).toBe(false);
   });
 
-  it('既定のリンク色はページの地（青）用', () => {
-    expect(value('--color-link')).toBe(value('--color-link-on-ground'));
+  it("既定のリンク色はページの地（青）用", () => {
+    expect(value("--color-link")).toBe(value("--color-link-on-ground"));
   });
 
-  it('見出しは本文色 — どちらの地でも AA', () => {
+  it("見出しは本文色 — どちらの地でも AA", () => {
     // ADR-0010 で見出しのピンクをやめた。夜の畑だけが白へ差し替える（下の「畑の上の文字」）。
-    expect(value('--color-heading')).toBe(value('--color-text'));
+    expect(value("--color-heading")).toBe(value("--color-text"));
   });
 
-  it('差し色は白い面の上でだけ文字にできる', () => {
-    expect(meetsAA(contrastRatio(value('--color-accent'), paper))).toBe(true);
+  it("差し色は白い面の上でだけ文字にできる", () => {
+    expect(meetsAA(contrastRatio(value("--color-accent"), paper))).toBe(true);
     // 青い地では 4.49。AA に届かないので、SectionLabel は白い面の中でしか使えない。
-    expect(meetsAA(contrastRatio(value('--color-accent'), ground))).toBe(false);
+    expect(meetsAA(contrastRatio(value("--color-accent"), ground))).toBe(false);
   });
 
   /**
@@ -81,14 +81,24 @@ describe('docs/DESIGN.md §4 — 地ごとに使える色が変わる', () => {
    * パレットを触ってここが2色以上になったら、その時点で設計の前提が変わっている。
    * 面（fill）・装飾（decor）・枠（outline）・帯（band）・下地（thumb・frame）・文字の後ろのにじみ（halo）は文字ではないので外す。
    */
-  it('青い地の上で AA を満たす文字色は本文色だけ', () => {
-    const notText = ['--color-fill-', 'decor', 'outline', 'band', 'thumb', 'frame', 'halo', '--color-bg', '--color-surface'];
+  it("青い地の上で AA を満たす文字色は本文色だけ", () => {
+    const notText = [
+      "--color-fill-",
+      "decor",
+      "outline",
+      "band",
+      "thumb",
+      "frame",
+      "halo",
+      "--color-bg",
+      "--color-surface",
+    ];
     const textRoles = [...tokens.keys()].filter(
-      (name) => name.startsWith('--color-') && !notText.some((part) => name.includes(part)),
+      (name) => name.startsWith("--color-") && !notText.some((part) => name.includes(part)),
     );
     const passing = textRoles.filter((name) => meetsAA(contrastRatio(value(name), ground)));
     // --color-text / --color-link-on-ground / --color-link / --color-heading は同じ値（本文色）に解決する。
-    expect(new Set(passing.map((name) => value(name)))).toEqual(new Set([value('--color-text')]));
+    expect(new Set(passing.map((name) => value(name)))).toEqual(new Set([value("--color-text")]));
   });
 });
 
@@ -96,28 +106,33 @@ describe('docs/DESIGN.md §4 — 地ごとに使える色が変わる', () => {
  * ステッカーの面（ADR-0010）。淡い面には本文色、濃い面には白。
  * どれも不透明な面なので axe も測るが、組の根拠をここに書いておく。
  */
-describe('docs/adr/0010 — ステッカーの面と文字色', () => {
-  it.each(['--color-fill-lavender', '--color-fill-pink-soft', '--color-fill-ground', '--color-surface'])(
-    '%s の上に本文色が AA',
+describe("docs/adr/0010 — ステッカーの面と文字色", () => {
+  it.each([
+    "--color-fill-lavender",
+    "--color-fill-pink-soft",
+    "--color-fill-ground",
+    "--color-surface",
+  ])("%s の上に本文色が AA", (fill) => {
+    expect(meetsAA(contrastRatio(value("--color-text"), value(fill)))).toBe(true);
+  });
+
+  it.each(["--color-band", "--color-fill-ink"])(
+    "%s の上に白が AA（帯・フッター・夜のピル）",
     (fill) => {
-      expect(meetsAA(contrastRatio(value('--color-text'), value(fill)))).toBe(true);
+      expect(meetsAA(contrastRatio(value("--color-text-on-fill"), value(fill)))).toBe(true);
     },
   );
 
-  it.each(['--color-band', '--color-fill-ink'])('%s の上に白が AA（帯・フッター・夜のピル）', (fill) => {
-    expect(meetsAA(contrastRatio(value('--color-text-on-fill'), value(fill)))).toBe(true);
-  });
-
-  it('装飾の紫とピンクは文字にできない — 白地で大字にも届かないか、大字のみ', () => {
-    expect(meetsAA(contrastRatio(value('--color-decor-violet'), paper), 'large')).toBe(false);
-    expect(meetsAA(contrastRatio(value('--color-decor-pink'), paper), 'normal')).toBe(false);
+  it("装飾の紫とピンクは文字にできない — 白地で大字にも届かないか、大字のみ", () => {
+    expect(meetsAA(contrastRatio(value("--color-decor-violet"), paper), "large")).toBe(false);
+    expect(meetsAA(contrastRatio(value("--color-decor-pink"), paper), "normal")).toBe(false);
   });
 });
 
-describe('docs/DESIGN.md §4 — 面にしか使わない色', () => {
-  it('黄は文字色にできない — 白地では大字でも AA を満たさない', () => {
-    const ratio = contrastRatio(value('--color-fill-amber'), paper);
-    expect(meetsAA(ratio, 'large')).toBe(false);
+describe("docs/DESIGN.md §4 — 面にしか使わない色", () => {
+  it("黄は文字色にできない — 白地では大字でも AA を満たさない", () => {
+    const ratio = contrastRatio(value("--color-fill-amber"), paper);
+    expect(meetsAA(ratio, "large")).toBe(false);
   });
 });
 
@@ -143,30 +158,36 @@ describe('docs/DESIGN.md §4 — 面にしか使わない色', () => {
  * 描いた畑の上で測るのは scripts/measure-field-contrast.mjs（`pnpm field:contrast`。CI では回らない）。
  * ピルは不透明な面の上なので、ここでは見ない（axe が測る）。
  */
-describe('docs/adr/0009 — 畑の上の文字', () => {
+describe("docs/adr/0009 — 畑の上の文字", () => {
   // 状態ごとの文字色とにじみの色の組を、NemophilaField.module.css から読む（.root が既定、.root[data-state='…'] が上書き）。
-  const fieldCss = postcss.parse(read('src/components/NemophilaField.module.css'));
+  const fieldCss = postcss.parse(read("src/components/NemophilaField.module.css"));
   const fieldPair = (state: string) => {
     const pair: { ink?: string; halo?: string } = {};
     fieldCss.walkRules((rule) => {
-      if (rule.selector !== '.root' && rule.selector !== `.root[data-state='${state}']`) return;
-      if (rule.parent?.type !== 'atrule' || (rule.parent as postcss.AtRule).name !== 'layer') return;
+      if (rule.selector !== ".root" && rule.selector !== `.root[data-state='${state}']`) return;
+      if (rule.parent?.type !== "atrule" || (rule.parent as postcss.AtRule).name !== "layer")
+        return;
       rule.walkDecls(/^--field-(ink|halo)$/, (decl) => {
-        pair[decl.prop === '--field-ink' ? 'ink' : 'halo'] = /^var\((--[\w-]+)\)$/.exec(decl.value)?.[1];
+        pair[decl.prop === "--field-ink" ? "ink" : "halo"] = /^var\((--[\w-]+)\)$/.exec(
+          decl.value,
+        )?.[1];
       });
     });
-    return { ink: pair.ink ?? '', halo: pair.halo ?? '' };
+    return { ink: pair.ink ?? "", halo: pair.halo ?? "" };
   };
-  const states = (['day', 'soon', 'live'] as const).map((state) => ({ state, ...fieldPair(state) }));
+  const states = (["day", "soon", "live"] as const).map((state) => ({
+    state,
+    ...fieldPair(state),
+  }));
 
-  it('どの状態でも、文字色とにじみの色の組をトークンとして読める', () => {
+  it("どの状態でも、文字色とにじみの色の組をトークンとして読める", () => {
     for (const { state, ink, halo } of states) {
       expect(tokens.has(ink) && tokens.has(halo), `${state}: ${ink} / ${halo}`).toBe(true);
     }
   });
 
-  describe.each(states)('$state', ({ state, ink, halo }) => {
-    it.each(['sky', 'haze', 'fog'])(`${ink} は %s の上で AA`, (part) => {
+  describe.each(states)("$state", ({ state, ink, halo }) => {
+    it.each(["sky", "haze", "fog"])(`${ink} は %s の上で AA`, (part) => {
       expect(meetsAA(contrastRatio(value(ink), value(`--c-field-${state}-${part}`)))).toBe(true);
     });
 
@@ -177,93 +198,99 @@ describe('docs/adr/0009 — 畑の上の文字', () => {
     });
 
     it(`${ink} は地面の上でも大字なら AA`, () => {
-      expect(meetsAA(contrastRatio(value(ink), value(`--c-field-${state}-ground`)), 'large')).toBe(true);
+      expect(meetsAA(contrastRatio(value(ink), value(`--c-field-${state}-ground`)), "large")).toBe(
+        true,
+      );
     });
   });
 
-  it('夜の空に本文色は置けない — 配信中に白へ切り替える理由', () => {
-    expect(meetsAA(contrastRatio(value('--color-text'), value('--c-field-live-sky')), 'large')).toBe(false);
+  it("夜の空に本文色は置けない — 配信中に白へ切り替える理由", () => {
+    expect(
+      meetsAA(contrastRatio(value("--color-text"), value("--c-field-live-sky")), "large"),
+    ).toBe(false);
   });
 
-  it('昼の空に白は置けない — ふだんを本文色にしておく理由', () => {
-    expect(meetsAA(contrastRatio(value('--color-text-on-fill'), value('--c-field-day-sky')), 'large')).toBe(false);
+  it("昼の空に白は置けない — ふだんを本文色にしておく理由", () => {
+    expect(
+      meetsAA(contrastRatio(value("--color-text-on-fill"), value("--c-field-day-sky")), "large"),
+    ).toBe(false);
   });
 });
 
-describe('src/components/tones.ts — 分類バッジの面と文字色は組', () => {
+describe("src/components/tones.ts — 分類バッジの面と文字色は組", () => {
   const fill = (tone: string) => value(`--color-fill-${tone}`);
 
-  it.each([...TONES])('%s の面がパレットに解決する', (tone) => {
+  it.each([...TONES])("%s の面がパレットに解決する", (tone) => {
     expect(fill(tone)).toMatch(/^#[0-9a-fA-F]{6}$/);
   });
 
-  it.each([...DARK_TONES])('%s は濃い面 — 白文字が AA', (tone) => {
-    expect(meetsAA(contrastRatio(value('--color-text-on-fill'), fill(tone)))).toBe(true);
+  it.each([...DARK_TONES])("%s は濃い面 — 白文字が AA", (tone) => {
+    expect(meetsAA(contrastRatio(value("--color-text-on-fill"), fill(tone)))).toBe(true);
   });
 
   const paleTones = TONES.filter((tone) => !DARK_TONES.includes(tone));
 
-  it.each([...paleTones])('%s は淡い面 — 本文色が AA', (tone) => {
-    expect(meetsAA(contrastRatio(value('--color-text'), fill(tone)))).toBe(true);
+  it.each([...paleTones])("%s は淡い面 — 本文色が AA", (tone) => {
+    expect(meetsAA(contrastRatio(value("--color-text"), fill(tone)))).toBe(true);
   });
 
-  it.each([...paleTones])('%s に白文字を置くと落ちる — 組を崩せない根拠', (tone) => {
-    expect(meetsAA(contrastRatio(value('--color-text-on-fill'), fill(tone)))).toBe(false);
+  it.each([...paleTones])("%s に白文字を置くと落ちる — 組を崩せない根拠", (tone) => {
+    expect(meetsAA(contrastRatio(value("--color-text-on-fill"), fill(tone)))).toBe(false);
   });
 });
 
-describe('docs/DESIGN.md §4 — 白い面でだけ使える文字色', () => {
-  it('補助文は白い面の上でだけ AA', () => {
+describe("docs/DESIGN.md §4 — 白い面でだけ使える文字色", () => {
+  it("補助文は白い面の上でだけ AA", () => {
     // ラベル・注記・「未確認」チップの文字。本文より小さく出すので、
     // 大字の下限ではなく通常サイズの 4.5 で見る。
-    expect(meetsAA(contrastRatio(value('--color-text-muted'), paper))).toBe(true);
+    expect(meetsAA(contrastRatio(value("--color-text-muted"), paper))).toBe(true);
     // 青い地では 3.40。地に直に置く出典の行（再生リスト）を本文色にしてあるのはこれが理由。
-    expect(meetsAA(contrastRatio(value('--color-text-muted'), ground))).toBe(false);
+    expect(meetsAA(contrastRatio(value("--color-text-muted"), ground))).toBe(false);
   });
 
-  it('補助文は本文より薄い', () => {
+  it("補助文は本文より薄い", () => {
     // 「薄いのに AA」が要件。本文と同じ濃さなら役割を分ける意味が無い。
-    expect(contrastRatio(value('--color-text-muted'), paper)).toBeLessThan(
-      contrastRatio(value('--color-text'), paper),
+    expect(contrastRatio(value("--color-text-muted"), paper)).toBeLessThan(
+      contrastRatio(value("--color-text"), paper),
     );
   });
 
-  it('数字の色は白い面の上でだけ AA — だから数字は白いタイルに乗る', () => {
-    expect(meetsAA(contrastRatio(value('--color-figure'), paper))).toBe(true);
+  it("数字の色は白い面の上でだけ AA — だから数字は白いタイルに乗る", () => {
+    expect(meetsAA(contrastRatio(value("--color-figure"), paper))).toBe(true);
     // 青い地では 4.28。StatTile が .on-paper を内側に持っているのはこのため。
-    expect(meetsAA(contrastRatio(value('--color-figure'), ground))).toBe(false);
+    expect(meetsAA(contrastRatio(value("--color-figure"), ground))).toBe(false);
   });
 
-  it('地の上の装飾は白 — 文字ではないので比の下限はかからない', () => {
+  it("地の上の装飾は白 — 文字ではないので比の下限はかからない", () => {
     // ドット・花。ここが文字色として使われ始めたら 1.75 で破綻するので、
     // 「文字には使えない」ことを明示しておく。
-    expect(meetsAA(contrastRatio(value('--color-decor'), ground), 'large')).toBe(false);
+    expect(meetsAA(contrastRatio(value("--color-decor"), ground), "large")).toBe(false);
   });
 });
 
-describe('docs/DESIGN.md §4 — 書体', () => {
-  it('どの書体スタックも sans-serif で終わる（明朝は使わない）', () => {
-    for (const name of [...tokens.keys()].filter((n) => n.startsWith('--font-'))) {
+describe("docs/DESIGN.md §4 — 書体", () => {
+  it("どの書体スタックも sans-serif で終わる（明朝は使わない）", () => {
+    for (const name of [...tokens.keys()].filter((n) => n.startsWith("--font-"))) {
       expect(value(name), `${name} の末尾`).toMatch(/sans-serif$/);
     }
   });
 
-  it('見出しの書体は、本文スタックへ落ちる', () => {
-    expect(value('--font-display')).toContain(value('--font-sans'));
+  it("見出しの書体は、本文スタックへ落ちる", () => {
+    expect(value("--font-display")).toContain(value("--font-sans"));
   });
 
-  it('webfont は src/styles/fonts.css にだけ置く', () => {
+  it("webfont は src/styles/fonts.css にだけ置く", () => {
     // Storybook と同期先は layers.css・tokens.css・global.css を読み、fonts.css は読まない（.storybook/preview.ts）。
     // ここに webfont を書くと、読まないはずの場所に数 MB のチャンクが付いていく。
     // **コメントは外してから見る。** 規約を説明した文章そのものに反応させない。
-    for (const css of ['src/styles/layers.css', 'src/styles/tokens.css', 'src/styles/global.css']) {
+    for (const css of ["src/styles/layers.css", "src/styles/tokens.css", "src/styles/global.css"]) {
       expect(stripComments(read(css)), css).not.toMatch(/@font-face|@import/);
     }
   });
 });
 
-describe('docs/DESIGN.md §6 — 本文は最低 16px', () => {
-  it('--text-base が 1rem', () => {
-    expect(value('--text-base')).toBe('1rem');
+describe("docs/DESIGN.md §6 — 本文は最低 16px", () => {
+  it("--text-base が 1rem", () => {
+    expect(value("--text-base")).toBe("1rem");
   });
 });

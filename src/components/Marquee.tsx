@@ -5,12 +5,12 @@
  * 属性（`className`・`id`・`data-*` など）は root の div にそのまま渡す
  * （docs/adr/0011-react-components-for-design-sync.md「props の決まり」）。
  */
-import type { HTMLAttributes } from 'react';
+import type { HTMLAttributes } from "react";
 
-import { cx } from '../lib/cx';
-import styles from './Marquee.module.css';
+import { cx } from "../lib/cx";
+import styles from "./Marquee.module.css";
 
-type MarqueeProps = Omit<HTMLAttributes<HTMLDivElement>, 'children' | 'dangerouslySetInnerHTML'>;
+type MarqueeProps = Omit<HTMLAttributes<HTMLDivElement>, "children" | "dangerouslySetInnerHTML">;
 
 /**
  * 帯を繰り返す回数を決めるのに写した、Marquee.module.css の広い画面の値。写し元を変えると
@@ -18,25 +18,25 @@ type MarqueeProps = Omit<HTMLAttributes<HTMLDivElement>, 'children' | 'dangerous
  */
 export const COPIED_FROM_CSS = {
   /** .ribbon の左右のはみ出し。 */
-  ribbonMarginInline: '-1.25rem',
+  ribbonMarginInline: "-1.25rem",
   /** .track の行頭のはみ出し。 */
-  trackMarginInlineStart: '-3rem',
+  trackMarginInlineStart: "-3rem",
   /** .band の字。下の GROUP_MIN_WIDTH の 221.9px は、この字で測った。 */
-  bandFontFamily: 'var(--font-latin-display)',
-  bandFontSize: '1.375rem',
-  bandFontWeight: '700',
-  bandLetterSpacing: '0.14em',
+  bandFontFamily: "var(--font-latin-display)",
+  bandFontSize: "1.375rem",
+  bandFontWeight: "700",
+  bandLetterSpacing: "0.14em",
   /** .group の間と、.bead の大きさ。 */
-  groupGap: 'var(--space-7)',
-  groupPaddingInlineEnd: 'var(--space-7)',
-  beadSize: '12px',
+  groupGap: "var(--space-7)",
+  groupPaddingInlineEnd: "var(--space-7)",
+  beadSize: "12px",
 } as const;
 
 /** 上の値が読むトークンの、GROUP_MIN_WIDTH の幅を測ったときの値（tokens.css。tests/repo/css-copies.test.ts が突き合わせる）。 */
 export const MEASURED_WITH_TOKENS = {
-  '--font-latin-display':
+  "--font-latin-display":
     '"Quicksand", "Zen Maru Gothic", "Zen Maru Gothic Fallback", system-ui, -apple-system, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Noto Sans JP", "Meiryo", sans-serif',
-  '--space-7': '1.75rem',
+  "--space-7": "1.75rem",
 } as const;
 
 /**
@@ -49,7 +49,10 @@ const rem = (value: string) => {
   if (!match) throw new Error(`rem の長さとして読めない: ${value}`);
   return Number(match[1]) * 16;
 };
-export const REACH = 3840 / 0.5 + rem(COPIED_FROM_CSS.ribbonMarginInline) * 2 + rem(COPIED_FROM_CSS.trackMarginInlineStart);
+export const REACH =
+  3840 / 0.5 +
+  rem(COPIED_FROM_CSS.ribbonMarginInline) * 2 +
+  rem(COPIED_FROM_CSS.trackMarginInlineStart);
 
 /**
  * 1回分の幅の狭いほうの見積もり。1回分は UNOFFICIAL と点1つで、幅は Marquee.module.css の .band の字と
@@ -86,7 +89,7 @@ export default function Marquee({ className, ...rest }: MarqueeProps) {
               // .group は inline-flex なので、CSS が効けば空白だけの文字は描かれず、並びは変わらない。
               <span className={styles.group} key={i}>
                 UNOFFICIAL
-                <span className={styles.bead} />{' '}
+                <span className={styles.bead} />{" "}
               </span>
             ))}
           </div>

@@ -7,15 +7,15 @@
  * src/components に置かない。あそこの .tsx は全部がコンポーネントとして数えられ、story と同期への登録を求められる
  * （tests/repo/story-coverage.test.ts・tests/repo/design-sync.test.ts）。
  */
-import { parseCustomProperties, resolve } from '../../src/lib/tokens';
-import tokensCss from '../../src/styles/tokens.css?raw';
-import styles from './TokenTables.module.css';
+import { parseCustomProperties, resolve } from "../../src/lib/tokens";
+import tokensCss from "../../src/styles/tokens.css?raw";
+import styles from "./TokenTables.module.css";
 
 const tokens = parseCustomProperties(tokensCss);
 const byPrefix = (prefix: string) =>
   [...tokens.keys()]
     .filter((n) => n.startsWith(prefix))
-    .map((n) => ({ name: n, raw: tokens.get(n) ?? '', value: resolve(tokens, n) }));
+    .map((n) => ({ name: n, raw: tokens.get(n) ?? "", value: resolve(tokens, n) }));
 
 /** パレット。色の literal はここにしか無い。 */
 export function Palette() {
@@ -29,7 +29,7 @@ export function Palette() {
         </tr>
       </thead>
       <tbody>
-        {byPrefix('--c-').map((t) => (
+        {byPrefix("--c-").map((t) => (
           <tr key={t.name}>
             <td>
               <span className={styles.swatch} style={{ backgroundColor: t.value }} />
@@ -59,7 +59,7 @@ export function ColorRoles() {
         </tr>
       </thead>
       <tbody>
-        {byPrefix('--color-').map((t) => (
+        {byPrefix("--color-").map((t) => (
           <tr key={t.name}>
             <td>
               <span className={styles.swatch} style={{ backgroundColor: t.value }} />
@@ -79,8 +79,19 @@ export function ColorRoles() {
 
 /** 書体と寸法。 */
 export function TypeAndMetrics() {
-  const fonts = byPrefix('--font-').map((t) => ({ ...t, sample: 'あのイーハトーヴォのすきとおった風' }));
-  const metrics = [...byPrefix('--text-'), ...byPrefix('--leading-'), ...byPrefix('--radius-'), ...byPrefix('--offset-'), ...byPrefix('--tap-'), ...byPrefix('--space-'), ...byPrefix('--anchor-')];
+  const fonts = byPrefix("--font-").map((t) => ({
+    ...t,
+    sample: "あのイーハトーヴォのすきとおった風",
+  }));
+  const metrics = [
+    ...byPrefix("--text-"),
+    ...byPrefix("--leading-"),
+    ...byPrefix("--radius-"),
+    ...byPrefix("--offset-"),
+    ...byPrefix("--tap-"),
+    ...byPrefix("--space-"),
+    ...byPrefix("--anchor-"),
+  ];
   return (
     <table className={styles.tokens}>
       <thead>

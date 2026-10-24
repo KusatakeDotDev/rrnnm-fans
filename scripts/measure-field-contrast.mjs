@@ -40,15 +40,18 @@
  * で探し、ほかの worktree やセッションで測っている途中のものでないことを始めた時刻で確かめてから、
  * `Stop-Process -Id <pid>` で止める（コマンドラインは相対パスなので、worktree では絞れない）。
  */
-import { parseArgs } from 'node:util';
+import { parseArgs } from "node:util";
 
-import { chromium } from 'playwright';
+import { chromium } from "playwright";
 
-import { AA_LARGE, AA_NORMAL, contrastRatio, relativeLuminance } from '../src/lib/contrast.ts';
-import { FIELD_MAX_STEP_S, parseCssRgb } from '../src/lib/field.ts';
+import { AA_LARGE, AA_NORMAL, contrastRatio, relativeLuminance } from "../src/lib/contrast.ts";
+import { FIELD_MAX_STEP_S, parseCssRgb } from "../src/lib/field.ts";
 
-const { values: args, positionals } = parseArgs({ allowPositionals: true, options: { states: { type: 'string' } } });
-const URL_TO_MEASURE = positionals[0] ?? 'http://localhost:4321/';
+const { values: args, positionals } = parseArgs({
+  allowPositionals: true,
+  options: { states: { type: "string" } },
+});
+const URL_TO_MEASURE = positionals[0] ?? "http://localhost:4321/";
 
 /** ビューポートの大きさ。広い画面・背の低い画面・タブレット・狭い画面。 */
 const SIZES = [
@@ -67,9 +70,10 @@ const SIZES = [
 /** 状態ごとに、WebGL の畑を撮り続ける長さ（畑の時計の秒）。夜は妖精の光の奥行きの1周（上の注）。 */
 const SAMPLE_S = { day: 4, soon: 4, live: 50 };
 /** 測る状態。`--states` で絞れる。 */
-const STATES = args.states?.split(',') ?? Object.keys(SAMPLE_S);
+const STATES = args.states?.split(",") ?? Object.keys(SAMPLE_S);
 for (const state of STATES) {
-  if (!Object.hasOwn(SAMPLE_S, state)) throw new Error(`--states は ${Object.keys(SAMPLE_S).join('・')} から選ぶ: ${state}`);
+  if (!Object.hasOwn(SAMPLE_S, state))
+    throw new Error(`--states は ${Object.keys(SAMPLE_S).join("・")} から選ぶ: ${state}`);
 }
 /** 畑の時計がこの倍の実時間を掛けても進みきらなければ、撮るのをやめて「足りない」と出す。 */
 const SAMPLE_GIVE_UP = 4;
@@ -85,11 +89,11 @@ const FRAME_GAP_MS = 100;
 const RING_PX = 2;
 
 const TARGETS = [
-  { name: 'キャッチ', selector: '[data-field] h1', need: AA_LARGE },
-  { name: '添え書き', selector: '[data-field] h1 ~ p', need: AA_NORMAL },
+  { name: "キャッチ", selector: "[data-field] h1", need: AA_LARGE },
+  { name: "添え書き", selector: "[data-field] h1 ~ p", need: AA_NORMAL },
 ];
 
-const TEXT = '[data-field] h1, [data-field] h1 *, [data-field] h1 ~ p';
+const TEXT = "[data-field] h1, [data-field] h1 *, [data-field] h1 ~ p";
 /**
  * 測る間ずっと、文字の登場の演出と移り変わりを止めておく。下の2つのスタイルを足し外しするたびに止めたり
  * 戻したりすると、外したときに演出が最初からかかり直し、要素の箱が演出の分（上へ 0.5rem）ずれる。
@@ -102,7 +106,8 @@ const HIDE_TEXT = `${TEXT} { color: transparent !important; }`;
  * CSS の畑を測るときは、キャンバスと前回の絵を隠す。WebGL の畑は描き続ける（mountField が見ているのは root の
  * 見え方なので止まらない）が、隠れているので値には響かない。ビューポートごとに GPU を余計に回すだけなので、止めはしない。
  */
-const NO_WEBGL = '[data-field] canvas, [data-field] [data-field-snapshot] { display: none !important; }';
+const NO_WEBGL =
+  "[data-field] canvas, [data-field] [data-field-snapshot] { display: none !important; }";
 
 /**
  * 相対輝度をチャンネルごとの表にする（相対輝度はチャンネルの和なので、表を足せば元に戻る）。
@@ -114,15 +119,15 @@ const LUMINANCE = {
   b: Array.from({ length: 256 }, (_, c) => relativeLuminance({ r: 0, g: 0, b: c })),
 };
 
-const toHex = (rgb) => `#${rgb.map((c) => c.toString(16).padStart(2, '0')).join('')}`;
+const toHex = (rgb) => `#${rgb.map((c) => c.toString(16).padStart(2, "0")).join("")}`;
 
-const browser = await chromium.launch({ headless: true, channel: 'chromium' });
+const browser = await chromium.launch({ headless: true, channel: "chromium" });
 try {
   const page = await browser.newPage();
   const calc = await browser.newPage();
-  for (const p of [page, calc]) p.on('crash', () => console.error('ブラウザのページが落ちた'));
+  for (const p of [page, calc]) p.on("crash", () => console.error("ブラウザのページが落ちた"));
   const rows = [];
-  console.log('畑     画面サイズ  状態   文字      最低の比  基準  コマ数  畑の秒   fps');
+  console.log("畑     画面サイズ  状態   文字      最低の比  基準  コマ数  畑の秒   fps");
 
   for (const [width, height] of SIZES) {
     await page.setViewportSize({ width, height });
@@ -130,30 +135,47 @@ try {
     try {
       await page.waitForSelector('[data-field][data-gl="on"]', { timeout: 15_000 });
     } catch {
-      throw new Error('畑が WebGL で描けなかった。GPU のある端末で回す');
+      throw new Error("畑が WebGL で描けなかった。GPU のある端末で回す");
     }
     await page.addStyleTag({ content: STILL_TEXT });
     await page.evaluate(startFieldClock, FIELD_MAX_STEP_S);
 
-    for (const render of ['webgl', 'css']) {
-      if (render === 'css') {
+    for (const render of ["webgl", "css"]) {
+      if (render === "css") {
         await page.addStyleTag({ content: NO_WEBGL });
-        await page.evaluate(() => document.querySelector('[data-field]')?.removeAttribute('data-gl'));
+        await page.evaluate(() =>
+          document.querySelector("[data-field]")?.removeAttribute("data-gl"),
+        );
       }
       for (const state of STATES) {
-        await page.evaluate((s) => document.querySelector('[data-field]')?.setAttribute('data-state', s), state);
+        await page.evaluate(
+          (s) => document.querySelector("[data-field]")?.setAttribute("data-state", s),
+          state,
+        );
         let settled = true;
-        if (render === 'webgl') settled = await waitFieldSeconds(page, STATE_SETTLE_S);
+        if (render === "webgl") settled = await waitFieldSeconds(page, STATE_SETTLE_S);
         else await page.waitForTimeout(STATE_SETTLE_CSS_MS);
-        const seconds = render === 'webgl' ? SAMPLE_S[state] : 0;
+        const seconds = render === "webgl" ? SAMPLE_S[state] : 0;
         const result = await sample(page, calc, seconds);
         // 待ちか撮る間のどちらかで、畑の時計が決めた長さまで進まなかった。色が移る途中を測ったか、撮り足りない。
         const short = !settled || result.fieldSeconds < seconds;
         // 途中で止まっても、そこまでの値が残るよう、測るたびに出す。
         TARGETS.forEach((target, i) => {
-          const row = { render, size: `${width}×${height}`, state, ...target, ratio: result.ratios[i], short };
+          const row = {
+            render,
+            size: `${width}×${height}`,
+            state,
+            ...target,
+            ratio: result.ratios[i],
+            short,
+          };
           rows.push(row);
-          const marks = [row.ratio < row.need ? '← 割れている' : '', short ? '← 畑の時計が足りない' : ''].join(' ').trim();
+          const marks = [
+            row.ratio < row.need ? "← 割れている" : "",
+            short ? "← 畑の時計が足りない" : "",
+          ]
+            .join(" ")
+            .trim();
           console.log(
             [
               render.padEnd(5),
@@ -166,24 +188,29 @@ try {
               result.fieldSeconds.toFixed(1).padStart(6),
               result.fps.toFixed(0).padStart(5),
               marks,
-            ].join('  '),
+            ].join("  "),
           );
         });
       }
     }
   }
 
-  console.log('');
+  console.log("");
   for (const target of TARGETS) {
     const mine = rows.filter((r) => r.name === target.name);
     const low = mine.reduce((a, b) => (b.ratio < a.ratio ? b : a));
-    console.log(`${target.name}の最低: ${low.ratio.toFixed(2)}（${low.render} ${low.size} ${low.state}。基準 ${target.need}）`);
+    console.log(
+      `${target.name}の最低: ${low.ratio.toFixed(2)}（${low.render} ${low.size} ${low.state}。基準 ${target.need}）`,
+    );
   }
 
   const failed = rows.filter((r) => r.ratio < r.need);
   const short = rows.filter((r) => r.short);
   if (failed.length > 0) console.error(`\n基準を割った組が ${failed.length} 個ある`);
-  if (short.length > 0) console.error(`\n畑の時計が決めた長さまで進まなかった組が ${short.length / TARGETS.length} 個ある`);
+  if (short.length > 0)
+    console.error(
+      `\n畑の時計が決めた長さまで進まなかった組が ${short.length / TARGETS.length} 個ある`,
+    );
   if (failed.length > 0 || short.length > 0) process.exitCode = 1;
 } finally {
   await browser.close();
@@ -230,7 +257,13 @@ async function sample(page, calc, seconds) {
         const el = document.querySelector(sel);
         if (!el) return null;
         const r = el.getBoundingClientRect();
-        return { left: r.left, top: r.top, right: r.right, bottom: r.bottom, color: getComputedStyle(el).color };
+        return {
+          left: r.left,
+          top: r.top,
+          right: r.right,
+          bottom: r.bottom,
+          color: getComputedStyle(el).color,
+        };
       }),
     TARGETS.map((t) => t.selector),
   );
@@ -243,8 +276,10 @@ async function sample(page, calc, seconds) {
   const clip = {
     x,
     y,
-    width: Math.ceil(Math.min(viewport.width, Math.max(...boxes.map((b) => b.right)) + RING_PX)) - x,
-    height: Math.ceil(Math.min(viewport.height, Math.max(...boxes.map((b) => b.bottom)) + RING_PX)) - y,
+    width:
+      Math.ceil(Math.min(viewport.width, Math.max(...boxes.map((b) => b.right)) + RING_PX)) - x,
+    height:
+      Math.ceil(Math.min(viewport.height, Math.max(...boxes.map((b) => b.bottom)) + RING_PX)) - y,
   };
   const texts = boxes.map((b, i) => {
     const rgb = parseCssRgb(b.color);
@@ -253,7 +288,7 @@ async function sample(page, calc, seconds) {
   });
 
   const style = await page.addStyleTag({ content: MASK_TEXT });
-  const glyphs = (await page.screenshot({ clip })).toString('base64');
+  const glyphs = (await page.screenshot({ clip })).toString("base64");
   await style.evaluate((el, css) => (el.textContent = css), HIDE_TEXT);
   try {
     const counts = await calc.evaluate(prepareGlyphs, {
@@ -280,7 +315,7 @@ async function sample(page, calc, seconds) {
     let now = start;
     do {
       if (frames > 0) await page.waitForTimeout(FRAME_GAP_MS);
-      const behind = (await page.screenshot({ clip })).toString('base64');
+      const behind = (await page.screenshot({ clip })).toString("base64");
       const worst = await calc.evaluate(worstOnFrame, behind);
       // 一番悪い画素は計算用のページが選び、比は src/lib/contrast.ts で出す。
       worst.forEach((rgb, i) => {
@@ -290,7 +325,8 @@ async function sample(page, calc, seconds) {
       now = await page.evaluate(() => ({ ...window.fieldClock }));
     } while (now.seconds - start.seconds < seconds && Date.now() < giveUp);
     const fieldSeconds = now.seconds - start.seconds;
-    const fps = seconds > 0 ? (now.frames - start.frames) / Math.max((now.ms - start.ms) / 1000, 1e-3) : 0;
+    const fps =
+      seconds > 0 ? (now.frames - start.frames) / Math.max((now.ms - start.ms) / 1000, 1e-3) : 0;
     return { ratios, frames, fieldSeconds, fps };
   } finally {
     await style.evaluate((el) => el.remove());
@@ -305,16 +341,20 @@ async function sample(page, calc, seconds) {
 async function prepareGlyphs({ glyphs, ring, luminance, targets }) {
   // canvas は1枚を使い回す。画像は data: URL の <img> ではなく ImageBitmap で開き、描いたらすぐ放す —
   // data: URL はコマごとに違うので、ブラウザがそれぞれを別の画像として持ち続け、夜の数百コマでメモリが増えうる。
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
   const pixels = async (b64) => {
     const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-    const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/png' }));
+    const bitmap = await createImageBitmap(new Blob([bytes], { type: "image/png" }));
     canvas.width = bitmap.width;
     canvas.height = bitmap.height;
     ctx.drawImage(bitmap, 0, 0);
     bitmap.close();
-    return { data: ctx.getImageData(0, 0, canvas.width, canvas.height).data, width: canvas.width, height: canvas.height };
+    return {
+      data: ctx.getImageData(0, 0, canvas.width, canvas.height).data,
+      width: canvas.width,
+      height: canvas.height,
+    };
   };
   const lum = (r, g, b) => luminance.r[r] + luminance.g[g] + luminance.b[b];
 
@@ -339,7 +379,8 @@ async function prepareGlyphs({ glyphs, ring, luminance, targets }) {
               const qx = px + dx;
               const qy = py + dy;
               if (qx < t.left || qx >= t.right || qy < t.top || qy >= t.bottom) continue;
-              if (qx >= 0 && qx < width && qy >= 0 && qy < height && glyph[qy * width + qx]) near = true;
+              if (qx >= 0 && qx < width && qy >= 0 && qy < height && glyph[qy * width + qx])
+                near = true;
             }
           }
           if (near) at.push((py * width + px) * 4);

@@ -39,10 +39,10 @@ import {
   placeFlower,
   planFlowers,
   type Rgb01,
-} from '../lib/field';
-import { FIELD_ATLAS_SIZE } from '../lib/field-atlas';
-import { parseFieldBundle } from '../lib/field-bundle-source';
-import { SMALL_SCREEN_PX } from './field-snapshot';
+} from "../lib/field";
+import { FIELD_ATLAS_SIZE } from "../lib/field-atlas";
+import { parseFieldBundle } from "../lib/field-bundle-source";
+import { SMALL_SCREEN_PX } from "./field-snapshot";
 
 /* ---------------------------------------------------------------------------
    状態ごとの色以外の値。色は CSS から読む（下の readPalettes）。
@@ -65,7 +65,7 @@ const LOOKS: Record<FieldState, StateLook> = {
 };
 
 /** 状態ごとに CSS から読む色の部位。`--field-<状態>-<部位>` の後ろ半分。 */
-const PARTS = ['fog', 'ground', 'stem', 'mote', 'glow'] as const;
+const PARTS = ["fog", "ground", "stem", "mote", "glow"] as const;
 type Part = (typeof PARTS)[number];
 type Palette = Record<Part, Rgb01>;
 
@@ -122,7 +122,8 @@ const FADE_SLOTS = 3;
 
 /** 起伏。手前はなだらかに波打ち、奥へ行くほど丘として持ち上がる。 */
 function hill(x: number, z: number): number {
-  let y = 0.25 * Math.sin(x * 0.15 + 1.0) * Math.cos(z * 0.11) + 0.15 * Math.sin(x * 0.37 + z * 0.23);
+  let y =
+    0.25 * Math.sin(x * 0.15 + 1.0) * Math.cos(z * 0.11) + 0.15 * Math.sin(x * 0.37 + z * 0.23);
   const far = Math.max(0, -z - 18);
   y += (far * far * 0.0025 + far * 0.05) * (0.75 + 0.25 * Math.cos(x * 0.035));
   return y;
@@ -168,10 +169,19 @@ const normalize = (a: Vec3): Vec3 => {
 };
 const dot = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 const mix = (a: number, b: number, t: number) => a + (b - a) * t;
-const mix3 = (a: Vec3, b: Vec3, t: number): Vec3 => [mix(a[0], b[0], t), mix(a[1], b[1], t), mix(a[2], b[2], t)];
+const mix3 = (a: Vec3, b: Vec3, t: number): Vec3 => [
+  mix(a[0], b[0], t),
+  mix(a[1], b[1], t),
+  mix(a[2], b[2], t),
+];
 /** ベジェ曲線（点の数で次数が決まる）。 */
 const bezier = (points: readonly Vec3[], t: number): Vec3 =>
-  points.length === 1 ? points[0]! : bezier(points.slice(1).map((p, i) => mix3(points[i]!, p, t)), t);
+  points.length === 1
+    ? points[0]!
+    : bezier(
+        points.slice(1).map((p, i) => mix3(points[i]!, p, t)),
+        t,
+      );
 /**
  * シードを固定した乱数（mulberry32）。0 以上 1 未満。花の植え方を開くたびに同じにする —
  * 前回の畑の絵（スナップショット）を先に出して本物と入れ替えるので、並びが変わると入れ替えた瞬間に花が動いて見える。
@@ -543,7 +553,7 @@ interface Program {
  */
 function startProgram(gl: WebGL2RenderingContext, vsSource: string, fsSource: string): Program {
   const attribs = [...vsSource.matchAll(/\bin\s+\w+\s+([^;]+);/g)].flatMap((m) =>
-    m[1]!.split(',').map((name) => name.trim()),
+    m[1]!.split(",").map((name) => name.trim()),
   );
   const program = gl.createProgram()!;
   for (const [type, source] of [
@@ -607,8 +617,9 @@ function whenLinked(
       const failed = programs.filter((p) => !gl.getProgramParameter(p.program, gl.LINK_STATUS));
       // 通らなかった理由を残す（特定の GPU・ドライバで落ちたときに追えるように）。問い合わせるのは失敗したときだけ。
       for (const { program } of failed) {
-        const logs = gl.getAttachedShaders(program)?.map((shader) => gl.getShaderInfoLog(shader)) ?? [];
-        console.warn('畑のシェーダーが通らなかった', gl.getProgramInfoLog(program), ...logs);
+        const logs =
+          gl.getAttachedShaders(program)?.map((shader) => gl.getShaderInfoLog(shader)) ?? [];
+        console.warn("畑のシェーダーが通らなかった", gl.getProgramInfoLog(program), ...logs);
       }
       resolve(failed.length === 0);
     };
@@ -641,7 +652,7 @@ function attribute(
 
 /** CSS のカスタムプロパティを、ブラウザに解決させた色（`rgb(…)`）で返す。 */
 function cssColor(root: HTMLElement, name: string): string {
-  const probe = document.createElement('span');
+  const probe = document.createElement("span");
   probe.style.color = `var(${name})`;
   probe.hidden = true;
   root.append(probe);
@@ -673,15 +684,15 @@ function readPalettes(root: HTMLElement): Record<FieldState, Palette> | null {
 /** CSS から読んだ色でネモフィラの花を1輪描き、テクスチャにする。 */
 function flowerTexture(gl: WebGL2RenderingContext, root: HTMLElement): WebGLTexture {
   const color = (name: string) => cssColor(root, name);
-  const white = color('--field-petal-center');
-  const pale = color('--field-petal-pale');
-  const petal = color('--field-petal-mid');
-  const edge = color('--field-petal-edge');
-  const vein = color('--field-petal-vein');
+  const white = color("--field-petal-center");
+  const pale = color("--field-petal-pale");
+  const petal = color("--field-petal-mid");
+  const edge = color("--field-petal-edge");
+  const vein = color("--field-petal-vein");
 
-  const canvas = document.createElement('canvas');
+  const canvas = document.createElement("canvas");
   canvas.width = canvas.height = 128;
-  const c = canvas.getContext('2d')!;
+  const c = canvas.getContext("2d")!;
   c.translate(64, 64);
   for (let i = 0; i < 5; i++) {
     c.save();
@@ -727,21 +738,24 @@ function flowerTexture(gl: WebGL2RenderingContext, root: HTMLElement): WebGLText
 
 function uploadTexture(gl: WebGL2RenderingContext, source: TexImageSource): WebGLTexture {
   // 以前の描画準備のエラーを、今回の転送失敗として扱わない。
-  while (!gl.isContextLost() && gl.getError() !== gl.NO_ERROR) { /* drain */ }
+  while (!gl.isContextLost() && gl.getError() !== gl.NO_ERROR) {
+    /* drain */
+  }
   const texture = gl.createTexture();
-  if (!texture) throw new Error('Texture allocation failed');
+  if (!texture) throw new Error("Texture allocation failed");
   try {
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
     gl.generateMipmap(gl.TEXTURE_2D);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    const aniso = gl.getExtension('EXT_texture_filter_anisotropic');
+    const aniso = gl.getExtension("EXT_texture_filter_anisotropic");
     if (aniso) {
       const maxAnisotropy = gl.getParameter(aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT) as number;
       gl.texParameterf(gl.TEXTURE_2D, aniso.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(4, maxAnisotropy));
     }
-    if (gl.isContextLost() || gl.getError() !== gl.NO_ERROR) throw new Error('Texture upload failed');
+    if (gl.isContextLost() || gl.getError() !== gl.NO_ERROR)
+      throw new Error("Texture upload failed");
     return texture;
   } catch (error) {
     gl.deleteTexture(texture);
@@ -752,7 +766,7 @@ function uploadTexture(gl: WebGL2RenderingContext, source: TexImageSource): WebG
 /* ---------------------------------------------------------------------------
    花の3Dモデル（株）。BOOTH「ネモフィラ」【3Dモデル】を変換したもの（ADR-0009「花の3Dモデル」）。
    ------------------------------------------------------------------------- */
-const MESH_URL = '/field/nemophila.bin';
+const MESH_URL = "/field/nemophila.bin";
 /** これを過ぎたら株を諦めて一枚絵の花だけで描く。そのぶん最初の1枚が遅れる上限でもある。 */
 const ASSET_TIMEOUT_MS = 4_000;
 
@@ -776,14 +790,18 @@ export async function loadClumpAssets(gl: WebGL2RenderingContext): Promise<Clump
   const controller = new AbortController();
   const { signal } = controller;
   const timeout = setTimeout(() => controller.abort(), ASSET_TIMEOUT_MS);
-  const expired = new Promise<null>((resolve) => signal.addEventListener('abort', () => resolve(null), { once: true }));
+  const expired = new Promise<null>((resolve) =>
+    signal.addEventListener("abort", () => resolve(null), { once: true }),
+  );
   const load = async (): Promise<ClumpAssets | null> => {
     const response = await fetch(MESH_URL, { signal });
     if (!response.ok) return null;
     const bundle = parseFieldBundle(await response.arrayBuffer());
     if (!bundle || signal.aborted || gl.isContextLost()) return null;
     // 透明な画素の色が縮小時に縁へ混ざらないよう、乗算済みアルファで読む。
-    const bitmap = await createImageBitmap(new Blob([bundle.texture], { type: 'image/webp' }), { premultiplyAlpha: 'premultiply' });
+    const bitmap = await createImageBitmap(new Blob([bundle.texture], { type: "image/webp" }), {
+      premultiplyAlpha: "premultiply",
+    });
     try {
       if (signal.aborted || gl.isContextLost()) return null;
       if (bitmap.width !== FIELD_ATLAS_SIZE || bitmap.height !== FIELD_ATLAS_SIZE) return null;
@@ -814,7 +832,7 @@ export async function loadClumpAssets(gl: WebGL2RenderingContext): Promise<Clump
  * レンダラの名前でも見る。ヘッドレスのブラウザ（規約テスト）もここで弾かれる。
  */
 function isSoftwareRenderer(gl: WebGL2RenderingContext): boolean {
-  const info = gl.getExtension('WEBGL_debug_renderer_info');
+  const info = gl.getExtension("WEBGL_debug_renderer_info");
   const renderer = String(gl.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : gl.RENDERER));
   return /swiftshader|llvmpipe|softpipe|software|basic render/i.test(renderer);
 }
@@ -853,10 +871,10 @@ export interface FieldController {
  */
 export function mountField(root: HTMLElement, options: FieldOptions): FieldController | null {
   const { canvas, reducedMotion } = options;
-  const gl = canvas.getContext('webgl2', {
+  const gl = canvas.getContext("webgl2", {
     antialias: true,
     alpha: true,
-    powerPreference: 'high-performance',
+    powerPreference: "high-performance",
     // GPU が無くソフトウェアで描くしかない環境では、コンテキスト自体をもらわない。
     failIfMajorPerformanceCaveat: true,
   });
@@ -864,7 +882,7 @@ export function mountField(root: HTMLElement, options: FieldOptions): FieldContr
 
   const palettes = readPalettes(root);
   /** 遠くの地面が寄っていく花の色。花びらの色は状態に依らない。 */
-  const petal = readColor(root, '--field-petal-mid');
+  const petal = readColor(root, "--field-petal-mid");
   if (!palettes || !petal) return null;
 
   /*
@@ -872,8 +890,12 @@ export function mountField(root: HTMLElement, options: FieldOptions): FieldContr
    * 取得とシェーダーのコンパイルを並べる。シェーダーが通らない環境では取った素材を捨てるが、まれなので速さを取った。
    */
   // 拡張はコンパイルを出す前に有効にする（有効にしてから出したものだけ並べる実装があっても効くように）。
-  const parallel = gl.getExtension('KHR_parallel_shader_compile');
-  let groundProgram: Program, flowerProgram: Program, clumpProgram: Program, moteProgram: Program, wispProgram: Program;
+  const parallel = gl.getExtension("KHR_parallel_shader_compile");
+  let groundProgram: Program,
+    flowerProgram: Program,
+    clumpProgram: Program,
+    moteProgram: Program,
+    wispProgram: Program;
   try {
     groundProgram = startProgram(gl, GROUND_VS, GROUND_FS);
     flowerProgram = startProgram(gl, FLOWER_VS, FLOWER_FS);
@@ -885,7 +907,13 @@ export function mountField(root: HTMLElement, options: FieldOptions): FieldContr
   }
   // 取りに行くのが先。拡張が無いと whenLinked はその場でリンクが終わるまで止まるので、後に置くと並ばない。
   const assetsLoaded = loadClumpAssets(gl);
-  const linked = whenLinked(gl, parallel, [groundProgram, flowerProgram, clumpProgram, moteProgram, wispProgram]);
+  const linked = whenLinked(gl, parallel, [
+    groundProgram,
+    flowerProgram,
+    clumpProgram,
+    moteProgram,
+    wispProgram,
+  ]);
 
   const isSmall = Math.min(window.innerWidth, window.innerHeight) < SMALL_SCREEN_PX;
 
@@ -898,7 +926,7 @@ export function mountField(root: HTMLElement, options: FieldOptions): FieldContr
   const GROUND_STEP = 2;
   const groundVao = gl.createVertexArray()!;
   gl.bindVertexArray(groundVao);
-  const groundBuffer = attribute(gl, groundProgram, 'aPos', new Float32Array(0), 3);
+  const groundBuffer = attribute(gl, groundProgram, "aPos", new Float32Array(0), 3);
   const groundIndexBuffer = gl.createBuffer()!;
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, groundIndexBuffer);
   gl.bindVertexArray(null);
@@ -985,7 +1013,8 @@ export function mountField(root: HTMLElement, options: FieldOptions): FieldContr
   // そこに株を回すと映るところがまばらになる。余白と株の幅の間は一枚絵の花が埋める。
   const clumpHalf = (z: number) => Math.min(baseHalf(z), visibleHalf(z, viewReach));
   const MAX_FLOWER_RATIO = 1.5;
-  const sizeFor = (z: number, random: () => number) => (0.8 + random() * 0.5) * (1 + Math.max(0, -z) * 0.02);
+  const sizeFor = (z: number, random: () => number) =>
+    (0.8 + random() * 0.5) * (1 + Math.max(0, -z) * 0.02);
 
   let flowerVao: WebGLVertexArrayObject | null = null;
   let flowerBuffers: { offsets: WebGLBuffer; data: WebGLBuffer } | null = null;
@@ -1004,8 +1033,13 @@ export function mountField(root: HTMLElement, options: FieldOptions): FieldContr
   const clumpParts: ClumpPart[] = [];
   let clumpScale = 1;
   /** 株のメッシュ（読めたときだけ）。 */
-  let clumpMesh: { mesh: FieldMesh; positions: WebGLBuffer; normals: WebGLBuffer; uvs: WebGLBuffer; indices: WebGLBuffer } | null =
-    null;
+  let clumpMesh: {
+    mesh: FieldMesh;
+    positions: WebGLBuffer;
+    normals: WebGLBuffer;
+    uvs: WebGLBuffer;
+    indices: WebGLBuffer;
+  } | null = null;
   /**
    * 花を植えて地面を張ったときに映っていた横の広がり（reachOf）。大きさが分かる前は 0。
    * 一枚絵の花と地面は、これに REACH_HEADROOM を掛けた幅まで植える（張る）。
@@ -1029,7 +1063,8 @@ export function mountField(root: HTMLElement, options: FieldOptions): FieldContr
       nearZ,
       farZ,
       // 株のあるところは株に任せ、その外側にだけ植える。
-      width: (z) => (z > flowerNearZ ? Math.max(0, visibleHalf(z, reach) - clumpHalf(z)) : visibleHalf(z, reach)),
+      width: (z) =>
+        z > flowerNearZ ? Math.max(0, visibleHalf(z, reach) - clumpHalf(z)) : visibleHalf(z, reach),
       outer: (z) => visibleHalf(z, reach),
       // 密度を keepAt 倍にする — 同じ本数を 1 / keepAt 倍の幅に植えたときの密度に揃える。
       baseHalf: (z) => baseHalf(z) / keepAt(z),
@@ -1042,14 +1077,18 @@ export function mountField(root: HTMLElement, options: FieldOptions): FieldContr
     const nearBed = bed(NEAR_Z, CARPET_Z);
     const farBed = bed(CARPET_Z, FAR_Z);
     const nearPlan = planFlowers(nearBed, perDepth, Infinity);
-    const farPlan = planFlowers(farBed, perDepth, Math.max(0, FLOWER_COUNT * MAX_FLOWER_RATIO - nearPlan.count));
+    const farPlan = planFlowers(
+      farBed,
+      perDepth,
+      Math.max(0, FLOWER_COUNT * MAX_FLOWER_RATIO - nearPlan.count),
+    );
     flowerCount = nearPlan.count + farPlan.count;
     const offsets = new Float32Array(flowerCount * 3);
     const data = new Float32Array(flowerCount * 3);
     const spot = { x: 0, z: 0 };
     // シードを固定した乱数で植える — 同じ大きさの画面なら開くたびに同じ並びになり、前回の絵と入れ替えても動かない。
     const random = seededRandom(1);
-    for (let i = 0; i < flowerCount; ) {
+    for (let i = 0; i < flowerCount;) {
       const near = i < nearPlan.count;
       if (!placeFlower(near ? nearBed : farBed, near ? nearPlan : farPlan, random, spot)) continue;
       const { x, z } = spot;
@@ -1073,13 +1112,17 @@ export function mountField(root: HTMLElement, options: FieldOptions): FieldContr
     gl.bindVertexArray(flowerVao);
     // prettier-ignore
     attribute(gl, flowerProgram, 'aCorner', new Float32Array([-1, 0, 1, 0, -1, 1, 1, 1, -1, -1, 1, -1, -1, 1, 1, 1]), 2);
-    attribute(gl, flowerProgram, 'aPart', new Float32Array([0, 0, 0, 0, 1, 1, 1, 1]), 1);
+    attribute(gl, flowerProgram, "aPart", new Float32Array([0, 0, 0, 0, 1, 1, 1, 1]), 1);
     flowerBuffers = {
-      offsets: attribute(gl, flowerProgram, 'iOffset', offsets, 3, { divisor: 1 }),
-      data: attribute(gl, flowerProgram, 'iData', data, 3, { divisor: 1 }),
+      offsets: attribute(gl, flowerProgram, "iOffset", offsets, 3, { divisor: 1 }),
+      data: attribute(gl, flowerProgram, "iData", data, 3, { divisor: 1 }),
     };
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, gl.createBuffer());
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array([0, 1, 2, 2, 1, 3, 4, 5, 6, 6, 5, 7]), gl.STATIC_DRAW);
+    gl.bufferData(
+      gl.ELEMENT_ARRAY_BUFFER,
+      new Uint16Array([0, 1, 2, 2, 1, 3, 4, 5, 6, 6, 5, 7]),
+      gl.STATIC_DRAW,
+    );
     gl.bindVertexArray(null);
   };
 
@@ -1146,16 +1189,31 @@ export function mountField(root: HTMLElement, options: FieldOptions): FieldContr
       const mine = kept.filter((_, i) => i % mesh.parts.length === k);
       const vao = gl.createVertexArray()!;
       gl.bindVertexArray(vao);
-      intAttribute('aPos', positions, 3, gl.SHORT);
-      intAttribute('aNormal', normals, 3, gl.BYTE);
-      intAttribute('aUv', uvs, 2, gl.UNSIGNED_SHORT);
+      intAttribute("aPos", positions, 3, gl.SHORT);
+      intAttribute("aNormal", normals, 3, gl.BYTE);
+      intAttribute("aUv", uvs, 2, gl.UNSIGNED_SHORT);
       clumpInstanceBuffers.push(
-        attribute(gl, clumpProgram, 'iOffset', new Float32Array(mine.flatMap((c) => c.slice(0, 3))), 3, { divisor: 1 }),
-        attribute(gl, clumpProgram, 'iData', new Float32Array(mine.flatMap((c) => c.slice(3))), 3, { divisor: 1 }),
+        attribute(
+          gl,
+          clumpProgram,
+          "iOffset",
+          new Float32Array(mine.flatMap((c) => c.slice(0, 3))),
+          3,
+          { divisor: 1 },
+        ),
+        attribute(gl, clumpProgram, "iData", new Float32Array(mine.flatMap((c) => c.slice(3))), 3, {
+          divisor: 1,
+        }),
       );
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indices);
       gl.bindVertexArray(null);
-      clumpParts.push({ vao, count: mine.length, firstIndex: part.firstIndex, indexCount: part.indexCount, height: part.heightCm });
+      clumpParts.push({
+        vao,
+        count: mine.length,
+        firstIndex: part.firstIndex,
+        indexCount: part.indexCount,
+        height: part.heightCm,
+      });
     });
   };
 
@@ -1212,8 +1270,8 @@ export function mountField(root: HTMLElement, options: FieldOptions): FieldContr
     motePos.set([x, hill(x, z) + 0.3 + moteRandom() * 2.6, z], i * 3);
     moteSeed[i] = moteRandom();
   }
-  attribute(gl, moteProgram, 'aPos', motePos, 3);
-  attribute(gl, moteProgram, 'aSeed', moteSeed, 1);
+  attribute(gl, moteProgram, "aPos", motePos, 3);
+  attribute(gl, moteProgram, "aSeed", moteSeed, 1);
 
   /* 妖精の気配：尾を引く光 */
   const TRAIL = 12;
@@ -1233,10 +1291,10 @@ export function mountField(root: HTMLElement, options: FieldOptions): FieldContr
       wispSize[i] = j === 0 ? 210 : 120 * (1 - j / TRAIL) + 20;
     }
   }
-  const wispBuffer = attribute(gl, wispProgram, 'aPos', wispPos, 3, { usage: gl.DYNAMIC_DRAW });
-  attribute(gl, wispProgram, 'aSize', wispSize, 1);
-  attribute(gl, wispProgram, 'aIdx', wispIdx, 1);
-  attribute(gl, wispProgram, 'aFade', wispFade, 1);
+  const wispBuffer = attribute(gl, wispProgram, "aPos", wispPos, 3, { usage: gl.DYNAMIC_DRAW });
+  attribute(gl, wispProgram, "aSize", wispSize, 1);
+  attribute(gl, wispProgram, "aIdx", wispIdx, 1);
+  attribute(gl, wispProgram, "aFade", wispFade, 1);
   gl.bindVertexArray(null);
 
   /**
@@ -1370,11 +1428,12 @@ export function mountField(root: HTMLElement, options: FieldOptions): FieldContr
     const t = (POINTER_PLANE_Y - camera.eye[1]) / dir[1];
     return [camera.eye[0] + dir[0] * t, POINTER_PLANE_Y, camera.eye[2] + dir[2] * t];
   };
-  const onControl = (event: Event) => event.target instanceof Element && event.target.closest('a, button');
+  const onControl = (event: Event) =>
+    event.target instanceof Element && event.target.closest("a, button");
   // 止めている間はポインタに反応しない（風も波紋も視差も）。止めたら動かない、を守る。
   // 最初の1枚を描くまでは反応しない — 波紋や風が入ると、前回の絵として撮られてしまう。
   // 2本目の指は追わない。lastHit は1つなので、指どうしで取り合うと指の間の距離と向きを拾う。
-  root.addEventListener('pointermove', (event) => {
+  root.addEventListener("pointermove", (event) => {
     if (paused || firstFrame || !event.isPrimary) return;
     // リンクやボタンの上は、空と同じく畑の外として扱う。
     const hit = onControl(event) ? null : groundPoint(event);
@@ -1405,7 +1464,8 @@ export function mountField(root: HTMLElement, options: FieldOptions): FieldContr
       // 指先の動きそのものなので、そのままにする。
       // 残っている風は、いちばん弱いスロットへ移して出たところで凪がせる（どのスロットの風より弱ければ捨てる）。
       let weakest = 0;
-      for (let i = 1; i < FADE_SLOTS; i++) if (fade[i * 3 + 2]! < fade[weakest * 3 + 2]!) weakest = i;
+      for (let i = 1; i < FADE_SLOTS; i++)
+        if (fade[i * 3 + 2]! < fade[weakest * 3 + 2]!) weakest = i;
       if (mouseStrength > fade[weakest * 3 + 2]!) {
         fade.set([mouse[0], mouse[2], mouseStrength], weakest * 3);
         fadeDir.set(mouseDir, weakest * 2);
@@ -1418,7 +1478,7 @@ export function mountField(root: HTMLElement, options: FieldOptions): FieldContr
     lastY = event.clientY;
     mouseTarget.splice(0, 3, ...hit);
   });
-  root.addEventListener('pointerdown', (event) => {
+  root.addEventListener("pointerdown", (event) => {
     if (paused || firstFrame || !event.isPrimary || onControl(event)) return;
     const hit = groundPoint(event);
     if (!hit) return;
@@ -1426,16 +1486,19 @@ export function mountField(root: HTMLElement, options: FieldOptions): FieldContr
     // pointermove までの1区間を拾わない。タッチで確かめられていないので、変えずにおく。
     addRipple(ripples, { x: hit[0], z: hit[2], born: time, released: null });
   });
-  root.addEventListener('pointerleave', (event) => {
+  root.addEventListener("pointerleave", (event) => {
     // 2本目の指が離れても、1本目のなぞりは続ける。
     if (event.isPrimary) lastHit = null;
   });
 
   /* 状態の色を寄せていく途中の値 */
-  const initial = parseFieldState(root.dataset['state']);
+  const initial = parseFieldState(root.dataset["state"]);
   const current = {
     ...LOOKS[initial],
-    colors: Object.fromEntries(PARTS.map((p) => [p, [...palettes[initial][p]]])) as Record<Part, number[]>,
+    colors: Object.fromEntries(PARTS.map((p) => [p, [...palettes[initial][p]]])) as Record<
+      Part,
+      number[]
+    >,
   };
 
   /* ループ。画面の外と裏のタブ、止めている間は回さない（回しっぱなしにしない）。 */
@@ -1458,22 +1521,26 @@ export function mountField(root: HTMLElement, options: FieldOptions): FieldContr
 
   /** 状態の色が移りきったか。止めていても、移りきるまでは描く。 */
   const settled = (target: FieldState) =>
-    PARTS.every((part) => current.colors[part].every((c, i) => Math.abs(c - palettes[target][part][i]!) < 1e-3)) &&
-    (['live', 'ambient', 'motes', 'wisps'] as const).every((key) => Math.abs(current[key] - LOOKS[target][key]) < 1e-3);
+    PARTS.every((part) =>
+      current.colors[part].every((c, i) => Math.abs(c - palettes[target][part][i]!) < 1e-3),
+    ) &&
+    (["live", "ambient", "motes", "wisps"] as const).every(
+      (key) => Math.abs(current[key] - LOOKS[target][key]) < 1e-3,
+    );
 
   const setUniforms = (program: Program) => {
     gl.useProgram(program.program);
-    gl.uniformMatrix4fv(program.uniform('uView'), false, camera.view);
-    gl.uniformMatrix4fv(program.uniform('uProj'), false, proj);
-    gl.uniform1f(program.uniform('uFogNear'), FOG_NEAR);
-    gl.uniform1f(program.uniform('uFogFar'), FOG_FAR);
+    gl.uniformMatrix4fv(program.uniform("uView"), false, camera.view);
+    gl.uniformMatrix4fv(program.uniform("uProj"), false, proj);
+    gl.uniform1f(program.uniform("uFogNear"), FOG_NEAR);
+    gl.uniform1f(program.uniform("uFogFar"), FOG_FAR);
   };
 
   /** 花の仕上げ（PETAL_GLSL）の uniform。地面の遠くの色と、一枚絵の花と株で同じもの。 */
   const setPetalUniforms = (program: Program) => {
-    gl.uniform3fv(program.uniform('uGlow'), current.colors.glow);
-    gl.uniform1f(program.uniform('uLive'), current.live);
-    gl.uniform1f(program.uniform('uAmb'), current.ambient);
+    gl.uniform3fv(program.uniform("uGlow"), current.colors.glow);
+    gl.uniform1f(program.uniform("uLive"), current.live);
+    gl.uniform1f(program.uniform("uAmb"), current.ambient);
   };
 
   const frame = (now: number) => {
@@ -1501,12 +1568,14 @@ export function mountField(root: HTMLElement, options: FieldOptions): FieldContr
 
     const gust = reducedMotion ? { front: 0, strength: 0 } : openingGust(time);
 
-    const target = parseFieldState(root.dataset['state']);
+    const target = parseFieldState(root.dataset["state"]);
     for (const part of PARTS) {
       const to = palettes[target][part];
-      current.colors[part] = current.colors[part].map((c, i) => approach(c, to[i]!, dt, STATE_RATE));
+      current.colors[part] = current.colors[part].map((c, i) =>
+        approach(c, to[i]!, dt, STATE_RATE),
+      );
     }
-    for (const key of ['live', 'ambient', 'motes', 'wisps'] as const) {
+    for (const key of ["live", "ambient", "motes", "wisps"] as const) {
       current[key] = approach(current[key], LOOKS[target][key], dt, STATE_RATE);
     }
 
@@ -1562,9 +1631,9 @@ export function mountField(root: HTMLElement, options: FieldOptions): FieldContr
     gl.depthMask(true);
 
     setUniforms(groundProgram);
-    gl.uniform3fv(groundProgram.uniform('uGround'), ground);
-    gl.uniform3fv(groundProgram.uniform('uFog'), fog);
-    gl.uniform3fv(groundProgram.uniform('uPetal'), petal);
+    gl.uniform3fv(groundProgram.uniform("uGround"), ground);
+    gl.uniform3fv(groundProgram.uniform("uFog"), fog);
+    gl.uniform3fv(groundProgram.uniform("uPetal"), petal);
     setPetalUniforms(groundProgram);
     gl.bindVertexArray(groundVao);
     gl.drawElements(gl.TRIANGLES, groundIndexCount, gl.UNSIGNED_SHORT, 0);
@@ -1572,41 +1641,47 @@ export function mountField(root: HTMLElement, options: FieldOptions): FieldContr
     /** 風と花の色の uniform。一枚絵の花と株で同じもの。 */
     const setPlantUniforms = (program: Program) => {
       setUniforms(program);
-      gl.uniform1f(program.uniform('uTime'), time);
-      gl.uniform1f(program.uniform('uMotion'), reducedMotion ? 0.3 : 1);
-      gl.uniform1f(program.uniform('uGust'), gust.strength);
-      gl.uniform1f(program.uniform('uGustFront'), gust.front);
-      gl.uniform3fv(program.uniform('uMouse'), mouse);
-      gl.uniform1f(program.uniform('uMouseStr'), mouseStrength);
-      gl.uniform2fv(program.uniform('uMouseDir'), mouseDir);
-      gl.uniform3fv(program.uniform('uMouseFade'), fade);
-      gl.uniform2fv(program.uniform('uMouseFadeDir'), fadeDir);
-      gl.uniform4fv(program.uniform('uRipple'), rippleUniform);
-      gl.uniform3fv(program.uniform('uFairy'), fairy);
-      gl.uniform3fv(program.uniform('uFog'), fog);
+      gl.uniform1f(program.uniform("uTime"), time);
+      gl.uniform1f(program.uniform("uMotion"), reducedMotion ? 0.3 : 1);
+      gl.uniform1f(program.uniform("uGust"), gust.strength);
+      gl.uniform1f(program.uniform("uGustFront"), gust.front);
+      gl.uniform3fv(program.uniform("uMouse"), mouse);
+      gl.uniform1f(program.uniform("uMouseStr"), mouseStrength);
+      gl.uniform2fv(program.uniform("uMouseDir"), mouseDir);
+      gl.uniform3fv(program.uniform("uMouseFade"), fade);
+      gl.uniform2fv(program.uniform("uMouseFadeDir"), fadeDir);
+      gl.uniform4fv(program.uniform("uRipple"), rippleUniform);
+      gl.uniform3fv(program.uniform("uFairy"), fairy);
+      gl.uniform3fv(program.uniform("uFog"), fog);
       setPetalUniforms(program);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, flowerTex);
-      gl.uniform1i(program.uniform('uTex'), 0);
+      gl.uniform1i(program.uniform("uTex"), 0);
     };
 
     if (clumpParts.length) {
       setPlantUniforms(clumpProgram);
       // 位置は正規化済み（-1〜1）で届くので、cm へは倍率を掛けるだけ。
-      gl.uniform1f(clumpProgram.uniform('uPosScale'), clumpScale);
+      gl.uniform1f(clumpProgram.uniform("uPosScale"), clumpScale);
       gl.enable(gl.SAMPLE_ALPHA_TO_COVERAGE);
       for (const part of clumpParts) {
-        gl.uniform1f(clumpProgram.uniform('uHeight'), part.height);
+        gl.uniform1f(clumpProgram.uniform("uHeight"), part.height);
         gl.bindVertexArray(part.vao);
-        gl.drawElementsInstanced(gl.TRIANGLES, part.indexCount, gl.UNSIGNED_SHORT, part.firstIndex * 2, part.count);
+        gl.drawElementsInstanced(
+          gl.TRIANGLES,
+          part.indexCount,
+          gl.UNSIGNED_SHORT,
+          part.firstIndex * 2,
+          part.count,
+        );
       }
       gl.disable(gl.SAMPLE_ALPHA_TO_COVERAGE);
     }
 
     setPlantUniforms(flowerProgram);
-    gl.uniform3fv(flowerProgram.uniform('uStem'), stem);
-    gl.uniform1f(flowerProgram.uniform('uAtlas'), useAtlas ? 1 : 0);
-    gl.uniform4fv(flowerProgram.uniform('uRects'), ATLAS_FLOWERS);
+    gl.uniform3fv(flowerProgram.uniform("uStem"), stem);
+    gl.uniform1f(flowerProgram.uniform("uAtlas"), useAtlas ? 1 : 0);
+    gl.uniform4fv(flowerProgram.uniform("uRects"), ATLAS_FLOWERS);
     // frame() は植える前には描かないので、ここでは花の VAO が必ずある。
     gl.bindVertexArray(flowerVao!);
     gl.drawElementsInstanced(gl.TRIANGLES, 12, gl.UNSIGNED_SHORT, 0, flowerCount);
@@ -1617,23 +1692,23 @@ export function mountField(root: HTMLElement, options: FieldOptions): FieldContr
     gl.depthMask(false);
 
     setUniforms(moteProgram);
-    gl.uniform1f(moteProgram.uniform('uTime'), time);
-    gl.uniform1f(moteProgram.uniform('uMotion'), reducedMotion ? 0.3 : 1);
-    gl.uniform1f(moteProgram.uniform('uDensity'), current.motes);
-    gl.uniform1f(moteProgram.uniform('uPixel'), pixel);
-    gl.uniform3fv(moteProgram.uniform('uColor'), mote);
+    gl.uniform1f(moteProgram.uniform("uTime"), time);
+    gl.uniform1f(moteProgram.uniform("uMotion"), reducedMotion ? 0.3 : 1);
+    gl.uniform1f(moteProgram.uniform("uDensity"), current.motes);
+    gl.uniform1f(moteProgram.uniform("uPixel"), pixel);
+    gl.uniform3fv(moteProgram.uniform("uColor"), mote);
     gl.bindVertexArray(moteVao);
     gl.drawArrays(gl.POINTS, 0, MOTES);
 
     setUniforms(wispProgram);
-    gl.uniform1f(wispProgram.uniform('uPixel'), pixel);
-    gl.uniform1f(wispProgram.uniform('uCount'), current.wisps);
-    gl.uniform1f(wispProgram.uniform('uMaxPoint'), maxPoint);
+    gl.uniform1f(wispProgram.uniform("uPixel"), pixel);
+    gl.uniform1f(wispProgram.uniform("uCount"), current.wisps);
+    gl.uniform1f(wispProgram.uniform("uMaxPoint"), maxPoint);
     const lead = introDone
       ? 1
       : mix(GUIDE_LEAD, 1, smoothstep(0.6, 1, flight())) * smoothstep(0, GUIDE_GROW, flight());
-    gl.uniform1f(wispProgram.uniform('uLead'), lead);
-    gl.uniform3fv(wispProgram.uniform('uColor'), mote);
+    gl.uniform1f(wispProgram.uniform("uLead"), lead);
+    gl.uniform3fv(wispProgram.uniform("uColor"), mote);
     gl.bindVertexArray(wispVao);
     gl.bindBuffer(gl.ARRAY_BUFFER, wispBuffer);
     gl.bufferSubData(gl.ARRAY_BUFFER, 0, wispPos);
@@ -1664,13 +1739,13 @@ export function mountField(root: HTMLElement, options: FieldOptions): FieldContr
     frameId = requestAnimationFrame(frame);
   };
   // 止めている間に状態が変わったら、色を移すために描き直す。
-  new MutationObserver(resume).observe(root, { attributes: true, attributeFilter: ['data-state'] });
+  new MutationObserver(resume).observe(root, { attributes: true, attributeFilter: ["data-state"] });
   new IntersectionObserver(([entry]) => {
     visible = entry?.isIntersecting ?? false;
     resume();
   }).observe(root);
-  document.addEventListener('visibilitychange', resume);
-  canvas.addEventListener('webglcontextlost', (event) => {
+  document.addEventListener("visibilitychange", resume);
+  canvas.addEventListener("webglcontextlost", (event) => {
     if (lost) return;
     event.preventDefault();
     lost = true;
@@ -1688,7 +1763,7 @@ export function mountField(root: HTMLElement, options: FieldOptions): FieldContr
     resizeObserver.disconnect();
     options.onLost();
     // 上げた素材ごとコンテキストを手放す（lost を先に立てたので、下の webglcontextlost は何もしない）。
-    gl.getExtension('WEBGL_lose_context')?.loseContext();
+    gl.getExtension("WEBGL_lose_context")?.loseContext();
   };
   void linked
     .then(async (ok) => {

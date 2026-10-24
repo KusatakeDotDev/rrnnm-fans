@@ -14,21 +14,21 @@
  *   - あって、絵が変わった、名前の日付が前の日 → 書き出さずに止まる。OG_IMAGE の日付を今日にしてから回し直す
  * 書き出したら、OG_IMAGE.hash を書き換え、public/og/ の前の日付の画像を消す（どのページからも指されなくなる）。
  */
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-import sharp from 'sharp';
+import sharp from "sharp";
 
-import { LOGO_OUTLINED } from '../src/components/site-assets.ts';
-import { OG_IMAGE } from '../src/layouts/og-image.ts';
-import { composeOgImageSvg, ogImageHash, PNG_OPTIONS } from './og-image-svg.ts';
+import { LOGO_OUTLINED } from "../src/components/site-assets.ts";
+import { OG_IMAGE } from "../src/layouts/og-image.ts";
+import { composeOgImageSvg, ogImageHash, PNG_OPTIONS } from "./og-image-svg.ts";
 
-const ROOT = fileURLToPath(new URL('..', import.meta.url));
-const LOGO_PATH = path.join(ROOT, 'public', LOGO_OUTLINED);
-const TOKENS_PATH = path.join(ROOT, 'src/styles/tokens.css');
-const OG_IMAGE_TS = path.join(ROOT, 'src/layouts/og-image.ts');
-const OUT_PATH = path.join(ROOT, 'public', OG_IMAGE.path);
+const ROOT = fileURLToPath(new URL("..", import.meta.url));
+const LOGO_PATH = path.join(ROOT, "public", LOGO_OUTLINED);
+const TOKENS_PATH = path.join(ROOT, "src/styles/tokens.css");
+const OG_IMAGE_TS = path.join(ROOT, "src/layouts/og-image.ts");
+const OUT_PATH = path.join(ROOT, "public", OG_IMAGE.path);
 const OUT_DIR = path.dirname(OUT_PATH);
 
 function fail(reason) {
@@ -42,13 +42,13 @@ if (!nameMatch) fail(`OG_IMAGE.path（${OG_IMAGE.path}）が「名前.YYYYMMDD.p
 const [, stem, date] = nameMatch;
 
 const now = new Date();
-const today = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+const today = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
 
 let svg;
 try {
   svg = composeOgImageSvg({
-    tokensCss: readFileSync(TOKENS_PATH, 'utf8'),
-    logoSvg: readFileSync(LOGO_PATH, 'utf8'),
+    tokensCss: readFileSync(TOKENS_PATH, "utf8"),
+    logoSvg: readFileSync(LOGO_PATH, "utf8"),
   });
 } catch (error) {
   fail(error instanceof Error ? error.message : String(error));
@@ -56,9 +56,10 @@ try {
 const hash = ogImageHash(svg);
 
 // フィンガープリントを書き換える行（hash の1行）を、PNG を書く前に確かめる。後で見つからないと、PNG だけが新しくなる。
-const ogImageTs = readFileSync(OG_IMAGE_TS, 'utf8');
+const ogImageTs = readFileSync(OG_IMAGE_TS, "utf8");
 const hashLine = /^(\s*hash: ')[0-9a-f]*(',)$/m;
-if (!hashLine.test(ogImageTs)) fail(`${path.relative(ROOT, OG_IMAGE_TS)} に hash の行が見つからない`);
+if (!hashLine.test(ogImageTs))
+  fail(`${path.relative(ROOT, OG_IMAGE_TS)} に hash の行が見つからない`);
 
 const outRel = path.relative(ROOT, OUT_PATH);
 if (existsSync(OUT_PATH)) {
@@ -79,19 +80,24 @@ const { data: png, info } = await sharp(Buffer.from(svg))
   .png(PNG_OPTIONS)
   .toBuffer({ resolveWithObject: true });
 if (info.width !== OG_IMAGE.width || info.height !== OG_IMAGE.height) {
-  fail(`出力が ${info.width}×${info.height} になった（${OG_IMAGE.width}×${OG_IMAGE.height} を想定）`);
+  fail(
+    `出力が ${info.width}×${info.height} になった（${OG_IMAGE.width}×${OG_IMAGE.height} を想定）`,
+  );
 }
 
 mkdirSync(OUT_DIR, { recursive: true });
 writeFileSync(OUT_PATH, png);
-console.log(`${outRel}（${info.width}×${info.height}、${(png.length / 1024).toFixed(1)} KiB）を書いた`);
+console.log(
+  `${outRel}（${info.width}×${info.height}、${(png.length / 1024).toFixed(1)} KiB）を書いた`,
+);
 
 // フィンガープリントを書き換える。書き換えるのは hash の1行だけ。
 writeFileSync(OG_IMAGE_TS, ogImageTs.replace(hashLine, `$1${hash}$2`));
 
 // 前の日付の画像は、どのページからも指されなくなる。残すと公開物に死んだファイルが溜まる。
 // 消すのは同じ前置きで日付だけが違うものに限る。ほかの用途で置いた画像は消さない。
-const sameStem = (name) => name.startsWith(`${stem}.`) && /^\d{8}\.png$/.test(name.slice(stem.length + 1));
+const sameStem = (name) =>
+  name.startsWith(`${stem}.`) && /^\d{8}\.png$/.test(name.slice(stem.length + 1));
 for (const name of readdirSync(OUT_DIR)) {
   if (sameStem(name) && name !== path.basename(OUT_PATH)) {
     rmSync(path.join(OUT_DIR, name));

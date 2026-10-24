@@ -1,10 +1,12 @@
-import type { Meta, StoryObj } from '@storybook/react-vite';
+import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import Flower from '../src/components/Flower.tsx';
-import YouTubeThumbnail from '../src/components/YouTubeThumbnail.tsx';
-import { pad } from './shared/layout.ts';
+import Flower from "../src/components/Flower.tsx";
+import YouTubeThumbnail from "../src/components/YouTubeThumbnail.tsx";
+import { pad } from "./shared/layout.ts";
 
-const meta = { title: 'General/YouTubeThumbnail', component: YouTubeThumbnail } satisfies Meta<typeof YouTubeThumbnail>;
+const meta = { title: "General/YouTubeThumbnail", component: YouTubeThumbnail } satisfies Meta<
+  typeof YouTubeThumbnail
+>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
@@ -13,12 +15,12 @@ type Story = StoryObj<typeof meta>;
 // リンクはハンドル（@…）ではなくチャンネル ID の URL にする（ハンドルは本人が変えられる）。
 export const InLink: Story = {
   render: () => (
-    <div className="on-paper" style={{ padding: pad, maxWidth: '24rem' }}>
+    <div className="on-paper" style={{ padding: pad, maxWidth: "24rem" }}>
       <a
         href="https://www.youtube.com/channel/UCnbNzG6tecF6BAdhuv_Tipg"
         target="_blank"
         rel="noopener noreferrer"
-        style={{ display: 'block' }}
+        style={{ display: "block" }}
       >
         <YouTubeThumbnail>
           <Flower size="3rem" />

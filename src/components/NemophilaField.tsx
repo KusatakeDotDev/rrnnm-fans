@@ -29,21 +29,21 @@
  * 添え書き（夜はキャッチも）にぼかしたにじみを敷く
  * （ADR-0010「ヒーロー — 畑はそのまま、上に乗るものを組み直す」）。
  */
-import type { HTMLAttributes } from 'react';
+import type { HTMLAttributes } from "react";
 
-import type { FieldState } from '../lib/field';
-import { cx } from '../lib/cx';
+import type { FieldState } from "../lib/field";
+import { cx } from "../lib/cx";
 import {
   SMALL_SCREEN_PX,
   SNAPSHOT_GIVE_UP_MS,
   SNAPSHOT_IMAGE_ITEM,
   SNAPSHOT_KEY_ITEM,
   SNAPSHOT_READ_EVENT,
-} from './field-snapshot';
-import styles from './NemophilaField.module.css';
-import { OFFICIAL } from '../data/official';
+} from "./field-snapshot";
+import styles from "./NemophilaField.module.css";
+import { OFFICIAL } from "../data/official";
 
-interface NemophilaFieldProps extends Omit<HTMLAttributes<HTMLElement>, 'dangerouslySetInnerHTML'> {
+interface NemophilaFieldProps extends Omit<HTMLAttributes<HTMLElement>, "dangerouslySetInnerHTML"> {
   /** 見出しの下に添える短い文。 */
   lede: string;
   /** 畑の状態。既定はふだん。 */
@@ -149,7 +149,14 @@ export function NemophilaFieldWithSnapshot(props: NemophilaFieldProps) {
 }
 
 function renderField(
-  { lede, state = 'day', scheduleHref = '#schedule', className, children, ...rest }: NemophilaFieldProps,
+  {
+    lede,
+    state = "day",
+    scheduleHref = "#schedule",
+    className,
+    children,
+    ...rest
+  }: NemophilaFieldProps,
   snapshot: boolean,
 ) {
   return (
@@ -163,7 +170,7 @@ function renderField(
       <div className={styles.light} aria-hidden="true"></div>
       <div className={styles.stars} aria-hidden="true"></div>
 
-      <div className={cx(styles.copy, 'container')}>
+      <div className={cx(styles.copy, "container")}>
         {children}
         <p className={styles.lede}>{lede}</p>
       </div>
@@ -178,13 +185,25 @@ function renderField(
           <span className={styles.goLong}>スケジュールを</span>見る
         </span>
       </a>
-      <a className={styles.status} data-for="soon" href={OFFICIAL.youtube} target="_blank" rel="noopener noreferrer">
+      <a
+        className={styles.status}
+        data-for="soon"
+        href={OFFICIAL.youtube}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
         <span className={styles.dot} aria-hidden="true"></span>
         <b>まもなく配信</b>
         <span className={styles.go}>YouTube で待つ ↗</span>
         <span className="sr-only">（外部サイトを新しいタブで開く）</span>
       </a>
-      <a className={styles.status} data-for="live" href={OFFICIAL.youtube} target="_blank" rel="noopener noreferrer">
+      <a
+        className={styles.status}
+        data-for="live"
+        href={OFFICIAL.youtube}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
         <span className={styles.dot} aria-hidden="true"></span>
         <b>配信中</b>
         <span className={styles.go}>YouTube で見る ↗</span>
@@ -194,7 +213,13 @@ function renderField(
       {/* 5秒を超えて自動で動き続けるので、止める手段が要る（WCAG 2.2.2）。畑が描けたときだけ出す。
           止めるのは WebGL の畑（そよぎ・なぞったときの風・叩いたときの波紋）。帯はもともと動かない。
           aria-pressed が true のとき「止めている」。 */}
-      <button type="button" className={styles.pause} hidden aria-pressed="false" data-field-pause="">
+      <button
+        type="button"
+        className={styles.pause}
+        hidden
+        aria-pressed="false"
+        data-field-pause=""
+      >
         <svg className={styles.iconPause} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <path d="M7 5h3.5v14H7zm6.5 0H17v14h-3.5z" fill="currentColor"></path>
         </svg>

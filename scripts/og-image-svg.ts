@@ -19,10 +19,10 @@
  * - 色は src/styles/tokens.css の役割トークンから読む。色の literal はパレットの1箇所にしか置かない（Issue rurino-nemo-fansite#5）
  * - ご本人の画像は使わない（docs/CONCEPT.md §3）
  */
-import { createHash } from 'node:crypto';
+import { createHash } from "node:crypto";
 
-import { OG_IMAGE } from '../src/layouts/og-image.ts';
-import { parseCustomProperties, resolve, stripComments } from '../src/lib/tokens.ts';
+import { OG_IMAGE } from "../src/layouts/og-image.ts";
+import { parseCustomProperties, resolve, stripComments } from "../src/lib/tokens.ts";
 
 /**
  * サイトのカード（Card.module.css）とドット（global.css の body::before）を、この倍率で描く。
@@ -43,40 +43,52 @@ const CARD_PADDING_X = 58;
 const CARD_PADDING_Y = 50;
 
 /** tokens.css とロゴの SVG から、OG_IMAGE の大きさの絵を組む。読めない形なら投げる。 */
-export function composeOgImageSvg({ tokensCss, logoSvg }: { tokensCss: string; logoSvg: string }): string {
+export function composeOgImageSvg({
+  tokensCss,
+  logoSvg,
+}: {
+  tokensCss: string;
+  logoSvg: string;
+}): string {
   // parseCustomProperties は、セレクタも @media も見ずに後の値を採る。今の tokens.css は `:root` の
   // ブロック1つだけ。ダークの値（RRNNM-28）などで別のブロックが入ると、画像が黙ってその色で描かれる。
   // そうなったら、ライトの `:root` だけを読むようにここを直す。
   if (!/^\s*:root\s*\{[^{}]*\}\s*$/.test(stripComments(tokensCss))) {
-    throw new Error('tokens.css に :root 以外のブロックがある。ライトの値だけを読むように composeOgImageSvg を直す');
+    throw new Error(
+      "tokens.css に :root 以外のブロックがある。ライトの値だけを読むように composeOgImageSvg を直す",
+    );
   }
   const tokens = parseCustomProperties(tokensCss);
   const color = (name: string) => resolve(tokens, name);
-  const ground = color('--color-bg');
-  const surface = color('--color-surface');
-  const outline = color('--color-outline');
-  const decor = color('--color-decor');
+  const ground = color("--color-bg");
+  const surface = color("--color-surface");
+  const outline = color("--color-outline");
+  const decor = color("--color-decor");
   /** 長さのトークンを px で読む。rem はルート 16px で px にする（サイトの既定の文字の大きさ）。 */
   const length = (name: string) => {
     const value = resolve(tokens, name);
     const match = /^(\d*\.?\d+)(px|rem)$/.exec(value);
     if (!match) throw new Error(`${name} を長さとして読めない（${value}）`);
-    return Number(match[1]) * (match[2] === 'rem' ? 16 : 1);
+    return Number(match[1]) * (match[2] === "rem" ? 16 : 1);
   };
-  const BORDER = length('--border-card') * SCALE;
-  const OFFSET = length('--offset-card') * SCALE;
-  const RADIUS = length('--radius-card') * SCALE;
-  const DOT_GAP = length('--dot-gap') * SCALE;
+  const BORDER = length("--border-card") * SCALE;
+  const OFFSET = length("--offset-card") * SCALE;
+  const RADIUS = length("--radius-card") * SCALE;
+  const DOT_GAP = length("--dot-gap") * SCALE;
   // ドットは、ぼかし（--dot-radius から --dot-edge まで）の中ほどの半径の円で描く。
-  const DOT_RADIUS = ((length('--dot-radius') + length('--dot-edge')) / 2) * SCALE;
-  const DOT_OPACITY = Number(resolve(tokens, '--dot-opacity'));
+  const DOT_RADIUS = ((length("--dot-radius") + length("--dot-edge")) / 2) * SCALE;
+  const DOT_OPACITY = Number(resolve(tokens, "--dot-opacity"));
 
   const logoMatch = logoSvg.match(/<svg\b([^>]*)>([\s\S]*)<\/svg>/);
   const viewBox = logoMatch?.[1]?.match(/\sviewBox="([^"]+)"/)?.[1];
   // viewBox は空白でもカンマでも区切れる（SVG の仕様）。
-  const [, , vbWidth = NaN, vbHeight = NaN] = viewBox?.trim().split(/[\s,]+/).map(Number) ?? [];
+  const [, , vbWidth = NaN, vbHeight = NaN] =
+    viewBox
+      ?.trim()
+      .split(/[\s,]+/)
+      .map(Number) ?? [];
   if (!logoMatch || !viewBox || !(vbWidth > 0) || !(vbHeight > 0)) {
-    throw new Error('ロゴの <svg> と viewBox を読めなかった');
+    throw new Error("ロゴの <svg> と viewBox を読めなかった");
   }
   const logoHeight = Math.round((LOGO_WIDTH * vbHeight) / vbWidth);
 
@@ -88,7 +100,7 @@ export function composeOgImageSvg({ tokensCss, logoSvg }: { tokensCss: string; l
   const cardX = Math.round((width - cardWidth - OFFSET) / 2);
   const cardY = Math.round((height - cardHeight - OFFSET) / 2);
   if (cardX < 0 || cardY < 0) {
-    throw new Error('カードが画面からはみ出す。LOGO_WIDTH か余白を小さくする');
+    throw new Error("カードが画面からはみ出す。LOGO_WIDTH か余白を小さくする");
   }
 
   // SVG の線は形の縁をまたいで引かれる。枠が外形の内側に収まるよう、面を枠の半分だけ縮めて線を引く。
@@ -113,5 +125,9 @@ export const PNG_OPTIONS = { compressionLevel: 9, palette: true } as const;
 
 /** 絵のフィンガープリント。組んだ SVG と PNG_OPTIONS から取る。src/layouts/og-image.ts の `hash` と比べる。 */
 export function ogImageHash(svg: string): string {
-  return createHash('sha256').update(svg).update(JSON.stringify(PNG_OPTIONS)).digest('hex').slice(0, 16);
+  return createHash("sha256")
+    .update(svg)
+    .update(JSON.stringify(PNG_OPTIONS))
+    .digest("hex")
+    .slice(0, 16);
 }

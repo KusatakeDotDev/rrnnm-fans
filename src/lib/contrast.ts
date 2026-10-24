@@ -12,7 +12,7 @@ export const AA_NORMAL = 4.5;
 /** WCAG 2.x AA の下限（大字 = 18pt 以上、または太字 14pt 以上）。 */
 export const AA_LARGE = 3;
 
-export type TextSize = 'normal' | 'large';
+export type TextSize = "normal" | "large";
 
 const HEX6 = /^#[0-9a-fA-F]{6}$/;
 
@@ -53,6 +53,6 @@ export function contrastRatio(a: string, b: string): number {
 
 /** AA を満たすか。境界（比がちょうど 4.5 / 3）は満たす側に入れる。 */
 // Stryker disable next-line StringLiteral: 'large' 以外は同じ枝に入るので、既定の値を何に変えても結果が同じ
-export function meetsAA(ratio: number, size: TextSize = 'normal'): boolean {
-  return ratio >= (size === 'large' ? AA_LARGE : AA_NORMAL);
+export function meetsAA(ratio: number, size: TextSize = "normal"): boolean {
+  return ratio >= (size === "large" ? AA_LARGE : AA_NORMAL);
 }

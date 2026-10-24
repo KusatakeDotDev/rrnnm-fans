@@ -11,9 +11,12 @@
  * `size` 以外の属性（`className`・`id`・`data-*` など）は root の svg にそのまま渡す
  * （docs/adr/0011-react-components-for-design-sync.md「props の決まり」）。
  */
-import type { SVGAttributes } from 'react';
+import type { SVGAttributes } from "react";
 
-interface FlowerProps extends Omit<SVGAttributes<SVGSVGElement>, 'children' | 'dangerouslySetInnerHTML'> {
+interface FlowerProps extends Omit<
+  SVGAttributes<SVGSVGElement>,
+  "children" | "dangerouslySetInnerHTML"
+> {
   /** 一辺の長さ。CSS の長さで書く。 */
   size?: string;
 }
@@ -21,7 +24,7 @@ interface FlowerProps extends Omit<SVGAttributes<SVGSVGElement>, 'children' | 'd
 /** 花弁の回転角。5弁なので 360/5。 */
 const petals = [0, 72, 144, 216, 288];
 
-export default function Flower({ size = '1.5rem', style, ...rest }: FlowerProps) {
+export default function Flower({ size = "1.5rem", style, ...rest }: FlowerProps) {
   return (
     // 飾りなので読み上げない。aria-hidden・focusable は残りの属性の後ろに置いて上書きさせない。
     <svg

@@ -6,7 +6,7 @@
   "compatibility_date": "2026-09-06",
   // 純静的サイトなので "main" は置かない。Worker スクリプトは1行も書かない。
   "assets": {
-    "directory": "./dist"
+    "directory": "./dist",
   },
   // プレビューURL（`<エイリアスまたはバージョン>-<Worker名>.<subdomain>.workers.dev`）を有効にする。
   // main へのマージはここへ出る（→ docs/OPERATIONS.md §7）。書かないと wrangler は値を送らず、
@@ -26,5 +26,5 @@
   // 本番に Access を掛けるときは、プレビューと別に掛ける（自動では掛からない。今掛けているかは
   // → docs/OPERATIONS.md §7）。
   // CI のトークンには Zone > Workers Routes > Edit（rrnnm.fans）が要る（→ docs/OPERATIONS.md §7）。
-  "routes": [{ "pattern": "rrnnm.fans", "custom_domain": true }]
+  "routes": [{ "pattern": "rrnnm.fans", "custom_domain": true }],
 }

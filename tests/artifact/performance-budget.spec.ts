@@ -1,6 +1,6 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from "@playwright/test";
 
-import { builtPages, distFiles, fieldAssetBytes, routeAssets } from '../helpers/dist';
+import { builtPages, distFiles, fieldAssetBytes, routeAssets } from "../helpers/dist";
 
 /**
  * docs/DESIGN.md §6 性能予算 / docs/adr/0006-performance-budget.md
@@ -43,8 +43,8 @@ const BUDGET = {
  *     固定値を足しても実際の量にならない
  */
 const UNMEASURED_EXTERNAL: Record<string, string[]> = {
-  '/references/': ['https://platform.x.com/widgets.js'],
-  '/kusobaka-slot/': ['https://platform.x.com/widgets.js'],
+  "/references/": ["https://platform.x.com/widgets.js"],
+  "/kusobaka-slot/": ["https://platform.x.com/widgets.js"],
 };
 
 const pages = builtPages();
@@ -56,8 +56,8 @@ const kib = (bytes: number): string => `${(bytes / KiB).toFixed(1)} KiB`;
  * for ループは黙って回らないだけで CI は緑になる（→ ADR-0003 §5 の「検査するトークンが
  * 静かに減るだけ」と同じ事故）。
  */
-test('予算を掛けるページが1枚以上ある（予算の空振り防止）', () => {
-  expect(pages.length, 'ページが0枚。ビルドが壊れている').toBeGreaterThan(0);
+test("予算を掛けるページが1枚以上ある（予算の空振り防止）", () => {
+  expect(pages.length, "ページが0枚。ビルドが壊れている").toBeGreaterThan(0);
 });
 
 for (const { route, file } of pages) {
@@ -87,27 +87,32 @@ for (const { route, file } of pages) {
     const unmeasured = UNMEASURED_EXTERNAL[route] ?? [];
     expect(
       external.filter((ref) => !unmeasured.includes(ref)),
-      '別ホストの CSS・JS・webfont を読んでいて、初期転送量を測れない',
+      "別ホストの CSS・JS・webfont を読んでいて、初期転送量を測れない",
     ).toEqual([]);
 
     // webfont（チャンクと @font-face の CSS）は下の別の線で見る。
     const total = htmlGzip + cssGzip + jsGzip;
     const breakdown = `HTML ${kib(htmlGzip)} + CSS ${kib(cssGzip)} + JS ${kib(jsGzip)}`;
 
-    expect(total, `初期転送量 ${kib(total)} — ${breakdown}`).toBeLessThanOrEqual(BUDGET.routeTransfer);
+    expect(total, `初期転送量 ${kib(total)} — ${breakdown}`).toBeLessThanOrEqual(
+      BUDGET.routeTransfer,
+    );
   });
 
   test(`webfont の @font-face の CSS が ${kib(BUDGET.fontFaceCss)} 以内 — ${route}`, () => {
     const { webfont } = assets();
 
-    expect(webfont.cssGzip, `@font-face の CSS ${kib(webfont.cssGzip)}（gzip後）`).toBeLessThanOrEqual(BUDGET.fontFaceCss);
+    expect(
+      webfont.cssGzip,
+      `@font-face の CSS ${kib(webfont.cssGzip)}（gzip後）`,
+    ).toBeLessThanOrEqual(BUDGET.fontFaceCss);
   });
 
   test(`webfont の @font-face が描画を止める CSS に無い — ${route}`, () => {
     const { webfont } = assets();
 
     // src/styles/fonts.css をふつうに import すると、数百の面が描画を止める CSS に入り、初期転送量の線（webfont を除く）にも出ない。
-    expect(webfont.blockingFaces, '描画を止める CSS にある、url() で読む @font-face の数').toBe(0);
+    expect(webfont.blockingFaces, "描画を止める CSS にある、url() で読む @font-face の数").toBe(0);
   });
 
   test(`webfont が ${kib(BUDGET.routeWebfont)} 以内 — ${route}`, () => {
@@ -125,8 +130,8 @@ for (const { route, file } of pages) {
  * webfont は woff2 だけを出す。woff は astro.config.mjs の PostCSS が `@font-face` の src から外している。
  * 外れなくなっても、ブラウザは woff を取りに行かないので見た目にも上の線にも出ず、dist と `@font-face` の CSS だけが重くなる。
  */
-test('dist に woff を出さない', () => {
-  expect(distFiles().filter((f) => f.endsWith('.woff'))).toEqual([]);
+test("dist に woff を出さない", () => {
+  expect(distFiles().filter((f) => f.endsWith(".woff"))).toEqual([]);
 });
 
 /**
@@ -139,6 +144,6 @@ test('dist に woff を出さない', () => {
 test(`畑の素材が ${kib(BUDGET.fieldAssets)} 以内`, () => {
   const assets = fieldAssetBytes();
   const total = assets.reduce((sum, a) => sum + a.bytes, 0);
-  const breakdown = assets.map((a) => `${a.rel} ${kib(a.bytes)}`).join(' / ') || '(素材無し)';
+  const breakdown = assets.map((a) => `${a.rel} ${kib(a.bytes)}`).join(" / ") || "(素材無し)";
   expect(total, breakdown).toBeLessThanOrEqual(BUDGET.fieldAssets);
 });
