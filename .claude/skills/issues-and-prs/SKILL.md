@@ -1,3 +1,8 @@
+---
+name: issues-and-prs
+description: Linear の Issue や GitHub の PR を作るとき、Issue・PR の本文やコメント・レビューを書くときに使う。
+---
+
 # Issue と PR の書き方
 
 出どころ: rurino-nemo-fansite#78
