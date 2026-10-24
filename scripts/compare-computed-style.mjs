@@ -159,7 +159,7 @@ async function readJson(side, path) {
     return res.ok ? await res.json() : null;
   } catch (error) {
     // 比べる前に落ちると終了コードが 1 になり、「差がある」と見分けられない。
-    console.error(`${side.dir ?? side.base} の ${path} を読めなかった: ${error instanceof Error ? error.message : error}`);
+    console.error(`${side.dir ?? side.base} の ${path} を読めなかった: ${error instanceof Error ? error.message : String(error)}`);
     process.exit(2);
   }
 }
@@ -178,7 +178,7 @@ function sitePaths(dir) {
     }
   };
   walk(dir);
-  return out.sort();
+  return out.sort((x, y) => x.localeCompare(y));
 }
 
 // ---- ページの中で動かす ----
@@ -202,7 +202,10 @@ function inPage({ op, match, ignore, storybook, mark, index, props }) {
       } else animation.finish();
     }
   };
-  if (op === 'settle') return void settle();
+  if (op === 'settle') {
+    settle();
+    return undefined;
+  }
   if (op === 'unmark') {
     for (const el of document.querySelectorAll(`[${mark}]`)) el.removeAttribute(mark);
     return null;
@@ -508,7 +511,7 @@ async function readSide(browser, side, path, cond, kind) {
 
 // ---- 比べる ----
 
-const report = { standard: new Map(), custom: new Map(), only: new Map(), errors: [], skipped: [] };
+const report = { standard: new Map(), custom: new Map(), only: new Map(), errors: /** @type {string[]} */ ([]), skipped: /** @type {string[]} */ ([]) };
 
 function add(map, key, make) {
   if (!map.has(key)) map.set(key, make());
@@ -606,7 +609,7 @@ if (!paths) {
   for (const [side, mine, other] of [['A', inA, inB], ['B', inB, inA]]) {
     for (const path of mine) if (!other.includes(path)) add(report.only, JSON.stringify([path, '（このページ）', side]), () => []);
   }
-  paths = inA.filter((path) => inB.includes(path)).sort();
+  paths = inA.filter((path) => inB.includes(path)).sort((x, y) => x.localeCompare(y));
   if (!paths.length && !report.only.size) usage('比べるページ・story が1つも無い（ビルドの出力のディレクトリを渡しているか確かめる）');
 }
 if (kind === 'site') for (const path of paths) if (!path.startsWith('/')) usage(`サイトのパスは / で始める（Git Bash では MSYS_NO_PATHCONV=1 を付け、ディレクトリは C:/… の形で渡す）: ${path}`);
@@ -640,11 +643,11 @@ try {
           try {
             // 片方が先に失敗しても、もう片方のページを閉じ終えるまで待つ。待たずに次へ進むと、開いたページが --jobs を超えて溜まる。
             const [A, B] = await Promise.allSettled([readSide(browser, sideA, path, cond, kind), readSide(browser, sideB, path, cond, kind)]);
-            const failed = [['A', A], ['B', B]].filter(([, result]) => result.status === 'rejected');
-            if (failed.length) throw new Error(failed.map(([side, result]) => `${side}: ${result.reason instanceof Error ? result.reason.message.split('\n')[0] : result.reason}`).join(' / '));
+            const failed = Object.entries({ A, B }).filter(([, result]) => result.status === 'rejected');
+            if (failed.length) throw new Error(failed.map(([side, result]) => `${side}: ${result.reason instanceof Error ? result.reason.message.split('\n')[0] : String(result.reason)}`).join(' / '));
             compareSides(path, A.value, B.value, cond);
           } catch (error) {
-            report.errors.push(`${path} ${label(cond)}: ${error instanceof Error ? error.message.split('\n')[0] : error}`);
+            report.errors.push(`${path} ${label(cond)}: ${error instanceof Error ? error.message.split('\n')[0] : String(error)}`);
           }
           done++;
           if (done % 10 === 0) console.error(`  ${done} 通り（${Math.round((Date.now() - started) / 1000)} 秒）`);
