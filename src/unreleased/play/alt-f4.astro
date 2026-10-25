@@ -121,9 +121,8 @@ import fairy from './_alt-f4/fairy.webp';
   /** サムネイルを取り終えるまでは待ってもらい、終えたら始めるかを尋ねる。遊んだあとは、閉じた数を添えて尋ねる。 */
   function ask(): void {
     if (!ready) message.textContent = '広告をあつめています…';
-    // 昔の手伝いのキャラクターの、決まり文句をまねる。
-    else if (lastScore === null) message.textContent = '広告をとじようとしているようですね。ゲームをはじめますか？';
-    else message.textContent = `おわりです。${lastScore}枚とじました。もう一回やりますか？`;
+    else if (lastScore === null) message.textContent = 'はじめますか？';
+    else message.textContent = `記録: ${lastScore}\nもう一度遊びますか？`;
     options.hidden = !ready;
     openBalloon(true);
   }
@@ -523,8 +522,10 @@ import fairy from './_alt-f4/fairy.webp';
       content: '';
     }
 
+    /* 遊んだあとの言葉は、記録と問いを改行で分けて書く。 */
     .balloon p {
       margin: 0;
+      white-space: pre-line;
     }
 
     .options {
