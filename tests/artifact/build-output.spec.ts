@@ -254,10 +254,10 @@ test("外部スクリプトは許可したホストだけ", () => {
  * docs/adr/0014-x-embed-reference-materials.md の決定
  *
  * X の埋め込みは、推し活の資料のページ（/references/）で、ぴよ汰。様が自分で公開したポストに、Skeb のページ（/skeb/）で、
- * ご本人の納品のポストに（docs/adr/0022-x-embed-skeb-delivery-posts.md の決定）、クソバカスロット（/kusobaka-slot/）で、
+ * ご本人の納品のポストに（docs/adr/0022-x-embed-skeb-delivery-posts.md の決定）、クソバカスロット（/play/kusobaka-slot/）で、
  * 元ネタのご本人のポストに（docs/adr/0028-x-embed-kusobaka-slot.md の決定）だけ使う。
  * ページが持つのはポストへのリンク（`data-x-post` の中）だけで、埋め込みのコードは、ブラウザで X の oEmbed（publish.x.com）から
- * 取って差し込む（/references/ と /kusobaka-slot/ は src/components/XPost.astro、/skeb/ は src/unreleased/skeb.astro）。どの要素がどのポストを指すか（data-x-post・class・属性）と、X のホストから直に
+ * 取って差し込む（/references/ と /play/kusobaka-slot/ は src/components/XPost.astro、/skeb/ は src/unreleased/skeb.astro）。どの要素がどのポストを指すか（data-x-post・class・属性）と、X のホストから直に
  * 読むものは、ブラウザが文字参照と属性の書き方を解いた DOM で見るほうが確かなので、tests/conformance/routes.spec.ts が見る。
  * ここで見るのは、ビルド成果物でしか見えないもの。
  *   - widgets.js を読むページ。許すページは tests/helpers/x-embed.ts（この検査が防ぐ範囲も、そこに書いてある）。開いた時点で読む
@@ -408,7 +408,7 @@ test("公開ページにクライアントアイランド（astro-island）が�
  * だけ名前が残っていても通らず、文字列の中の `/*`（`'image/*'` など）をコメントと取り違えることもない。
  *
  * **マーカーは、ページに置いているスクリプト（PlaylistGrid.astro のラッパー、XPost.astro の oEmbed を差し込むもの、
- * src/pages/kusobaka-slot.astro のスロット）が
+ * src/pages/play/kusobaka-slot.astro のスロット）が
  * 属性セレクタで探すものを全部並べる。**
  * スクリプトにマーカーを足したら、ここにも足す。スクリプトが自分で付け外しするマーカー（`data-loading`）は、
  * コンポーネントの出力には出ないので入れない。

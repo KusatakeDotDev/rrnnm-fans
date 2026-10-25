@@ -1,0 +1,4 @@
+# ミニゲームを /play/<slug>/ の下に置くことにして、クソバカスロットを /kusobaka-slot/ から移した。
+# 前の URL は SNS などに貼られているので、移った先へ送る。書き方は Cloudflare のドキュメント（Workers > Static Assets > Redirects）。
+/kusobaka-slot/ /play/kusobaka-slot/ 301
+/kusobaka-slot /play/kusobaka-slot/ 301

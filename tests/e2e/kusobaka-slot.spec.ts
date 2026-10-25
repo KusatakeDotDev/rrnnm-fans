@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { CHEERS, MISSES, REACTIONS, SOUND_LEVEL, WORD } from "../../src/lib/kusobaka-slot";
 
 /**
- * src/pages/kusobaka-slot.astro。期限（既定は元ネタの日の日本時間の終わり）までは、どの順に押しても4本とも「クソバカ」で止まり、
+ * src/pages/play/kusobaka-slot.astro。期限（既定は元ネタの日の日本時間の終わり）までは、どの順に押しても4本とも「クソバカ」で止まり、
  * 押すたびに音が鳴り、もう1回回せる（連チャン）。期限を過ぎると目押しになり、日付を延ばすと、またかならずそろう。
  * 鳴らした音は、AudioBufferSourceNode の start・stop を音の名前で記録して見る。どのセリフを選ぶかは
  * tests/unit/kusobaka-slot.test.ts が見るので、ここでは乱数を 0 に留めて、選ぶセリフを決め打ちにする。
@@ -102,6 +102,19 @@ async function recordSounds(page: Page, slow?: { name: string; delay: number }):
   }, slow);
 }
 
+// 前の URL は SNS などに貼られているので、public/_redirects で移った先へ送る。ページは開かず、応答だけを見る。
+test("クソバカスロット — 前の URL（/kusobaka-slot/）は、/play/kusobaka-slot/ へ送る", async ({
+  request,
+}) => {
+  for (const from of ["/kusobaka-slot/", "/kusobaka-slot"]) {
+    const response = await request.get(from, { maxRedirects: 0 });
+    expect.soft(response.status(), from).toBe(301);
+    expect
+      .soft(new URL(response.headers()["location"] ?? "", "http://localhost").pathname, from)
+      .toBe("/play/kusobaka-slot/");
+  }
+});
+
 test("クソバカスロット — 期限までは、押すたびに音が鳴り、4本でクソバカがそろい、もう1回回せる", async ({
   page,
 }) => {
@@ -109,7 +122,7 @@ test("クソバカスロット — 期限までは、押すたびに音が鳴り
   // 時計は止めずに、日付だけを期限の2時間前に留める。リールは本物の時間で回す。
   await page.clock.setFixedTime(new Date("2026-10-18T22:00:00+09:00"));
   await page.emulateMedia({ reducedMotion: "no-preference" });
-  await page.goto("/kusobaka-slot/");
+  await page.goto("/play/kusobaka-slot/");
 
   const start = page.locator("[data-slot-start]");
   const stops = page.locator("[data-slot-stop]");
@@ -178,7 +191,7 @@ test("クソバカスロット — 期限を過ぎると目押しになり、日
   // リールの位置は時刻から決まるので、時計を止めて、押す時刻を決め打ちにする。
   await page.clock.install({ time: new Date("2026-10-19T00:00:00+09:00") });
   await page.emulateMedia({ reducedMotion: "no-preference" });
-  await page.goto("/kusobaka-slot/");
+  await page.goto("/play/kusobaka-slot/");
   await page.clock.pauseAt(new Date("2026-10-19T00:01:00+09:00"));
 
   const start = page.locator("[data-slot-start]");

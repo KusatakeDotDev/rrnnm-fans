@@ -10,7 +10,7 @@
  *   - /references/: ぴよ汰。様のポスト。docs/FACTS.md §2 で確かめたもの。足すときは、FACTS で確かめてからここに足す
  *   - /skeb/: ご本人の納品のポスト。投稿者が @rurino_nemo で、ポストが指す Skeb の作品が src/data/skeb.ts の作品と同じことを
  *     確かめたもの（docs/OPERATIONS.md「Skeb の作品リンク」）。足すときは、同じことを確かめてから skeb.ts とここに足す
- *   - /kusobaka-slot/: スロットの元ネタの、ご本人の 2026-10-18 のポスト。投稿者が @rurino_nemo であることを確かめたもの。
+ *   - /play/kusobaka-slot/: スロットの元ネタの、ご本人の 2026-10-18 のポスト。投稿者が @rurino_nemo であることを確かめたもの。
  *     このページはこのポストだけを埋め込む
  *
  * `load` は widgets.js を読む時: `open` はページを開いた時点（HTML の `<script src>`）、`click` はポストのリンクを押した時
@@ -42,7 +42,7 @@ export const X_EMBEDS: Readonly<
       "1772640668499820765",
     ],
   },
-  "/kusobaka-slot/": { load: "open", posts: ["2111763781324046562"] },
+  "/play/kusobaka-slot/": { load: "open", posts: ["2111763781324046562"] },
 };
 
 export const X_EMBED_PAGES = Object.keys(X_EMBEDS);

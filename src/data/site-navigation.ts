@@ -8,4 +8,4 @@ export const PAGE_LINKS: readonly SiteLink[] = [
 ];
 
 /** フッターから辿らせない、おふざけのページ（tests/conformance/routes.spec.ts がフッターの検査から外す）。サイトマップには載る。 */
-export const UNLINKED_ROUTES: readonly string[] = ["/kusobaka-slot/"];
+export const UNLINKED_ROUTES: readonly string[] = ["/play/kusobaka-slot/"];

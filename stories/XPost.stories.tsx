@@ -35,7 +35,7 @@ export const OnPaper: Story = {
   ),
 };
 
-// 青い地の上（/kusobaka-slot/）。引用に白い面を敷く。
+// 青い地の上（/play/kusobaka-slot/）。引用に白い面を敷く。
 export const OnGround: Story = {
   render: () => (
     <div className="on-ground" style={column}>
