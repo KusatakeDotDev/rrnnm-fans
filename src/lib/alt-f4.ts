@@ -5,6 +5,12 @@
  * `random` は `Math.random` と同じ契約（0 以上 1 未満を返す）の関数。テストで決め打ちできるよう注入にする。
  */
 
+/**
+ * 広告に出す動画の ID の一覧を返すパス。チャンネルのフィードはブラウザから読めないので、同じオリジンで中継する
+ * （ADR-0033 の決定）。本番とテストは Worker（worker/index.ts）、開発サーバーは src/integrations/alt-f4-videos.ts が返す。
+ */
+export const VIDEOS_PATH = "/play/alt-f4/videos.json";
+
 /** 1回の制限時間（ミリ秒）。 */
 export const ROUND_MS = 30_000;
 /** ふだんは、この間をおいて1枚ずつ出す（ミリ秒）。 */

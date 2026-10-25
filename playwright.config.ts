@@ -76,7 +76,9 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   webServer: {
-    command: `pnpm exec wrangler dev --port ${PORT} --ip 127.0.0.1 --assets ${process.env["TEST_DIST"] ?? "dist"}`,
+    // Worker（worker/index.ts）が中継する YouTube のフィードは、繋がらない先に替える。PR の検査を、外の状態に左右させないため
+    // （ADR-0003「外部取得は固定データの回帰検査と本番配布前の実データ検査に分ける」）。ゲームの E2E は、一覧を page.route で返す。
+    command: `pnpm exec wrangler dev --port ${PORT} --ip 127.0.0.1 --assets ${process.env["TEST_DIST"] ?? "dist"} --var YOUTUBE_FEED_URL:http://127.0.0.1:9/feed.xml`,
     url: BASE_URL,
     reuseExistingServer: false,
     // workerd の起動は速くない。CI の遅いランナーでも足りる幅を取る。
