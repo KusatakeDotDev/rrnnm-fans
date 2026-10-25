@@ -3,9 +3,12 @@
 // 広告の画像を瑠璃野ねもさんの動画・配信のサムネイルにしたもの。制限時間のうちに閉じた数を数える。
 // フッターには出さない（src/data/site-navigation.ts の UNLINKED_ROUTES）。
 // サムネイルは、その動画の視聴ページへのリンクの中にだけ出し、押すと視聴ページを別のウィンドウで開く（ADR-0033 の決定）。
+// スタートのボタンだけでは始め方が分かりにくかったので、昔のパソコンの手伝いのキャラクターのように、妖精が吹き出しで
+// 始めるかを尋ねる（RRNNM-112）。妖精の絵はいらすとやの素材（LICENSE の「第三者の素材」）。
 import { OFFICIAL } from '../../data/official';
 import Base from '../../layouts/Base.astro';
 import { ROUND_MS } from '../../lib/alt-f4';
+import fairy from './_alt-f4/fairy.webp';
 ---
 
 <Base title="広告をとじろ" description="次々に開く広告のウィンドウを、制限時間のうちに何枚とじられるかのミニゲームです。広告には瑠璃野ねもさんの動画のサムネイルが出ます。">
@@ -14,14 +17,23 @@ import { ROUND_MS } from '../../lib/alt-f4';
   </Fragment>
 
   <p class="how">
-    スタートを押すと、広告のウィンドウが次々に開きます。{ROUND_MS / 1000}秒のうちに、右上の × で何枚とじられるか。広告を押すと、その動画が開きます。
+    はじめると、広告のウィンドウが次々に開きます。{ROUND_MS / 1000}秒のうちに、右上の × で何枚とじられるか。広告を押すと、その動画が開きます。
   </p>
 
   <div class="desktop" data-altf4-desktop>
     <div class="popups" data-altf4-popups>
-      <div class="result" data-altf4-result hidden>
-        <p class="result-title">おわり</p>
-        <p><span class="tabular" data-altf4-result-count>0</span>枚とじました</p>
+      {/* 吹き出しの言葉は、サムネイルを取り終えたか・1回遊んだかで変わるので、スクリプトが書いて開く。 */}
+      <div class="assistant" data-altf4-assistant>
+        <div class="balloon" id="altf4-balloon" data-altf4-balloon hidden>
+          <p data-altf4-message></p>
+          <div class="options" data-altf4-options hidden>
+            <button type="button" data-altf4-yes>はい</button>
+            <button type="button" data-altf4-no>いいえ</button>
+          </div>
+        </div>
+        <button type="button" class="fairy" aria-label="妖精に話しかける" aria-controls="altf4-balloon" aria-expanded="false" data-altf4-fairy>
+          <img src={fairy.src} width={fairy.width / 2} height={fairy.height / 2} alt="" />
+        </button>
       </div>
     </div>
     <div class="taskbar">
@@ -82,8 +94,13 @@ import { ROUND_MS } from '../../lib/alt-f4';
 
   const desktop = document.querySelector<HTMLElement>('[data-altf4-desktop]')!;
   const layer = desktop.querySelector<HTMLElement>('[data-altf4-popups]')!;
-  const result = desktop.querySelector<HTMLElement>('[data-altf4-result]')!;
-  const resultCount = desktop.querySelector<HTMLElement>('[data-altf4-result-count]')!;
+  const assistant = layer.querySelector<HTMLElement>('[data-altf4-assistant]')!;
+  const balloon = assistant.querySelector<HTMLElement>('[data-altf4-balloon]')!;
+  const message = assistant.querySelector<HTMLElement>('[data-altf4-message]')!;
+  const options = assistant.querySelector<HTMLElement>('[data-altf4-options]')!;
+  const yesButton = assistant.querySelector<HTMLButtonElement>('[data-altf4-yes]')!;
+  const noButton = assistant.querySelector<HTMLButtonElement>('[data-altf4-no]')!;
+  const fairy = assistant.querySelector<HTMLButtonElement>('[data-altf4-fairy]')!;
   const startButton = desktop.querySelector<HTMLButtonElement>('[data-altf4-start]')!;
   const score = desktop.querySelector<HTMLElement>('[data-altf4-score]')!;
   const clock = desktop.querySelector<HTMLElement>('[data-altf4-clock]')!;
@@ -92,11 +109,34 @@ import { ROUND_MS } from '../../lib/alt-f4';
 
   let thumbnails: Thumbnail[] = [];
   let deck: Thumbnail[] = [];
+  let ready = false;
+  /** 前に遊んだときに閉じた数。まだ遊んでいなければ null。 */
+  let lastScore: number | null = null;
+
+  function openBalloon(open: boolean): void {
+    balloon.hidden = !open;
+    fairy.setAttribute('aria-expanded', String(open));
+  }
+
+  /** サムネイルを取り終えるまでは待ってもらい、終えたら始めるかを尋ねる。遊んだあとは、閉じた数を添えて尋ねる。 */
+  function ask(): void {
+    if (!ready) message.textContent = '広告をあつめています…';
+    // 昔の手伝いのキャラクターの、決まり文句をまねる。
+    else if (lastScore === null) message.textContent = '広告をとじようとしているようですね。ゲームをはじめますか？';
+    else message.textContent = `おわりです。${lastScore}枚とじました。もう一回やりますか？`;
+    options.hidden = !ready;
+    openBalloon(true);
+  }
+
+  ask();
   const loaded = loadThumbnails(shuffle(VIDEO_IDS, Math.random)).then((list) => {
     thumbnails = list;
   });
   void Promise.race([loaded, new Promise((resolve) => setTimeout(resolve, LOAD_WAIT_MS))]).then(() => {
+    ready = true;
     startButton.disabled = false;
+    // 待ってもらっていた吹き出しが開いたままなら、続けて尋ねる。閉じられていたら、開き直さない。
+    if (!balloon.hidden) ask();
   });
 
   /** 同じ広告が続けて出ないよう、全部を1回ずつ出してから混ぜ直す。 */
@@ -137,7 +177,8 @@ import { ROUND_MS } from '../../lib/alt-f4';
       caption.textContent = '瑠璃野ねもの YouTube チャンネル';
     }
     popup.style.visibility = 'hidden';
-    layer.insertBefore(popup, result);
+    // 妖精より下に重ねる。時間切れのあと、残ったウィンドウの上で尋ねるため。
+    layer.insertBefore(popup, assistant);
     const bounds = boundsOf(
       { width: layer.clientWidth, height: layer.clientHeight },
       { width: popup.offsetWidth, height: popup.offsetHeight },
@@ -179,9 +220,11 @@ import { ROUND_MS } from '../../lib/alt-f4';
   }
 
   function start(): void {
+    // キーボードで始めた人が、そのまま × へ進めるようにする（押したボタンは消えるか押せなくなる）。
+    const fromButton = document.activeElement === yesButton || document.activeElement === startButton;
     stopTimers();
     for (const popup of layer.querySelectorAll('[data-altf4-popup]')) popup.remove();
-    result.hidden = true;
+    assistant.hidden = true;
     closed = 0;
     score.textContent = '0';
     lastChainAt = null;
@@ -191,6 +234,7 @@ import { ROUND_MS } from '../../lib/alt-f4';
     startButton.disabled = true;
     status.textContent = 'スタート';
     spawnAnywhere();
+    if (fromButton) layer.querySelector<HTMLButtonElement>('[data-altf4-close]')?.focus({ preventScroll: true });
     timers.add(
       window.setInterval(() => {
         if (shouldChain(performance.now(), lastChainAt, chaining, Math.random)) startChain();
@@ -210,16 +254,28 @@ import { ROUND_MS } from '../../lib/alt-f4';
     stopTimers();
     playing = false;
     clock.textContent = formatClock(0);
-    resultCount.textContent = String(closed);
-    result.hidden = false;
     status.textContent = `おわり。${closed}枚とじました`;
     startButton.textContent = 'もう一回';
     startButton.disabled = false;
-    // 時間切れで × が効かなくなるので、ウィンドウの中にいたフォーカスを、もう一回のボタンへ移す。
-    if (layer.contains(document.activeElement)) startButton.focus();
+    // 時間切れで × が効かなくなるので、ウィンドウの中にいたフォーカスを、妖精の「はい」へ移す。
+    const focusWasInLayer = layer.contains(document.activeElement);
+    lastScore = closed;
+    assistant.hidden = false;
+    ask();
+    if (focusWasInLayer) yesButton.focus();
   }
 
   startButton.addEventListener('click', start);
+  yesButton.addEventListener('click', start);
+  noButton.addEventListener('click', () => {
+    openBalloon(false);
+    // 吹き出しごと消えるので、開き直せる妖精へ移す。
+    fairy.focus();
+  });
+  fairy.addEventListener('click', () => {
+    if (balloon.hidden) ask();
+    else openBalloon(false);
+  });
 
   desktop.addEventListener('click', (event) => {
     const target = event.target as Element;
@@ -242,7 +298,8 @@ import { ROUND_MS } from '../../lib/alt-f4';
       return;
     }
     // ウィンドウの外やタイトルバーを押してしまったら、もう1枚開く。
-    if (playing && !target.closest('.taskbar, [data-altf4-result]')) spawnAnywhere();
+    // 始めるボタン（タスクバー・妖精）を押したクリックは、始めた直後にここへ届くので数えない。
+    if (playing && !target.closest('.taskbar, [data-altf4-assistant]')) spawnAnywhere();
   });
 </script>
 
@@ -422,34 +479,115 @@ import { ROUND_MS } from '../../lib/alt-f4';
       text-decoration-line: underline;
     }
 
-    .result {
+    /* 昔の手伝いのキャラクターのように、右下に居て、上に吹き出しを出す。 */
+    .assistant {
       position: absolute;
-      inset: 0;
-      display: grid;
-      place-content: center;
-      gap: var(--space-2);
-      margin: auto;
-      width: min(16rem, 85%);
-      height: fit-content;
-      border: 1px solid #0a246a;
-      padding: var(--space-5);
-      background: #ece9d8;
-      color: #000;
-      text-align: center;
-      box-shadow: 2px 2px 8px rgb(0 0 0 / 35%);
+      right: var(--space-3);
+      bottom: var(--space-2);
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: var(--space-3);
+      max-width: calc(100% - 2 * var(--space-3));
     }
 
-    .result[hidden] {
+    .assistant[hidden],
+    .balloon[hidden],
+    .options[hidden] {
       display: none;
     }
 
-    .result p {
+    .balloon {
+      position: relative;
+      width: 17rem;
+      max-width: 100%;
+      border: 1px solid #000;
+      border-radius: 0.75rem;
+      padding: var(--space-3) var(--space-4);
+      background: #ffffe1;
+      color: #000;
+      box-shadow: 2px 2px 6px rgb(0 0 0 / 30%);
+    }
+
+    /* しっぽ。下の妖精のほうへ向ける。 */
+    .balloon::after {
+      position: absolute;
+      right: 2.5rem;
+      bottom: -0.45rem;
+      width: 0.8rem;
+      height: 0.8rem;
+      border-right: 1px solid #000;
+      border-bottom: 1px solid #000;
+      background: inherit;
+      transform: rotate(45deg);
+      content: '';
+    }
+
+    .balloon p {
       margin: 0;
     }
 
-    .result-title {
-      font-size: var(--text-h3);
-      font-weight: 700;
+    .options {
+      display: flex;
+      flex-direction: column;
+      margin: var(--space-1) 0 0;
+    }
+
+    /* 昔の吹き出しの、青い丸の付いた選択肢。 */
+    .options button {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      min-height: var(--tap-size);
+      padding: 0;
+      border: 0;
+      background: none;
+      color: #0033cc;
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .options button::before {
+      flex: none;
+      width: 0.6rem;
+      height: 0.6rem;
+      border-radius: 50%;
+      background: #2a6fd6;
+      content: '';
+    }
+
+    .options button:hover,
+    .options button:focus-visible {
+      text-decoration-line: underline;
+    }
+
+    .fairy {
+      width: clamp(4.5rem, 20vw, 6.5rem);
+      padding: 0;
+      border: 0;
+      background: none;
+      cursor: pointer;
+    }
+
+    /* 浮かせるのは絵だけにして、押せる範囲は動かさない。 */
+    .fairy img {
+      display: block;
+      width: 100%;
+      height: auto;
+      animation: altf4-float 3s ease-in-out infinite;
+    }
+
+    @keyframes altf4-float {
+      50% {
+        translate: 0 -0.4rem;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .fairy img {
+        animation: none;
+      }
     }
 
     /* 色は地の文字のまま。薄い色は、地の水玉の上で AA に届かない。 */

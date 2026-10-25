@@ -11,8 +11,9 @@ import { VIDEO_IDS } from "../../src/unreleased/play/_alt-f4/videos";
 import { builtRoutes } from "../helpers/dist";
 
 /**
- * src/unreleased/play/alt-f4.astro。スタートで広告のウィンドウが開き、× で閉じた数を数え、広告を押すと動画の視聴ページを
- * 小さな別のウィンドウで開き、ウィンドウの外を押すともう1枚開き、時間切れで結果を出して × が効かなくなる。
+ * src/unreleased/play/alt-f4.astro。妖精の吹き出しかタスクバーのスタートで始めると広告のウィンドウが開き、× で閉じた数を数え、
+ * 広告を押すと動画の視聴ページを小さな別のウィンドウで開き、ウィンドウの外を押すともう1枚開き、時間切れで妖精がもう一回やるかを
+ * 尋ねて × が効かなくなる。
  * 位置・連鎖・残り時間の計算は tests/unit/alt-f4.test.ts が見るので、ここでは乱数を 0 に留め、時計を進めて、つなぎを見る。
  */
 
@@ -60,13 +61,24 @@ test("広告のウィンドウを閉じて数え、時間切れで止まる", as
   const start = page.locator("[data-altf4-start]");
   const popups = page.locator("[data-altf4-popup]");
   const score = page.locator("[data-altf4-score]");
-  const result = page.locator("[data-altf4-result]");
+  const assistant = page.locator("[data-altf4-assistant]");
+  const balloon = page.locator("[data-altf4-balloon]");
+  const yes = page.locator("[data-altf4-yes]");
 
-  await expect(start).toBeEnabled();
-  await start.click();
+  await test.step("妖精が吹き出しで始めるかを尋ね、「いいえ」で閉じても、妖精を押せば尋ね直す", async () => {
+    await expect(yes).toBeVisible();
+    await expect(start).toBeEnabled();
+    await page.locator("[data-altf4-no]").click();
+    await expect(balloon).toBeHidden();
+    await page.locator("[data-altf4-fairy]").click();
+    await expect(yes).toBeVisible();
+  });
 
-  await test.step("スタートで1枚開き、広告は選んだ動画のどれかの視聴ページを指す", async () => {
+  await yes.click();
+
+  await test.step("妖精の「はい」で1枚開いて妖精は隠れ、広告は選んだ動画のどれかの視聴ページを指す", async () => {
     await expect(popups).toHaveCount(1);
+    await expect(assistant).toBeHidden();
     const ad = popups.locator("[data-altf4-ad]");
     const href = await ad.getAttribute("href");
     expect(VIDEO_IDS.map(watchUrl)).toContain(href);
@@ -101,21 +113,20 @@ test("広告のウィンドウを閉じて数え、時間切れで止まる", as
     await expect(popups).toHaveCount(1 + CHAIN_COUNT);
   });
 
-  await test.step("時間切れで結果を出し、× が効かなくなる", async () => {
+  await test.step("時間切れで妖精がもう一回やるかを尋ね、× が効かなくなる", async () => {
     await page.clock.runFor(ROUND_MS);
-    await expect(result).toBeVisible();
-    await expect(result.locator("[data-altf4-result-count]")).toHaveText("1");
+    await expect(yes).toBeVisible();
     const count = await popups.count();
-    // 結果の枠が上に重なって押せないことがあるので、× に直接押したことにする。
+    // 妖精の吹き出しが上に重なって押せないことがあるので、× に直接押したことにする。
     await popups.last().locator("[data-altf4-close]").dispatchEvent("click");
     await expect(popups).toHaveCount(count);
     await expect(score).toHaveText("1");
     await expect(start).toBeEnabled();
   });
 
-  await test.step("もう一回で、ウィンドウと数を戻して始め直す", async () => {
+  await test.step("タスクバーのスタートからも、ウィンドウと数を戻して始め直せる", async () => {
     await start.click();
-    await expect(result).toBeHidden();
+    await expect(assistant).toBeHidden();
     await expect(popups).toHaveCount(1);
     await expect(score).toHaveText("0");
   });
