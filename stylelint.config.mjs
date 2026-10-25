@@ -255,7 +255,8 @@ export default {
       rules: { "rrnnm/layer-by-path": layerBy({ layers: ["components"] }) },
     },
     {
-      files: ["src/pages/**/*.astro", "src/unreleased/*.astro"],
+      // src/unreleased/ でルートになるのは、`_` で始まるディレクトリの外の .astro（ADR-0018）。
+      files: ["src/pages/**/*.astro", "src/unreleased/*.astro", "src/unreleased/!(_*)/**/*.astro"],
       rules: {
         "rrnnm/layer-by-path": layerBy({ layers: ["pages"] }),
         "rrnnm/page-global-selector": true,

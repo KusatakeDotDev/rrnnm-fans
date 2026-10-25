@@ -1,0 +1,461 @@
+---
+// 広告のウィンドウを閉じるミニゲーム。昔のパソコンで、広告のウィンドウが次々に開いて止まらなくなったときの見た目を借り、
+// 広告の画像を瑠璃野ねもさんの動画・配信のサムネイルにしたもの。制限時間のうちに閉じた数を数える。
+// フッターには出さない（src/data/site-navigation.ts の UNLINKED_ROUTES）。
+// サムネイルは、その動画の視聴ページへのリンクの中にだけ出し、押すと視聴ページを別のウィンドウで開く（ADR-0033 の決定）。
+import { OFFICIAL } from '../../data/official';
+import Base from '../../layouts/Base.astro';
+import { ROUND_MS } from '../../lib/alt-f4';
+---
+
+<Base title="広告をとじろ" description="次々に開く広告のウィンドウを、制限時間のうちに何枚とじられるかのミニゲームです。広告には瑠璃野ねもさんの動画のサムネイルが出ます。">
+  <Fragment slot="head">
+    <h1>広告をとじろ</h1>
+  </Fragment>
+
+  <p class="how">
+    スタートを押すと、広告のウィンドウが次々に開きます。{ROUND_MS / 1000}秒のうちに、右上の × で何枚とじられるか。広告を押すと、その動画が開きます。
+  </p>
+
+  <div class="desktop" data-altf4-desktop>
+    <div class="popups" data-altf4-popups>
+      <div class="result" data-altf4-result hidden>
+        <p class="result-title">おわり</p>
+        <p><span class="tabular" data-altf4-result-count>0</span>枚とじました</p>
+      </div>
+    </div>
+    <div class="taskbar">
+      {/* サムネイルを取り終えるまで押せない形で出す（スクリプトが disabled を外す）。 */}
+      <button type="button" class="start" data-altf4-start disabled>スタート</button>
+      <p class="score">とじた <span class="tabular" data-altf4-score>0</span></p>
+      <p class="clock tabular" data-altf4-clock>0:{String(ROUND_MS / 1000).padStart(2, '0')}</p>
+    </div>
+  </div>
+  <p class="sr-only" role="status" data-altf4-status></p>
+
+  <p class="credit">
+    出典：YouTube <a href={OFFICIAL.youtube} target="_blank" rel="noopener noreferrer">瑠璃野ねも<span class="sr-only">（YouTube チャンネル。外部サイトを新しいタブで開く）</span></a>
+  </p>
+
+  <template data-altf4-popup-template>
+    <div class="popup" data-altf4-popup>
+      <div class="titlebar">
+        <span class="titlebar-text">瑠璃野ねも - YouTube</span>
+        <button type="button" class="close" aria-label="閉じる" data-altf4-close>
+          <svg viewBox="0 0 10 10" aria-hidden="true" focusable="false"><path d="M2 2l6 6M8 2l-6 6" /></svg>
+        </button>
+      </div>
+      {/* 行き先は、スクリプトが動画の視聴ページに差し替える。サムネイルが1枚も取れなかったときは、チャンネルのまま出す。 */}
+      <a class="ad" href={OFFICIAL.youtube} target="_blank" rel="noopener noreferrer" data-altf4-ad>
+        <span class="frame"><img alt="" referrerpolicy="no-referrer" decoding="async" data-altf4-image /></span>
+        <span class="caption" data-altf4-caption></span>
+        <span class="sr-only">（外部サイトを新しいタブで開く）</span>
+      </a>
+    </div>
+  </template>
+</Base>
+
+<script>
+  import {
+    boundsOf,
+    CHAIN_COUNT,
+    CHAIN_INTERVAL_MS,
+    CHAIN_START_DIRECTION,
+    CHAIN_START_MARGIN,
+    chainStep,
+    randomPosition,
+    remainingSeconds,
+    ROUND_MS,
+    shouldChain,
+    SPAWN_INTERVAL_MS,
+    type Direction,
+    type Point,
+  } from '../../lib/alt-f4';
+  import { shuffle } from '../../lib/shuffle';
+  import { loadThumbnails, type Thumbnail } from './_alt-f4/thumbnails';
+  import { VIDEO_IDS } from './_alt-f4/videos';
+
+  /** サムネイルを取り終えるのを待つ上限（ミリ秒）。過ぎたら、取れた分だけで始められるようにする。 */
+  const LOAD_WAIT_MS = 5_000;
+  /** 残り時間の表示を書き換える間（ミリ秒）。 */
+  const CLOCK_INTERVAL_MS = 100;
+
+  const desktop = document.querySelector<HTMLElement>('[data-altf4-desktop]')!;
+  const layer = desktop.querySelector<HTMLElement>('[data-altf4-popups]')!;
+  const result = desktop.querySelector<HTMLElement>('[data-altf4-result]')!;
+  const resultCount = desktop.querySelector<HTMLElement>('[data-altf4-result-count]')!;
+  const startButton = desktop.querySelector<HTMLButtonElement>('[data-altf4-start]')!;
+  const score = desktop.querySelector<HTMLElement>('[data-altf4-score]')!;
+  const clock = desktop.querySelector<HTMLElement>('[data-altf4-clock]')!;
+  const status = document.querySelector<HTMLElement>('[data-altf4-status]')!;
+  const template = document.querySelector<HTMLTemplateElement>('[data-altf4-popup-template]')!;
+
+  let thumbnails: Thumbnail[] = [];
+  let deck: Thumbnail[] = [];
+  const loaded = loadThumbnails(shuffle(VIDEO_IDS, Math.random)).then((list) => {
+    thumbnails = list;
+  });
+  void Promise.race([loaded, new Promise((resolve) => setTimeout(resolve, LOAD_WAIT_MS))]).then(() => {
+    startButton.disabled = false;
+  });
+
+  /** 同じ広告が続けて出ないよう、全部を1回ずつ出してから混ぜ直す。 */
+  function nextThumbnail(): Thumbnail | undefined {
+    if (deck.length === 0) deck = shuffle(thumbnails, Math.random);
+    return deck.pop();
+  }
+
+  let playing = false;
+  let startedAt = 0;
+  let closed = 0;
+  let lastChainAt: number | null = null;
+  let chaining = false;
+  const timers = new Set<number>();
+
+  function stopTimers(): void {
+    for (const id of timers) clearInterval(id);
+    timers.clear();
+  }
+
+  function formatClock(seconds: number): string {
+    return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+  }
+
+  /** ウィンドウを1枚作って、デスクトップに置く。置く位置は、置いたウィンドウの大きさから決める。 */
+  function spawn(positionFor: (bounds: ReturnType<typeof boundsOf>) => Point): void {
+    const popup = (template.content.firstElementChild as HTMLElement).cloneNode(true) as HTMLElement;
+    const ad = popup.querySelector<HTMLAnchorElement>('[data-altf4-ad]')!;
+    const image = popup.querySelector<HTMLImageElement>('[data-altf4-image]')!;
+    const caption = popup.querySelector<HTMLElement>('[data-altf4-caption]')!;
+    const thumbnail = nextThumbnail();
+    if (thumbnail) {
+      ad.href = thumbnail.href;
+      image.src = thumbnail.image;
+      caption.textContent = thumbnail.title;
+    } else {
+      image.remove();
+      caption.textContent = '瑠璃野ねもの YouTube チャンネル';
+    }
+    popup.style.visibility = 'hidden';
+    layer.insertBefore(popup, result);
+    const bounds = boundsOf(
+      { width: layer.clientWidth, height: layer.clientHeight },
+      { width: popup.offsetWidth, height: popup.offsetHeight },
+    );
+    const { x, y } = positionFor(bounds);
+    popup.style.left = `${x}px`;
+    popup.style.top = `${y}px`;
+    popup.style.visibility = '';
+  }
+
+  function spawnAnywhere(): void {
+    spawn((bounds) => randomPosition(bounds, Math.random));
+  }
+
+  /** 連鎖。1枚めは内側のどこかに置き、そこから斜めにずらしながら続けて開き、端で跳ね返す。 */
+  function startChain(): void {
+    chaining = true;
+    lastChainAt = performance.now();
+    let opened = 0;
+    let position: Point = { x: 0, y: 0 };
+    let direction: Direction = CHAIN_START_DIRECTION;
+    const id = window.setInterval(() => {
+      spawn((bounds) => {
+        if (opened === 0) {
+          position = randomPosition(bounds, Math.random, CHAIN_START_MARGIN);
+        } else {
+          ({ position, direction } = chainStep(position, direction, bounds));
+        }
+        return position;
+      });
+      opened++;
+      if (opened >= CHAIN_COUNT) {
+        clearInterval(id);
+        timers.delete(id);
+        chaining = false;
+      }
+    }, CHAIN_INTERVAL_MS);
+    timers.add(id);
+  }
+
+  function start(): void {
+    stopTimers();
+    for (const popup of layer.querySelectorAll('[data-altf4-popup]')) popup.remove();
+    result.hidden = true;
+    closed = 0;
+    score.textContent = '0';
+    lastChainAt = null;
+    chaining = false;
+    playing = true;
+    startedAt = performance.now();
+    startButton.disabled = true;
+    status.textContent = 'スタート';
+    spawnAnywhere();
+    timers.add(
+      window.setInterval(() => {
+        if (shouldChain(performance.now(), lastChainAt, chaining, Math.random)) startChain();
+        else spawnAnywhere();
+      }, SPAWN_INTERVAL_MS),
+    );
+    timers.add(
+      window.setInterval(() => {
+        const elapsed = performance.now() - startedAt;
+        clock.textContent = formatClock(remainingSeconds(elapsed));
+        if (elapsed >= ROUND_MS) finish();
+      }, CLOCK_INTERVAL_MS),
+    );
+  }
+
+  function finish(): void {
+    stopTimers();
+    playing = false;
+    clock.textContent = formatClock(0);
+    resultCount.textContent = String(closed);
+    result.hidden = false;
+    status.textContent = `おわり。${closed}枚とじました`;
+    startButton.textContent = 'もう一回';
+    startButton.disabled = false;
+    // 時間切れで × が効かなくなるので、ウィンドウの中にいたフォーカスを、もう一回のボタンへ移す。
+    if (layer.contains(document.activeElement)) startButton.focus();
+  }
+
+  startButton.addEventListener('click', start);
+
+  desktop.addEventListener('click', (event) => {
+    const target = event.target as Element;
+    const close = target.closest<HTMLButtonElement>('[data-altf4-close]');
+    if (close) {
+      if (!playing) return;
+      const hadFocus = document.activeElement === close;
+      close.closest('[data-altf4-popup]')!.remove();
+      closed++;
+      score.textContent = String(closed);
+      // キーボードで遊ぶ人が続けて閉じられるよう、いちばん上（最後に開いた）のウィンドウの × へ移る。
+      if (hadFocus) [...layer.querySelectorAll<HTMLButtonElement>('[data-altf4-close]')].at(-1)?.focus();
+      return;
+    }
+    const ad = target.closest<HTMLAnchorElement>('[data-altf4-ad]');
+    if (ad) {
+      // 本物の広告のように、小さな別のウィンドウで開く（スマートフォンでは新しいタブになる）。
+      event.preventDefault();
+      window.open(ad.href, '_blank', 'popup,noopener,noreferrer');
+      return;
+    }
+    // ウィンドウの外やタイトルバーを押してしまったら、もう1枚開く。
+    if (playing && !target.closest('.taskbar, [data-altf4-result]')) spawnAnywhere();
+  });
+</script>
+
+<style>
+  @layer pages {
+    h1 {
+      margin: 0;
+    }
+
+    .how {
+      margin: var(--space-8) 0 0;
+    }
+
+    .desktop {
+      display: flex;
+      flex-direction: column;
+      height: clamp(26rem, 70vh, 40rem);
+      margin: var(--space-6) 0 0;
+      border: var(--border-card) solid var(--color-outline);
+      border-radius: var(--radius-card);
+      overflow: hidden;
+      background: linear-gradient(to bottom, #3a7bd5 0%, #8cc0f2 62%, #6fae4a 62%, #4e8f33 100%);
+      box-shadow: var(--offset-card) var(--offset-card) 0 var(--color-outline);
+      /* 続けて押すと字が選ばれ、すばやく2回押すと拡大されてしまうため。Safari は接頭辞付きしか読まない。 */
+      -webkit-user-select: none;
+      /* stylelint-disable-next-line plugin/use-baseline -- Safari は上の接頭辞付きを読み、ほかのブラウザがこれを読む */
+      user-select: none;
+      touch-action: manipulation;
+    }
+
+    .popups {
+      position: relative;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .taskbar {
+      display: flex;
+      align-items: stretch;
+      gap: var(--space-2);
+      min-height: var(--tap-size);
+      background: linear-gradient(to bottom, #3168d5 0%, #2457c4 10%, #1f4fb5 90%, #173e93 100%);
+      color: #fff;
+    }
+
+    .taskbar p {
+      display: flex;
+      align-items: center;
+      margin: 0;
+      padding: 0 var(--space-3);
+    }
+
+    .start {
+      padding: 0 var(--space-5) 0 var(--space-4);
+      border: 0;
+      border-radius: 0 0.75rem 0.75rem 0;
+      background: linear-gradient(to bottom, #2e7d32 0%, #276b2a 50%, #1f5a22 100%);
+      color: #fff;
+      font: inherit;
+      font-weight: 700;
+      font-style: italic;
+      cursor: pointer;
+    }
+
+    .start:disabled {
+      background: #5a7d5a;
+      cursor: default;
+    }
+
+    .score {
+      flex: 1;
+    }
+
+    .clock {
+      border-left: 1px solid #0b2f75;
+      background: linear-gradient(to bottom, #0b6fc4 0%, #095aa0 100%);
+    }
+
+    .popup {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      width: min(18rem, 85%);
+      border: 1px solid #0a246a;
+      border-radius: 0.5rem 0.5rem 0 0;
+      overflow: hidden;
+      background: #ece9d8;
+      box-shadow: 2px 2px 8px rgb(0 0 0 / 35%);
+    }
+
+    .titlebar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-2);
+      padding: var(--space-1) var(--space-1) var(--space-1) var(--space-2);
+      background: linear-gradient(to bottom, #2a6fd6 0%, #1c5bbf 40%, #13489f 100%);
+      color: #fff;
+      font-size: var(--text-small);
+      font-weight: 700;
+    }
+
+    .titlebar-text {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .close {
+      display: grid;
+      flex: none;
+      place-items: center;
+      width: 1.75rem;
+      height: 1.5rem;
+      padding: 0;
+      border: 1px solid #fff;
+      border-radius: 0.25rem;
+      background: linear-gradient(to bottom, #d6492b 0%, #c23a1f 50%, #a82a15 100%);
+      color: #fff;
+      cursor: pointer;
+    }
+
+    .close svg {
+      width: 0.75rem;
+      height: 0.75rem;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+    }
+
+    .ad {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+      padding: var(--space-2);
+      color: #000;
+      text-decoration-line: none;
+    }
+
+    .frame {
+      position: relative;
+      display: grid;
+      place-items: center;
+      aspect-ratio: 16 / 9;
+      overflow: hidden;
+      background: #1c5bbf;
+      color: #fff;
+      font-weight: 700;
+    }
+
+    /* 画像が無い（1枚も取れなかった）ときの広告の中身。 */
+    .frame:empty::before {
+      content: 'AD';
+    }
+
+    /* oEmbed のサムネイル（hqdefault）は 4:3 で、16:9 の動画なら上下に黒い帯が付く。枠に重ねて、帯を切り落とす。
+       枠の中に流すと、画像の高さ（4:3）が枠の 16:9 より優先されて、帯ごと出る。 */
+    .frame img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* 長い題名は2行で切る。 */
+    .caption {
+      max-height: calc(2 * 1.4em);
+      overflow: hidden;
+      font-size: var(--text-small);
+      line-height: 1.4;
+    }
+
+    .ad:hover .caption,
+    .ad:focus-visible .caption {
+      text-decoration-line: underline;
+    }
+
+    .result {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-content: center;
+      gap: var(--space-2);
+      margin: auto;
+      width: min(16rem, 85%);
+      height: fit-content;
+      border: 1px solid #0a246a;
+      padding: var(--space-5);
+      background: #ece9d8;
+      color: #000;
+      text-align: center;
+      box-shadow: 2px 2px 8px rgb(0 0 0 / 35%);
+    }
+
+    .result[hidden] {
+      display: none;
+    }
+
+    .result p {
+      margin: 0;
+    }
+
+    .result-title {
+      font-size: var(--text-h3);
+      font-weight: 700;
+    }
+
+    /* 色は地の文字のまま。薄い色は、地の水玉の上で AA に届かない。 */
+    .credit {
+      margin: var(--space-4) 0 0;
+      font-size: var(--text-small);
+    }
+  }
+</style>
