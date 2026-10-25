@@ -1,10 +1,11 @@
 /**
  * 広告のウィンドウに出すサムネイルを、ブラウザで取る（src/unreleased/play/alt-f4.astro）。
- * 取り方は再生リストのタイルと同じで、oEmbed の `thumbnail_url` をそのまま使い、`https://i.ytimg.com` の画像だけを受け入れる
- * （ADR-0033 の決定。ADR-0008「名前と表紙は、ブラウザで取る」と同じ形）。サムネイルの出どころを変えるときは、このファイルだけを替える。
+ * 動画は、Worker が中継するチャンネルのフィードの最新のもの。サムネイルの取り方は再生リストのタイルと同じで、oEmbed の
+ * `thumbnail_url` をそのまま使い、`https://i.ytimg.com` の画像だけを受け入れる（ADR-0033 の決定。ADR-0008「名前と表紙は、
+ * ブラウザで取る」と同じ形）。サムネイルの出どころを変えるときは、このファイルだけを替える。
  */
 import { isOEmbed, isYouTubeThumbnail, oembedUrl } from "../../../lib/youtube";
-import { watchUrl } from "../../../lib/alt-f4";
+import { VIDEOS_PATH, watchUrl } from "../../../lib/alt-f4";
 
 export interface Thumbnail {
   title: string;
@@ -16,6 +17,19 @@ export interface Thumbnail {
 const LOAD_TIMEOUT_MS = 8_000;
 /** youtube.com へ一度に投げる数。全部を同時に投げると、まとめて制限に掛かったときに全部が落ちる。 */
 const CONCURRENCY = 4;
+
+/** チャンネルの最新の動画の ID。取れなければ空。 */
+export async function loadVideoIds(): Promise<string[]> {
+  try {
+    const res = await fetch(VIDEOS_PATH, { signal: AbortSignal.timeout(LOAD_TIMEOUT_MS) });
+    if (!res.ok) return [];
+    const body: unknown = await res.json();
+    return Array.isArray(body) ? body.filter((id): id is string => typeof id === "string") : [];
+  } catch {
+    // 通信断・タイムアウト・JSON として読めない。チャンネルへの広告に落とす。
+    return [];
+  }
+}
 
 async function loadOne(videoId: string): Promise<Thumbnail | null> {
   const href = watchUrl(videoId);

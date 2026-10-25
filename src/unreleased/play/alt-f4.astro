@@ -84,8 +84,7 @@ import fairy from './_alt-f4/fairy.webp';
     type Point,
   } from '../../lib/alt-f4';
   import { shuffle } from '../../lib/shuffle';
-  import { loadThumbnails, type Thumbnail } from './_alt-f4/thumbnails';
-  import { VIDEO_IDS } from './_alt-f4/videos';
+  import { loadThumbnails, loadVideoIds, type Thumbnail } from './_alt-f4/thumbnails';
 
   /** サムネイルを取り終えるのを待つ上限（ミリ秒）。過ぎたら、取れた分だけで始められるようにする。 */
   const LOAD_WAIT_MS = 5_000;
@@ -128,9 +127,11 @@ import fairy from './_alt-f4/fairy.webp';
   }
 
   ask();
-  const loaded = loadThumbnails(shuffle(VIDEO_IDS, Math.random)).then((list) => {
-    thumbnails = list;
-  });
+  const loaded = loadVideoIds()
+    .then((ids) => loadThumbnails(shuffle(ids, Math.random)))
+    .then((list) => {
+      thumbnails = list;
+    });
   void Promise.race([loaded, new Promise((resolve) => setTimeout(resolve, LOAD_WAIT_MS))]).then(() => {
     ready = true;
     startButton.disabled = false;

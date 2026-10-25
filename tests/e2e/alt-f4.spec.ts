@@ -5,9 +5,9 @@ import {
   CHAIN_INTERVAL_MS,
   ROUND_MS,
   SPAWN_INTERVAL_MS,
+  VIDEOS_PATH,
   watchUrl,
 } from "../../src/lib/alt-f4";
-import { VIDEO_IDS } from "../../src/unreleased/play/_alt-f4/videos";
 import { builtRoutes } from "../helpers/dist";
 
 /**
@@ -20,10 +20,13 @@ import { builtRoutes } from "../helpers/dist";
 const ROUTE = "/play/alt-f4/";
 const hasPage = builtRoutes().includes(ROUTE);
 const IMAGE = "https://i.ytimg.com/vi/fixture/hqdefault.jpg";
+/** Worker が中継するチャンネルの最新の動画の代わり（テストの Worker は、YouTube へ出ない。playwright.config.ts）。 */
+const VIDEO_IDS = ["fixture0001", "fixture0002", "fixture0003"];
 
 test("広告のウィンドウを閉じて数え、時間切れで止まる", async ({ page }) => {
   test.skip(!hasPage, "本番モードではページを生成しない");
 
+  await page.route(`**${VIDEOS_PATH}`, (route) => route.fulfill({ json: VIDEO_IDS }));
   await page.route("https://www.youtube.com/oembed?**", (route) => {
     const video = new URL(new URL(route.request().url()).searchParams.get("url")!).searchParams.get(
       "v",
