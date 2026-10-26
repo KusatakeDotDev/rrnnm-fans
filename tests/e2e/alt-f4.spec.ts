@@ -19,7 +19,8 @@ import { builtRoutes } from "../helpers/dist";
 
 const ROUTE = "/play/alt-f4/";
 const hasPage = builtRoutes().includes(ROUTE);
-const IMAGE = "https://i.ytimg.com/vi/fixture/hqdefault.jpg";
+/** 動画ごとに別の URL にする。同じ URL だと、ブラウザは2本目からキャッシュを使い、取りに行った数で待てない。 */
+const imageOf = (video: string) => `https://i.ytimg.com/vi/${video}/hqdefault.jpg`;
 /** Worker が中継するチャンネルの最新の動画の代わり（テストの Worker は、YouTube へ出ない。playwright.config.ts）。 */
 const VIDEO_IDS = ["fixture0001", "fixture0002", "fixture0003"];
 
@@ -37,7 +38,7 @@ test("広告のウィンドウを閉じて数え、時間切れで止まる", as
         provider_name: "YouTube",
         thumbnail_width: 480,
         thumbnail_height: 360,
-        thumbnail_url: IMAGE,
+        thumbnail_url: imageOf(video!),
       },
     });
   });
@@ -89,7 +90,10 @@ test("広告のウィンドウを閉じて数え、時間切れで止まる", as
     const ad = popups.locator("[data-altf4-ad]");
     const href = await ad.getAttribute("href");
     expect(VIDEO_IDS.map(watchUrl)).toContain(href);
-    await expect(ad.locator("img")).toHaveAttribute("src", IMAGE);
+    await expect(ad.locator("img")).toHaveAttribute(
+      "src",
+      imageOf(new URL(href!).searchParams.get("v")!),
+    );
   });
 
   await test.step("× で閉じると、閉じた数が増える", async () => {
