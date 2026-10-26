@@ -41,12 +41,14 @@ test("広告のウィンドウを閉じて数え、時間切れで止まる", as
       },
     });
   });
-  await page.route("https://i.ytimg.com/**", (route) =>
-    route.fulfill({
+  let images = 0;
+  await page.route("https://i.ytimg.com/**", (route) => {
+    images++;
+    return route.fulfill({
       contentType: "image/svg+xml",
       body: '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="360"/>',
-    }),
-  );
+    });
+  });
   await page.addInitScript(() => {
     Math.random = () => 0;
     const opened: unknown[][] = [];
@@ -69,6 +71,8 @@ test("広告のウィンドウを閉じて数え、時間切れで止まる", as
   const yes = page.locator("[data-altf4-yes]");
 
   await test.step("妖精が吹き出しで始めるかを尋ね、「いいえ」で閉じても、妖精を押せば尋ね直す", async () => {
+    // サムネイルは取れたものから広告に出るので、全部を取り終えてから始める。
+    await expect.poll(() => images).toBe(VIDEO_IDS.length);
     await expect(yes).toBeVisible();
     await expect(start).toBeEnabled();
     await page.locator("[data-altf4-no]").click();

@@ -106,7 +106,8 @@ import fairy from './_alt-f4/fairy.webp';
   const status = document.querySelector<HTMLElement>('[data-altf4-status]')!;
   const template = document.querySelector<HTMLTemplateElement>('[data-altf4-popup-template]')!;
 
-  let thumbnails: Thumbnail[] = [];
+  /** 取れたサムネイル。取れたものから足していく。 */
+  const thumbnails: Thumbnail[] = [];
   let deck: Thumbnail[] = [];
   let ready = false;
   /** 前に遊んだときに閉じた数。まだ遊んでいなければ null。 */
@@ -127,11 +128,9 @@ import fairy from './_alt-f4/fairy.webp';
   }
 
   ask();
-  const loaded = loadVideoIds()
-    .then((ids) => loadThumbnails(shuffle(ids, Math.random)))
-    .then((list) => {
-      thumbnails = list;
-    });
+  const loaded = loadVideoIds().then((ids) =>
+    loadThumbnails(shuffle(ids, Math.random), (thumbnail) => thumbnails.push(thumbnail)),
+  );
   void Promise.race([loaded, new Promise((resolve) => setTimeout(resolve, LOAD_WAIT_MS))]).then(() => {
     ready = true;
     startButton.disabled = false;
@@ -159,6 +158,17 @@ import fairy from './_alt-f4/fairy.webp';
 
   function formatClock(seconds: number): string {
     return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+  }
+
+  /**
+   * 制限時間を過ぎていたら終える（終わっていれば true）。時計の表示は 100 ms ごとにしか見ないので、
+   * 過ぎてから気付くまでのあいだに、次の1枚が開いたり × が数えられたりしないよう、開く前と数える前にも見る。
+   */
+  function timeIsUp(): boolean {
+    if (!playing) return true;
+    if (performance.now() - startedAt < ROUND_MS) return false;
+    finish();
+    return true;
   }
 
   /** ウィンドウを1枚作って、デスクトップに置く。置く位置は、置いたウィンドウの大きさから決める。 */
@@ -201,6 +211,7 @@ import fairy from './_alt-f4/fairy.webp';
     let position: Point = { x: 0, y: 0 };
     let direction: Direction = CHAIN_START_DIRECTION;
     const id = window.setInterval(() => {
+      if (timeIsUp()) return;
       spawn((bounds) => {
         if (opened === 0) {
           position = randomPosition(bounds, Math.random, CHAIN_START_MARGIN);
@@ -237,15 +248,15 @@ import fairy from './_alt-f4/fairy.webp';
     if (fromButton) layer.querySelector<HTMLButtonElement>('[data-altf4-close]')?.focus({ preventScroll: true });
     timers.add(
       window.setInterval(() => {
+        if (timeIsUp()) return;
         if (shouldChain(performance.now(), lastChainAt, chaining, Math.random)) startChain();
         else spawnAnywhere();
       }, SPAWN_INTERVAL_MS),
     );
     timers.add(
       window.setInterval(() => {
-        const elapsed = performance.now() - startedAt;
-        clock.textContent = formatClock(remainingSeconds(elapsed));
-        if (elapsed >= ROUND_MS) finish();
+        if (timeIsUp()) return;
+        clock.textContent = formatClock(remainingSeconds(performance.now() - startedAt));
       }, CLOCK_INTERVAL_MS),
     );
   }
@@ -281,7 +292,7 @@ import fairy from './_alt-f4/fairy.webp';
     const target = event.target as Element;
     const close = target.closest<HTMLButtonElement>('[data-altf4-close]');
     if (close) {
-      if (!playing) return;
+      if (timeIsUp()) return;
       const hadFocus = document.activeElement === close;
       close.closest('[data-altf4-popup]')!.remove();
       closed++;
@@ -299,7 +310,7 @@ import fairy from './_alt-f4/fairy.webp';
     }
     // ウィンドウの外やタイトルバーを押してしまったら、もう1枚開く。
     // 始めるボタン（タスクバー・妖精）を押したクリックは、始めた直後にここへ届くので数えない。
-    if (playing && !target.closest('.taskbar, [data-altf4-assistant]')) spawnAnywhere();
+    if (!target.closest('.taskbar, [data-altf4-assistant]') && !timeIsUp()) spawnAnywhere();
   });
 </script>
 

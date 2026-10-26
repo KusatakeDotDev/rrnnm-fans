@@ -1,7 +1,8 @@
 /**
  * サイトの Worker。ミニゲーム「広告をとじろ」の動画の一覧（VIDEOS_PATH）だけを返し、ほかは静的なファイル（dist）に回す
  * （ADR-0033 の決定）。チャンネルのフィードは CORS を許さず、ブラウザから読めないので、同じオリジンで中継する。
- * 一覧は同じオリジンのページだけが読む。`Access-Control-Allow-Origin` は付けない（付けると、誰でも使える中継になる）。
+ * ほかのサイトのページから読ませないよう、`Access-Control-Allow-Origin` は付けない（CORS が止めるのはブラウザだけで、
+ * ブラウザの外からは読めるが、返すのはこのチャンネルの公開の動画の ID だけ）。
  */
 import { OFFICIAL } from "../src/data/official";
 import { VIDEOS_PATH } from "../src/lib/alt-f4";

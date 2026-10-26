@@ -47,7 +47,11 @@ async function loadOne(videoId: string): Promise<Thumbnail | null> {
     const img = new Image();
     img.referrerPolicy = "no-referrer";
     img.src = body.thumbnail_url;
-    await img.decode();
+    // 画像が届かないまま止まっても、その動画だけを諦める。
+    await Promise.race([
+      img.decode(),
+      new Promise((_, reject) => setTimeout(reject, LOAD_TIMEOUT_MS)),
+    ]);
     return { title: body.title, href, image: body.thumbnail_url };
   } catch {
     // CORS が閉じられた・通信断・タイムアウト・画像が読めない。その動画は出さない。
@@ -55,16 +59,17 @@ async function loadOne(videoId: string): Promise<Thumbnail | null> {
   }
 }
 
-/** `videoIds` の順に取り、取れたものだけを返す。どれも取れなければ空。 */
-export async function loadThumbnails(videoIds: readonly string[]): Promise<Thumbnail[]> {
-  const results: (Thumbnail | null)[] = [];
+/** `videoIds` の順に取り、取れたものから `onLoad` に渡す。全部を待たずに、取れた分から広告に出せるようにするため。 */
+export async function loadThumbnails(
+  videoIds: readonly string[],
+  onLoad: (thumbnail: Thumbnail) => void,
+): Promise<void> {
   let next = 0;
   const worker = async () => {
     while (next < videoIds.length) {
-      const i = next++;
-      results[i] = await loadOne(videoIds[i]!);
+      const thumbnail = await loadOne(videoIds[next++]!);
+      if (thumbnail) onLoad(thumbnail);
     }
   };
   await Promise.all(Array.from({ length: CONCURRENCY }, worker));
-  return results.filter((thumbnail): thumbnail is Thumbnail => thumbnail !== null);
 }
