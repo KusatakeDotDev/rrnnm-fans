@@ -6,6 +6,7 @@ import { defineConfig } from "astro/config";
 
 // 設定を読み直しても、ここから読む src/integrations/dev-idle.ts と、その先の src/lib/dev-idle.ts は前のものが残る
 // （Node が覚えている）。どちらかを変えたら、開発サーバーを立て直して確かめる。
+import altF4Videos from "./src/integrations/alt-f4-videos.ts";
 import devIdle from "./src/integrations/dev-idle.ts";
 import unreleased from "./src/integrations/unreleased.ts";
 import { cssTarget } from "./src/styles/browser-targets.mjs";
@@ -15,7 +16,7 @@ export default defineConfig({
   site: "https://rrnnm.fans",
   // サイトマップに `lastmod`・`changefreq`・`priority` は付けない。Google は `changefreq` と `priority` を読まず、`lastmod` は
   // 正確なときしか使わないが、このサイトはページごとの更新日を持っていないため（ファイルのコミット日は、ページの中身と合わない）。
-  integrations: [react(), sitemap(), unreleased(), devIdle()],
+  integrations: [react(), sitemap(), unreleased(), devIdle(), altF4Videos()],
   // スコープは属性ではなくクラスで付ける。React のコンポーネントに渡る class はレンダラが捨てるので、
   // 親のスコープ付き CSS がコンポーネントの root に届かない（ADR-0011「スコープをクラスで付ける」）。
   scopedStyleStrategy: "class",

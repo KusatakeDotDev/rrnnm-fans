@@ -44,7 +44,7 @@ const BUDGET = {
  */
 const UNMEASURED_EXTERNAL: Record<string, string[]> = {
   "/references/": ["https://platform.x.com/widgets.js"],
-  "/kusobaka-slot/": ["https://platform.x.com/widgets.js"],
+  "/play/kusobaka-slot/": ["https://platform.x.com/widgets.js"],
 };
 
 const pages = builtPages();

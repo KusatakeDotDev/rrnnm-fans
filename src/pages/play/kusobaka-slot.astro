@@ -4,10 +4,10 @@
 // ファイルは、非公開のリポジトリから重ねる（ADR-0029 の決定）。
 // ポストの「今日は」に合わせ、かならずそろうのはその日のうちだけ。日付は来た人が書き換えて延ばせる遊びにし、再読み込みで戻す。
 // 元ネタのポストを埋め込むのは、その文面（「今日は」）が、日付を書き換える遊びのヒントになるため。ADR-0028 の決定で、許すポストは tests/helpers/x-embed.ts。
-import { OFFICIAL } from '../data/official';
-import XPost from '../components/XPost.astro';
-import Base from '../layouts/Base.astro';
-import { DEFAULT_UNTIL, WORD } from '../lib/kusobaka-slot';
+import { OFFICIAL } from '../../data/official';
+import XPost from '../../components/XPost.astro';
+import Base from '../../layouts/Base.astro';
+import { DEFAULT_UNTIL, WORD } from '../../lib/kusobaka-slot';
 
 const POST = `${OFFICIAL.x}/status/2111763781324046562`;
 ---
@@ -65,7 +65,7 @@ const POST = `${OFFICIAL.x}/status/2111763781324046562`;
 
 <script>
   // 本物を重ねたビルドでは取りに行かないので、ページの JS に埋め込まず、別のファイルにする。
-  import silent from '../assets/kusobaka-slot-silent.mp3?no-inline';
+  import silent from '../../assets/kusobaka-slot-silent.mp3?no-inline';
   import {
     charIndex,
     CHEERS,
@@ -83,13 +83,13 @@ const POST = `${OFFICIAL.x}/status/2111763781324046562`;
     voiceFor,
     WORD,
     type Voice,
-  } from '../lib/kusobaka-slot';
+  } from '../../lib/kusobaka-slot';
 
   type Sound = 'stop' | 'success' | Voice;
 
   const SOUNDS: readonly Sound[] = ['stop', 'success', ...REACTIONS, ...CHEERS, ...MISSES];
   // 重ねていないビルドでは、どの名前でも無音を鳴らす（ADR-0029 の決定）。
-  const sounds = import.meta.glob<string>('../assets/kusobaka-slot/*.mp3', { eager: true, import: 'default' });
+  const sounds = import.meta.glob<string>('../../assets/kusobaka-slot/*.mp3', { eager: true, import: 'default' });
 
   /** 回る速さ（コマ/ミリ秒）。 */
   const SPEED = 0.012;
@@ -106,7 +106,7 @@ const POST = `${OFFICIAL.x}/status/2111763781324046562`;
   const files = new Map(
     SOUNDS.map((name) => [
       name,
-      fetch(`${sounds[`../assets/kusobaka-slot/${name}.mp3`] ?? silent}#${name}`)
+      fetch(`${sounds[`../../assets/kusobaka-slot/${name}.mp3`] ?? silent}#${name}`)
         .then((response) => (response.ok ? response.arrayBuffer() : null))
         .catch(() => null),
     ]),

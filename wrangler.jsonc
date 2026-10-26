@@ -4,9 +4,12 @@
   // 前の名前の設定は引き継がれない。新しい Worker に Access を掛けてから変える。
   "name": "rrnnm-fans",
   "compatibility_date": "2026-09-06",
-  // 純静的サイトなので "main" は置かない。Worker スクリプトは1行も書かない。
+  // Worker が返すのは、ミニゲーム「広告をとじろ」の動画の一覧だけ（ADR-0033 の決定）。静的なファイルがあるリクエストは
+  // Worker を通らずに配られ、無いリクエストは Worker が ASSETS に回して、Worker が無かったときと同じ 404 にする。
+  "main": "worker/index.ts",
   "assets": {
     "directory": "./dist",
+    "binding": "ASSETS",
   },
   // プレビューURL（`<エイリアスまたはバージョン>-<Worker名>.<subdomain>.workers.dev`）を有効にする。
   // main へのマージはここへ出る（→ docs/OPERATIONS.md §7）。書かないと wrangler は値を送らず、

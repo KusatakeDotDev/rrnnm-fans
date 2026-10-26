@@ -1,0 +1,612 @@
+---
+// 広告のウィンドウを閉じるミニゲーム。昔のパソコンで、広告のウィンドウが次々に開いて止まらなくなったときの見た目を借り、
+// 広告の画像を瑠璃野ねもさんの動画・配信のサムネイルにしたもの。制限時間のうちに閉じた数を数える。
+// フッターには出さない（src/data/site-navigation.ts の UNLINKED_ROUTES）。
+// サムネイルは、その動画の視聴ページへのリンクの中にだけ出し、押すと視聴ページを別のウィンドウで開く（ADR-0033 の決定）。
+// スタートのボタンだけでは始め方が分かりにくかったので、昔のパソコンの手伝いのキャラクターのように、妖精が吹き出しで
+// 始めるかを尋ねる（RRNNM-112）。妖精の絵はいらすとやの素材（LICENSE の「第三者の素材」）。
+import { OFFICIAL } from '../../data/official';
+import Base from '../../layouts/Base.astro';
+import { ROUND_MS } from '../../lib/alt-f4';
+import fairy from './_alt-f4/fairy.webp';
+---
+
+<Base title="広告をとじろ" description="次々に開く広告のウィンドウを、制限時間のうちに何枚とじられるかのミニゲームです。広告には瑠璃野ねもさんの動画のサムネイルが出ます。">
+  <Fragment slot="head">
+    <h1>広告をとじろ</h1>
+  </Fragment>
+
+  <p class="how">
+    はじめると、広告のウィンドウが次々に開きます。{ROUND_MS / 1000}秒のうちに、右上の × で何枚とじられるか。広告を押すと、その動画が開きます。
+  </p>
+
+  <div class="desktop" data-altf4-desktop>
+    <div class="popups" data-altf4-popups>
+      {/* 吹き出しの言葉は、サムネイルを取り終えたか・1回遊んだかで変わるので、スクリプトが書いて開く。 */}
+      <div class="assistant" data-altf4-assistant>
+        <div class="balloon" id="altf4-balloon" data-altf4-balloon hidden>
+          <p data-altf4-message></p>
+          <div class="options" data-altf4-options hidden>
+            <button type="button" data-altf4-yes>はい</button>
+            <button type="button" data-altf4-no>いいえ</button>
+          </div>
+        </div>
+        <button type="button" class="fairy" aria-label="妖精に話しかける" aria-controls="altf4-balloon" aria-expanded="false" data-altf4-fairy>
+          <img src={fairy.src} width={fairy.width / 2} height={fairy.height / 2} alt="" />
+        </button>
+      </div>
+    </div>
+    <div class="taskbar">
+      {/* サムネイルを取り終えるまで押せない形で出す（スクリプトが disabled を外す）。 */}
+      <button type="button" class="start" data-altf4-start disabled>スタート</button>
+      <p class="score">とじた <span class="tabular" data-altf4-score>0</span></p>
+      <p class="clock tabular" data-altf4-clock>0:{String(ROUND_MS / 1000).padStart(2, '0')}</p>
+    </div>
+  </div>
+  <p class="sr-only" role="status" data-altf4-status></p>
+
+  <p class="credit">
+    出典：YouTube <a href={OFFICIAL.youtube} target="_blank" rel="noopener noreferrer">瑠璃野ねも<span class="sr-only">（YouTube チャンネル。外部サイトを新しいタブで開く）</span></a>
+  </p>
+
+  <template data-altf4-popup-template>
+    <div class="popup" data-altf4-popup>
+      <div class="titlebar">
+        <span class="titlebar-text">瑠璃野ねも - YouTube</span>
+        <button type="button" class="close" aria-label="閉じる" data-altf4-close>
+          <svg viewBox="0 0 10 10" aria-hidden="true" focusable="false"><path d="M2 2l6 6M8 2l-6 6" /></svg>
+        </button>
+      </div>
+      {/* 行き先は、スクリプトが動画の視聴ページに差し替える。サムネイルが1枚も取れなかったときは、チャンネルのまま出す。 */}
+      <a class="ad" href={OFFICIAL.youtube} target="_blank" rel="noopener noreferrer" data-altf4-ad>
+        <span class="frame"><img alt="" referrerpolicy="no-referrer" decoding="async" data-altf4-image /></span>
+        <span class="caption" data-altf4-caption></span>
+        <span class="sr-only">（外部サイトを新しいタブで開く）</span>
+      </a>
+    </div>
+  </template>
+</Base>
+
+<script>
+  import {
+    boundsOf,
+    CHAIN_COUNT,
+    CHAIN_INTERVAL_MS,
+    CHAIN_START_DIRECTION,
+    CHAIN_START_MARGIN,
+    chainStep,
+    randomPosition,
+    remainingSeconds,
+    ROUND_MS,
+    shouldChain,
+    SPAWN_INTERVAL_MS,
+    type Direction,
+    type Point,
+  } from '../../lib/alt-f4';
+  import { shuffle } from '../../lib/shuffle';
+  import { loadThumbnails, loadVideoIds, type Thumbnail } from './_alt-f4/thumbnails';
+
+  /** サムネイルを取り終えるのを待つ上限（ミリ秒）。過ぎたら、取れた分だけで始められるようにする。 */
+  const LOAD_WAIT_MS = 5_000;
+  /** 残り時間の表示を書き換える間（ミリ秒）。 */
+  const CLOCK_INTERVAL_MS = 100;
+
+  const desktop = document.querySelector<HTMLElement>('[data-altf4-desktop]')!;
+  const layer = desktop.querySelector<HTMLElement>('[data-altf4-popups]')!;
+  const assistant = layer.querySelector<HTMLElement>('[data-altf4-assistant]')!;
+  const balloon = assistant.querySelector<HTMLElement>('[data-altf4-balloon]')!;
+  const message = assistant.querySelector<HTMLElement>('[data-altf4-message]')!;
+  const options = assistant.querySelector<HTMLElement>('[data-altf4-options]')!;
+  const yesButton = assistant.querySelector<HTMLButtonElement>('[data-altf4-yes]')!;
+  const noButton = assistant.querySelector<HTMLButtonElement>('[data-altf4-no]')!;
+  const fairy = assistant.querySelector<HTMLButtonElement>('[data-altf4-fairy]')!;
+  const startButton = desktop.querySelector<HTMLButtonElement>('[data-altf4-start]')!;
+  const score = desktop.querySelector<HTMLElement>('[data-altf4-score]')!;
+  const clock = desktop.querySelector<HTMLElement>('[data-altf4-clock]')!;
+  const status = document.querySelector<HTMLElement>('[data-altf4-status]')!;
+  const template = document.querySelector<HTMLTemplateElement>('[data-altf4-popup-template]')!;
+
+  /** 取れたサムネイル。取れたものから足していく。 */
+  const thumbnails: Thumbnail[] = [];
+  let deck: Thumbnail[] = [];
+  let ready = false;
+  /** 前に遊んだときに閉じた数。まだ遊んでいなければ null。 */
+  let lastScore: number | null = null;
+
+  function openBalloon(open: boolean): void {
+    balloon.hidden = !open;
+    fairy.setAttribute('aria-expanded', String(open));
+  }
+
+  /** サムネイルを取り終えるまでは待ってもらい、終えたら始めるかを尋ねる。遊んだあとは、閉じた数を添えて尋ねる。 */
+  function ask(): void {
+    if (!ready) message.textContent = '広告をあつめています…';
+    else if (lastScore === null) message.textContent = 'はじめますか？';
+    else message.textContent = `記録: ${lastScore}\nもう一度遊びますか？`;
+    options.hidden = !ready;
+    openBalloon(true);
+  }
+
+  ask();
+  const loaded = loadVideoIds().then((ids) =>
+    loadThumbnails(shuffle(ids, Math.random), (thumbnail) => thumbnails.push(thumbnail)),
+  );
+  void Promise.race([loaded, new Promise((resolve) => setTimeout(resolve, LOAD_WAIT_MS))]).then(() => {
+    ready = true;
+    startButton.disabled = false;
+    // 待ってもらっていた吹き出しが開いたままなら、続けて尋ねる。閉じられていたら、開き直さない。
+    if (!balloon.hidden) ask();
+  });
+
+  /** 同じ広告が続けて出ないよう、全部を1回ずつ出してから混ぜ直す。 */
+  function nextThumbnail(): Thumbnail | undefined {
+    if (deck.length === 0) deck = shuffle(thumbnails, Math.random);
+    return deck.pop();
+  }
+
+  let playing = false;
+  let startedAt = 0;
+  let closed = 0;
+  let lastChainAt: number | null = null;
+  let chaining = false;
+  const timers = new Set<number>();
+
+  function stopTimers(): void {
+    for (const id of timers) clearInterval(id);
+    timers.clear();
+  }
+
+  function formatClock(seconds: number): string {
+    return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+  }
+
+  /**
+   * 制限時間を過ぎていたら終える（終わっていれば true）。時計の表示は 100 ms ごとにしか見ないので、
+   * 過ぎてから気付くまでのあいだに、次の1枚が開いたり × が数えられたりしないよう、開く前と数える前にも見る。
+   */
+  function timeIsUp(): boolean {
+    if (!playing) return true;
+    if (performance.now() - startedAt < ROUND_MS) return false;
+    finish();
+    return true;
+  }
+
+  /** ウィンドウを1枚作って、デスクトップに置く。置く位置は、置いたウィンドウの大きさから決める。 */
+  function spawn(positionFor: (bounds: ReturnType<typeof boundsOf>) => Point): void {
+    const popup = (template.content.firstElementChild as HTMLElement).cloneNode(true) as HTMLElement;
+    const ad = popup.querySelector<HTMLAnchorElement>('[data-altf4-ad]')!;
+    const image = popup.querySelector<HTMLImageElement>('[data-altf4-image]')!;
+    const caption = popup.querySelector<HTMLElement>('[data-altf4-caption]')!;
+    const thumbnail = nextThumbnail();
+    if (thumbnail) {
+      ad.href = thumbnail.href;
+      image.src = thumbnail.image;
+      caption.textContent = thumbnail.title;
+    } else {
+      image.remove();
+      caption.textContent = '瑠璃野ねもの YouTube チャンネル';
+    }
+    popup.style.visibility = 'hidden';
+    // 妖精より下に重ねる。時間切れのあと、残ったウィンドウの上で尋ねるため。
+    layer.insertBefore(popup, assistant);
+    const bounds = boundsOf(
+      { width: layer.clientWidth, height: layer.clientHeight },
+      { width: popup.offsetWidth, height: popup.offsetHeight },
+    );
+    const { x, y } = positionFor(bounds);
+    popup.style.left = `${x}px`;
+    popup.style.top = `${y}px`;
+    popup.style.visibility = '';
+  }
+
+  function spawnAnywhere(): void {
+    spawn((bounds) => randomPosition(bounds, Math.random));
+  }
+
+  /** 連鎖。1枚めは内側のどこかに置き、そこから斜めにずらしながら続けて開き、端で跳ね返す。 */
+  function startChain(): void {
+    chaining = true;
+    lastChainAt = performance.now();
+    let opened = 0;
+    let position: Point = { x: 0, y: 0 };
+    let direction: Direction = CHAIN_START_DIRECTION;
+    const id = window.setInterval(() => {
+      if (timeIsUp()) return;
+      spawn((bounds) => {
+        if (opened === 0) {
+          position = randomPosition(bounds, Math.random, CHAIN_START_MARGIN);
+        } else {
+          ({ position, direction } = chainStep(position, direction, bounds));
+        }
+        return position;
+      });
+      opened++;
+      if (opened >= CHAIN_COUNT) {
+        clearInterval(id);
+        timers.delete(id);
+        chaining = false;
+      }
+    }, CHAIN_INTERVAL_MS);
+    timers.add(id);
+  }
+
+  function start(): void {
+    // キーボードで始めた人が、そのまま × へ進めるようにする（押したボタンは消えるか押せなくなる）。
+    const fromButton = document.activeElement === yesButton || document.activeElement === startButton;
+    stopTimers();
+    for (const popup of layer.querySelectorAll('[data-altf4-popup]')) popup.remove();
+    assistant.hidden = true;
+    closed = 0;
+    score.textContent = '0';
+    lastChainAt = null;
+    chaining = false;
+    playing = true;
+    startedAt = performance.now();
+    startButton.disabled = true;
+    status.textContent = 'スタート';
+    spawnAnywhere();
+    if (fromButton) layer.querySelector<HTMLButtonElement>('[data-altf4-close]')?.focus({ preventScroll: true });
+    timers.add(
+      window.setInterval(() => {
+        if (timeIsUp()) return;
+        if (shouldChain(performance.now(), lastChainAt, chaining, Math.random)) startChain();
+        else spawnAnywhere();
+      }, SPAWN_INTERVAL_MS),
+    );
+    timers.add(
+      window.setInterval(() => {
+        if (timeIsUp()) return;
+        clock.textContent = formatClock(remainingSeconds(performance.now() - startedAt));
+      }, CLOCK_INTERVAL_MS),
+    );
+  }
+
+  function finish(): void {
+    stopTimers();
+    playing = false;
+    clock.textContent = formatClock(0);
+    status.textContent = `おわり。${closed}枚とじました`;
+    startButton.textContent = 'もう一回';
+    startButton.disabled = false;
+    // 時間切れで × が効かなくなるので、ウィンドウの中にいたフォーカスを、妖精の「はい」へ移す。
+    const focusWasInLayer = layer.contains(document.activeElement);
+    lastScore = closed;
+    assistant.hidden = false;
+    ask();
+    if (focusWasInLayer) yesButton.focus();
+  }
+
+  startButton.addEventListener('click', start);
+  yesButton.addEventListener('click', start);
+  noButton.addEventListener('click', () => {
+    openBalloon(false);
+    // 吹き出しごと消えるので、開き直せる妖精へ移す。
+    fairy.focus();
+  });
+  fairy.addEventListener('click', () => {
+    if (balloon.hidden) ask();
+    else openBalloon(false);
+  });
+
+  desktop.addEventListener('click', (event) => {
+    const target = event.target as Element;
+    const close = target.closest<HTMLButtonElement>('[data-altf4-close]');
+    if (close) {
+      if (timeIsUp()) return;
+      const hadFocus = document.activeElement === close;
+      close.closest('[data-altf4-popup]')!.remove();
+      closed++;
+      score.textContent = String(closed);
+      // キーボードで遊ぶ人が続けて閉じられるよう、いちばん上（最後に開いた）のウィンドウの × へ移る。
+      if (hadFocus) [...layer.querySelectorAll<HTMLButtonElement>('[data-altf4-close]')].at(-1)?.focus();
+      return;
+    }
+    const ad = target.closest<HTMLAnchorElement>('[data-altf4-ad]');
+    if (ad) {
+      // 本物の広告のように、小さな別のウィンドウで開く（スマートフォンでは新しいタブになる）。
+      event.preventDefault();
+      window.open(ad.href, '_blank', 'popup,noopener,noreferrer');
+      return;
+    }
+    // ウィンドウの外やタイトルバーを押してしまったら、もう1枚開く。
+    // 始めるボタン（タスクバー・妖精）を押したクリックは、始めた直後にここへ届くので数えない。
+    if (!target.closest('.taskbar, [data-altf4-assistant]') && !timeIsUp()) spawnAnywhere();
+  });
+</script>
+
+<style>
+  @layer pages {
+    h1 {
+      margin: 0;
+    }
+
+    .how {
+      margin: var(--space-8) 0 0;
+    }
+
+    .desktop {
+      display: flex;
+      flex-direction: column;
+      height: clamp(26rem, 70vh, 40rem);
+      margin: var(--space-6) 0 0;
+      border: var(--border-card) solid var(--color-outline);
+      border-radius: var(--radius-card);
+      overflow: hidden;
+      background: linear-gradient(to bottom, #3a7bd5 0%, #8cc0f2 62%, #6fae4a 62%, #4e8f33 100%);
+      box-shadow: var(--offset-card) var(--offset-card) 0 var(--color-outline);
+      /* 続けて押すと字が選ばれ、すばやく2回押すと拡大されてしまうため。Safari は接頭辞付きしか読まない。 */
+      -webkit-user-select: none;
+      /* stylelint-disable-next-line plugin/use-baseline -- Safari は上の接頭辞付きを読み、ほかのブラウザがこれを読む */
+      user-select: none;
+      touch-action: manipulation;
+    }
+
+    .popups {
+      position: relative;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .taskbar {
+      display: flex;
+      align-items: stretch;
+      gap: var(--space-2);
+      min-height: var(--tap-size);
+      background: linear-gradient(to bottom, #3168d5 0%, #2457c4 10%, #1f4fb5 90%, #173e93 100%);
+      color: #fff;
+    }
+
+    .taskbar p {
+      display: flex;
+      align-items: center;
+      margin: 0;
+      padding: 0 var(--space-3);
+    }
+
+    .start {
+      padding: 0 var(--space-5) 0 var(--space-4);
+      border: 0;
+      border-radius: 0 0.75rem 0.75rem 0;
+      background: linear-gradient(to bottom, #2e7d32 0%, #276b2a 50%, #1f5a22 100%);
+      color: #fff;
+      font: inherit;
+      font-weight: 700;
+      font-style: italic;
+      cursor: pointer;
+    }
+
+    .start:disabled {
+      background: #5a7d5a;
+      cursor: default;
+    }
+
+    .score {
+      flex: 1;
+    }
+
+    .clock {
+      border-left: 1px solid #0b2f75;
+      background: linear-gradient(to bottom, #0b6fc4 0%, #095aa0 100%);
+    }
+
+    .popup {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      width: min(18rem, 85%);
+      border: 1px solid #0a246a;
+      border-radius: 0.5rem 0.5rem 0 0;
+      overflow: hidden;
+      background: #ece9d8;
+      box-shadow: 2px 2px 8px rgb(0 0 0 / 35%);
+    }
+
+    .titlebar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-2);
+      padding: var(--space-1) var(--space-1) var(--space-1) var(--space-2);
+      background: linear-gradient(to bottom, #2a6fd6 0%, #1c5bbf 40%, #13489f 100%);
+      color: #fff;
+      font-size: var(--text-small);
+      font-weight: 700;
+    }
+
+    .titlebar-text {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .close {
+      display: grid;
+      flex: none;
+      place-items: center;
+      width: 1.75rem;
+      height: 1.5rem;
+      padding: 0;
+      border: 1px solid #fff;
+      border-radius: 0.25rem;
+      background: linear-gradient(to bottom, #d6492b 0%, #c23a1f 50%, #a82a15 100%);
+      color: #fff;
+      cursor: pointer;
+    }
+
+    .close svg {
+      width: 0.75rem;
+      height: 0.75rem;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+    }
+
+    .ad {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+      padding: var(--space-2);
+      color: #000;
+      text-decoration-line: none;
+    }
+
+    .frame {
+      position: relative;
+      display: grid;
+      place-items: center;
+      aspect-ratio: 16 / 9;
+      overflow: hidden;
+      background: #1c5bbf;
+      color: #fff;
+      font-weight: 700;
+    }
+
+    /* 画像が無い（1枚も取れなかった）ときの広告の中身。 */
+    .frame:empty::before {
+      content: 'AD';
+    }
+
+    /* oEmbed のサムネイル（hqdefault）は 4:3 で、16:9 の動画なら上下に黒い帯が付く。枠に重ねて、帯を切り落とす。
+       枠の中に流すと、画像の高さ（4:3）が枠の 16:9 より優先されて、帯ごと出る。 */
+    .frame img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* 長い題名は2行で切る。 */
+    .caption {
+      max-height: calc(2 * 1.4em);
+      overflow: hidden;
+      font-size: var(--text-small);
+      line-height: 1.4;
+    }
+
+    .ad:hover .caption,
+    .ad:focus-visible .caption {
+      text-decoration-line: underline;
+    }
+
+    /* 昔の手伝いのキャラクターのように、右下に居て、上に吹き出しを出す。 */
+    .assistant {
+      position: absolute;
+      right: var(--space-3);
+      bottom: var(--space-2);
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: var(--space-3);
+      max-width: calc(100% - 2 * var(--space-3));
+    }
+
+    .assistant[hidden],
+    .balloon[hidden],
+    .options[hidden] {
+      display: none;
+    }
+
+    .balloon {
+      position: relative;
+      width: 17rem;
+      max-width: 100%;
+      border: 1px solid #000;
+      border-radius: 0.75rem;
+      padding: var(--space-3) var(--space-4);
+      background: #ffffe1;
+      color: #000;
+      box-shadow: 2px 2px 6px rgb(0 0 0 / 30%);
+    }
+
+    /* しっぽ。下の妖精のほうへ向ける。 */
+    .balloon::after {
+      position: absolute;
+      right: 2.5rem;
+      bottom: -0.45rem;
+      width: 0.8rem;
+      height: 0.8rem;
+      border-right: 1px solid #000;
+      border-bottom: 1px solid #000;
+      background: inherit;
+      transform: rotate(45deg);
+      content: '';
+    }
+
+    /* 遊んだあとの言葉は、記録と問いを改行で分けて書く。 */
+    .balloon p {
+      margin: 0;
+      white-space: pre-line;
+    }
+
+    .options {
+      display: flex;
+      flex-direction: column;
+      margin: var(--space-1) 0 0;
+    }
+
+    /* 昔の吹き出しの、青い丸の付いた選択肢。 */
+    .options button {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      min-height: var(--tap-size);
+      padding: 0;
+      border: 0;
+      background: none;
+      color: #0033cc;
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .options button::before {
+      flex: none;
+      width: 0.6rem;
+      height: 0.6rem;
+      border-radius: 50%;
+      background: #2a6fd6;
+      content: '';
+    }
+
+    .options button:hover,
+    .options button:focus-visible {
+      text-decoration-line: underline;
+    }
+
+    .fairy {
+      width: clamp(4.5rem, 20vw, 6.5rem);
+      padding: 0;
+      border: 0;
+      background: none;
+      cursor: pointer;
+    }
+
+    /* 浮かせるのは絵だけにして、押せる範囲は動かさない。 */
+    .fairy img {
+      display: block;
+      width: 100%;
+      height: auto;
+      animation: altf4-float 3s ease-in-out infinite;
+    }
+
+    @keyframes altf4-float {
+      50% {
+        translate: 0 -0.4rem;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .fairy img {
+        animation: none;
+      }
+    }
+
+    /* 色は地の文字のまま。薄い色は、地の水玉の上で AA に届かない。 */
+    .credit {
+      margin: var(--space-4) 0 0;
+      font-size: var(--text-small);
+    }
+  }
+</style>

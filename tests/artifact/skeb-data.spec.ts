@@ -7,7 +7,7 @@ test("Skeb — 本番OFFでは作品データと専用カードCSS・スクリ�
   const receipt = JSON.parse(readFileSync(`${DIST}.receipt.json`, "utf8"));
   test.skip(receipt.showUnreleased === true, "未公開ONのビルド");
   expect(receipt.showUnreleased).toBe(false);
-  // 見るのは納品のポストだけ。ご本人のほかのポスト（src/pages/kusobaka-slot.astro の元ネタ）へのリンクは、Skeb と関係なく出してよい。
+  // 見るのは納品のポストだけ。ご本人のほかのポスト（src/pages/play/kusobaka-slot.astro の元ネタ）へのリンクは、Skeb と関係なく出してよい。
   const deliveryIds = SKEB_WORKS.flatMap((work) =>
     work.deliveryPost
       ? [work.deliveryPost.url.slice(work.deliveryPost.url.lastIndexOf("/") + 1)]

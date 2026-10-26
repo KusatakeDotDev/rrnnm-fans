@@ -24,7 +24,7 @@ import {
 } from "../../src/lib/kusobaka-slot";
 
 /**
- * src/lib/kusobaka-slot.ts — クソバカスロット（src/pages/kusobaka-slot.astro）の、DOM と音に触らないところ。
+ * src/lib/kusobaka-slot.ts — クソバカスロット（src/pages/play/kusobaka-slot.astro）の、DOM と音に触らないところ。
  * 壊れると「期限までにクソバカ以外で止まる」「止めた瞬間に帯が跳ぶ」「延ばしたのに期限切れになる」の形で出る。
  */
 

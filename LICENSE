@@ -40,3 +40,9 @@ Zen Maru Gothic webfont files in the build output (_astro/zen-maru-gothic-*.woff
 bundled from the @fontsource/zen-maru-gothic package
   Zen Maru Gothic, Copyright 2021 The Zen Maru Gothic Project Authors.
   SIL Open Font License 1.1. See public/fonts/OFL.txt.
+
+src/unreleased/play/_alt-f4/fairy.webp
+  Illustration from いらすとや (https://www.irasutoya.com/), by Takashi
+  Mifune, used under its terms (https://www.irasutoya.com/p/terms.html).
+  Resized and converted to WebP. いらすとやの素材（fantasy_pixy2.png）を
+  縮めて WebP に変換したもの。いらすとやの利用規約に従う。
