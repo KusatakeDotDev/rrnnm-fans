@@ -2,6 +2,7 @@ import fc from "fast-check";
 import { describe, expect, it } from "vite-plus/test";
 
 import {
+  adWindowFeatures,
   boundsOf,
   CHAIN_CHANCE,
   CHAIN_COOLDOWN_MS,
@@ -19,7 +20,7 @@ import {
 /**
  * src/lib/alt-f4.ts — 広告のウィンドウを閉じるミニゲーム（src/unreleased/play/alt-f4.astro）の、DOM に触らないところ。
  * 壊れると「ウィンドウがデスクトップの外にはみ出す」「連鎖が端で跳ね返らずに外へ抜ける」「連鎖が続けて起きて画面が埋まる」
- * 「残り時間の表示がずれる」の形で出る。
+ * 「残り時間の表示がずれる」「広告を押して開く視聴ページのウィンドウが、画面を覆う」の形で出る。
  */
 
 const unitInterval = fc.double({ min: 0, max: 1, maxExcluded: true, noNaN: true });
@@ -222,5 +223,25 @@ describe("動画の視聴ページ", () => {
 
   it("ID に URL の区切りの文字が入っていても、ほかのパラメータにしない", () => {
     expect(watchUrl("a&list=x")).toBe("https://www.youtube.com/watch?v=a%26list%3Dx");
+  });
+});
+
+describe("広告を押して開く視聴ページのウィンドウ", () => {
+  it("画面の右下の隅に、480×360 の小さなウィンドウで開く。開いた側は触れさせない", () => {
+    expect(adWindowFeatures({ left: 0, top: 0, width: 1920, height: 1040 })).toBe(
+      "popup,noopener,noreferrer,width=480,height=360,left=1440,top=680",
+    );
+  });
+
+  it("画面を複数つないで、今の画面の左上が 0 でないときも、その画面の右下に置く", () => {
+    expect(adWindowFeatures({ left: 1920, top: -200, width: 1280, height: 1000 })).toBe(
+      "popup,noopener,noreferrer,width=480,height=360,left=2720,top=440",
+    );
+  });
+
+  it("画面がウィンドウより小さいと、ウィンドウの左上を画面の左上にそろえる", () => {
+    expect(adWindowFeatures({ left: 100, top: 50, width: 400, height: 300 })).toBe(
+      "popup,noopener,noreferrer,width=480,height=360,left=100,top=50",
+    );
   });
 });
