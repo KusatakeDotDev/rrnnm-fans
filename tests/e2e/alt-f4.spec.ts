@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import {
+  adWindowFeatures,
   CHAIN_COUNT,
   CHAIN_INTERVAL_MS,
   ROUND_MS,
@@ -14,7 +15,7 @@ import { builtRoutes } from "../helpers/dist";
  * src/unreleased/play/alt-f4.astro。妖精の吹き出しかタスクバーのスタートで始めると広告のウィンドウが開き、× で閉じた数を数え、
  * 広告を押すと動画の視聴ページを小さな別のウィンドウで開き、ウィンドウの外を押すともう1枚開き、時間切れで妖精がもう一回やるかを
  * 尋ねて × が効かなくなる。
- * 位置・連鎖・残り時間の計算は tests/unit/alt-f4.test.ts が見るので、ここでは乱数を 0 に留め、時計を進めて、つなぎを見る。
+ * 位置・連鎖・残り時間と、視聴ページのウィンドウの大きさと位置の計算は tests/unit/alt-f4.test.ts が見るので、ここでは乱数を 0 に留め、時計を進めて、つなぎを見る。
  */
 
 const ROUTE = "/play/alt-f4/";
@@ -109,13 +110,17 @@ test("広告のウィンドウを閉じて数え、時間切れで止まる", as
     await expect(score).toHaveText("1");
   });
 
-  await test.step("広告を押すと、視聴ページを小さな別のウィンドウで開き、ページは移らない", async () => {
+  await test.step("広告を押すと、視聴ページを画面の右下に小さな別のウィンドウで開き、ページは移らない", async () => {
     const ad = popups.locator("[data-altf4-ad]");
     const href = await ad.getAttribute("href");
+    const area = await page.evaluate(() => {
+      const s = screen as Screen & { availLeft: number; availTop: number };
+      return { left: s.availLeft, top: s.availTop, width: s.availWidth, height: s.availHeight };
+    });
     await ad.click();
     expect(
       await page.evaluate(() => (window as unknown as { opened: unknown[][] }).opened),
-    ).toEqual([[href, "_blank", "popup,noopener,noreferrer"]]);
+    ).toEqual([[href, "_blank", adWindowFeatures(area)]]);
     expect(new URL(page.url()).pathname).toBe(ROUTE);
   });
 

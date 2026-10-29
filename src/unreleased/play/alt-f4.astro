@@ -69,6 +69,7 @@ import fairy from './_alt-f4/fairy.webp';
 
 <script>
   import {
+    adWindowFeatures,
     boundsOf,
     CHAIN_COUNT,
     CHAIN_INTERVAL_MS,
@@ -305,7 +306,10 @@ import fairy from './_alt-f4/fairy.webp';
     if (ad) {
       // 本物の広告のように、小さな別のウィンドウで開く（スマートフォンでは新しいタブになる）。
       event.preventDefault();
-      window.open(ad.href, '_blank', 'popup,noopener,noreferrer');
+      // availLeft・availTop は標準に無いが、主なブラウザが持つ。画面を複数つなぐと、今の画面の左上が 0 にならない。
+      const { availLeft, availTop, availWidth, availHeight } = screen as Screen & { availLeft?: number; availTop?: number };
+      const features = adWindowFeatures({ left: availLeft ?? 0, top: availTop ?? 0, width: availWidth, height: availHeight });
+      window.open(ad.href, '_blank', features);
       return;
     }
     // ウィンドウの外やタイトルバーを押してしまったら、もう1枚開く。

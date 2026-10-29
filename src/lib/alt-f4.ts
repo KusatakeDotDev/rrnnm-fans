@@ -106,3 +106,24 @@ export function remainingSeconds(elapsed: number): number {
 export function watchUrl(videoId: string): string {
   return `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`;
 }
+
+/** 広告を押して開く視聴ページのウィンドウの、中身の大きさ（px）。視聴ページのプレイヤーと題名が収まり、横にスクロールしない。 */
+export const AD_WINDOW: Size = { width: 480, height: 360 };
+
+/** 画面のうち、ウィンドウを置ける範囲（タスクバーなどを除く）。`screen.availLeft` などの値（px）。 */
+export interface ScreenArea {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * 広告を押したときの `window.open` の features。大きさを指定しないと、ゲームのウィンドウとほぼ同じ大きさで開いて画面を覆うので、
+ * 画面の右下の隅に小さく開く。位置は中身の大きさで決め、ツールバーの分は、ブラウザが画面の中に押し戻す。
+ */
+export function adWindowFeatures(area: ScreenArea): string {
+  const left = area.left + Math.max(0, area.width - AD_WINDOW.width);
+  const top = area.top + Math.max(0, area.height - AD_WINDOW.height);
+  return `popup,noopener,noreferrer,width=${AD_WINDOW.width},height=${AD_WINDOW.height},left=${left},top=${top}`;
+}
