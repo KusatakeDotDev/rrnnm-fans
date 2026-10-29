@@ -239,7 +239,7 @@ describe("広告を押して開く視聴ページのウィンドウ", () => {
     );
   });
 
-  it("画面がウィンドウより小さいと、画面の左上にそろえる（画面の外へ出さない）", () => {
+  it("画面がウィンドウより小さいと、ウィンドウの左上を画面の左上にそろえる", () => {
     expect(adWindowFeatures({ left: 100, top: 50, width: 400, height: 300 })).toBe(
       "popup,noopener,noreferrer,width=480,height=360,left=100,top=50",
     );
