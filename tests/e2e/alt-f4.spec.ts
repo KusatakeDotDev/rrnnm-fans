@@ -60,11 +60,6 @@ test("広告のウィンドウを閉じて数え、時間切れで止まる", as
       return null;
     };
   });
-  // 時計は止めて、runFor で進めた分だけ進める。流れたままだと、手順のあいだに次の1枚が開いて、数がずれる。
-  await page.clock.install({ time: new Date("2026-10-25T00:00:00Z") });
-  await page.goto(ROUTE);
-  await page.clock.pauseAt(new Date("2026-10-25T00:00:10Z"));
-
   const start = page.locator("[data-altf4-start]");
   const popups = page.locator("[data-altf4-popup]");
   const score = page.locator("[data-altf4-score]");
@@ -72,11 +67,17 @@ test("広告のウィンドウを閉じて数え、時間切れで止まる", as
   const balloon = page.locator("[data-altf4-balloon]");
   const yes = page.locator("[data-altf4-yes]");
 
+  await page.clock.install({ time: new Date("2026-10-25T00:00:00Z") });
+  await page.goto(ROUTE);
+  // サムネイルは取れたものから広告に出るので、全部を取り終えてから始める。時計を止める前に待つのは、止めるときに進める10秒で、
+  // 取っている途中の fetch の AbortSignal.timeout（Playwright の時計に従う）が切れ、取れる数が減るため（PR #18 の CI）。
+  await expect.poll(() => images).toBe(VIDEO_IDS.length);
+  await expect(start).toBeEnabled();
+  // 時計は止めて、runFor で進めた分だけ進める。流れたままだと、手順のあいだに次の1枚が開いて、数がずれる。
+  await page.clock.pauseAt(new Date("2026-10-25T00:00:10Z"));
+
   await test.step("妖精が吹き出しで始めるかを尋ね、「いいえ」で閉じても、妖精を押せば尋ね直す", async () => {
-    // サムネイルは取れたものから広告に出るので、全部を取り終えてから始める。
-    await expect.poll(() => images).toBe(VIDEO_IDS.length);
     await expect(yes).toBeVisible();
-    await expect(start).toBeEnabled();
     await page.locator("[data-altf4-no]").click();
     await expect(balloon).toBeHidden();
     await page.locator("[data-altf4-fairy]").click();
