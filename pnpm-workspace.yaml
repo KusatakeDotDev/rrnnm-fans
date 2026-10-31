@@ -13,20 +13,20 @@ catalogMode: strict
 # catalog に入れず、package.json に直接書くもの（tests/repo/catalog-specifiers.test.ts がこの一覧を読む）:
 # （今は無い）
 catalog:
-  "@astrojs/check": ^0.9.10
-  "@astrojs/react": ^7.0.1
+  "@astrojs/check": ^0.9.12
+  "@astrojs/react": ^7.1.1
   "@astrojs/sitemap": ^3.7.4
-  "@axe-core/playwright": ^4.13.0
+  "@axe-core/playwright": ^4.14.0
   "@fontsource/zen-maru-gothic": ^5.3.1
 
   # Why: CI のイメージのタグ（ci.yml の container:）と同じバージョンにする（ADR-0013 の決定）
   # RemoveWhen: ADR-0013「見直す条件」で、イメージのタグを手で直さなくてよくなったとき
   "@playwright/test": ^1.63.0
 
-  "@storybook/addon-a11y": ^10.6.1
-  "@storybook/addon-docs": ^10.6.1
-  "@storybook/addon-vitest": ^10.6.1
-  "@storybook/react-vite": ^10.6.1
+  "@storybook/addon-a11y": ^10.6.5
+  "@storybook/addon-docs": ^10.6.5
+  "@storybook/addon-vitest": ^10.6.5
+  "@storybook/react-vite": ^10.6.5
   "@stryker-mutator/core": ^10.1.1
   "@stryker-mutator/vitest-runner": ^10.1.1
   "@types/node": ^26.6.5
@@ -41,7 +41,7 @@ catalog:
   # RemoveWhen: コンポーネントのテストを、Vitest のブラウザーモードで回さなくなったとき
   "@vitest/browser-playwright": 5.0.5
 
-  astro: ^7.3.8
+  astro: ^7.4.2
   fast-check: ^4.10.2
 
   # Why: CI のイメージのタグ（ci.yml の container:）と同じバージョンにする（ADR-0013 の決定）
@@ -50,17 +50,17 @@ catalog:
 
   # Why: 自前の .astro の <style> を読む Stylelint の構文が import するので、直接持つ（ADR-0025「依存は、ADR-0016 の4項目を添えて主に聞いた」）
   # RemoveWhen: 自前の構文をやめるとき
-  postcss: ^8.5.28
+  postcss: ^8.5.32
 
-  react: ^19.3.0
-  react-dom: ^19.3.0
+  react: ^19.3.1
+  react-dom: ^19.3.1
   sharp: ^0.35.5
-  storybook: ^10.6.1
+  storybook: ^10.6.5
   stylelint: ^17.16.0
 
   # Why: 下限の iOS 18 で読めない CSS の機能を、書いたときに止める（ADR-0025「下限で読めない機能は、Baseline 2024 で lint する」）
   # RemoveWhen: Stylelint が Baseline のルールを組み込みにしたとき（ADR-0025「見直す条件」）
-  stylelint-plugin-use-baseline: ^1.4.7
+  stylelint-plugin-use-baseline: ^1.4.8
 
   # Why: メジャーを 6 に留める（.github/dependabot.yml の ignore。ADR-0003「TypeScript は 6 系に留める」）
   # RemoveWhen: ADR-0003「TypeScript は 6 系に留める」の見直しの条件を満たしたとき
@@ -78,7 +78,7 @@ catalog:
   # RemoveWhen: Stryker と addon-vitest が vitest を peer として読まなくなったとき
   vitest: 5.0.5
 
-  wrangler: ^4.149.0
+  wrangler: ^4.154.0
 
 # Vitest は peer の Vite ごとに別のものとして入るので、Vite もそろえないと、テストのファイルが登録する先と Stryker が回すものが別になる
 # （ADR-0031「Vitest と Vite のバージョンは、vite-plus の中のものにそろえる」）
