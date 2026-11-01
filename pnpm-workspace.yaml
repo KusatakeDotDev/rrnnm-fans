@@ -14,7 +14,7 @@ catalogMode: strict
 # （今は無い）
 catalog:
   "@astrojs/check": ^0.9.12
-  "@astrojs/react": ^7.1.1
+  "@astrojs/react": ^7.1.2
   "@astrojs/sitemap": ^3.7.4
   "@axe-core/playwright": ^4.14.0
   "@fontsource/zen-maru-gothic": ^5.3.1
@@ -29,7 +29,7 @@ catalog:
   "@storybook/react-vite": ^10.6.5
   "@stryker-mutator/core": ^10.1.1
   "@stryker-mutator/vitest-runner": ^10.1.1
-  "@types/node": ^26.6.5
+  "@types/node": ^26.6.6
   "@types/react": ^19.3.0
   "@types/react-dom": ^19.3.0
 
@@ -41,7 +41,7 @@ catalog:
   # RemoveWhen: コンポーネントのテストを、Vitest のブラウザーモードで回さなくなったとき
   "@vitest/browser-playwright": 5.0.5
 
-  astro: ^7.4.2
+  astro: ^7.4.4
   fast-check: ^4.10.2
 
   # Why: CI のイメージのタグ（ci.yml の container:）と同じバージョンにする（ADR-0013 の決定）
@@ -78,7 +78,7 @@ catalog:
   # RemoveWhen: Stryker と addon-vitest が vitest を peer として読まなくなったとき
   vitest: 5.0.5
 
-  wrangler: ^4.154.0
+  wrangler: ^4.155.0
 
 # Vitest は peer の Vite ごとに別のものとして入るので、Vite もそろえないと、テストのファイルが登録する先と Stryker が回すものが別になる
 # （ADR-0031「Vitest と Vite のバージョンは、vite-plus の中のものにそろえる」）
