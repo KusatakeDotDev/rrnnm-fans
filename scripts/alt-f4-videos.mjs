@@ -6,7 +6,8 @@
  *   pnpm alt-f4:videos <meta.json>
  *
  * meta.json は、チャンネルの動画と配信（ショートを除く）を YouTube Data API の videos.list で引いた結果の配列で、
- * 1件ごとに id・publishedAt・actualStartTime（配信が始まった時刻。動画は null）を持つ。
+ * 1件ごとに id・kind（チャンネルの動画のタブなら videos、配信のタブなら streams）・publishedAt・actualStartTime
+ * （配信やプレミア公開が始まった時刻。ふつうの動画と、まだ始まっていない配信は null）を持つ。
  */
 import { readFileSync, writeFileSync } from "node:fs";
 
@@ -20,8 +21,10 @@ if (!metaFile) {
   process.exit(1);
 }
 
-// 配信は、枠を立てた時刻ではなく、実際に始まった時刻で見る。
+// 配信は、枠を立てた時刻ではなく、実際に始まった時刻で見る。まだ始まっていない配信（待機所）は、oEmbed がサムネイルを
+// 返さない（RRNNM-106）ので外す。
 const videos = JSON.parse(readFileSync(metaFile, "utf8"))
+  .filter((video) => video.kind !== "streams" || video.actualStartTime)
   .map((video) => ({ id: video.id, at: Date.parse(video.actualStartTime ?? video.publishedAt) }))
   .filter((video) => /^[\w-]{11}$/.test(video.id) && video.at >= SINCE)
   // 古い順にする。作り直したときに、増えた分が末尾に並ぶ。
