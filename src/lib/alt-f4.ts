@@ -14,6 +14,18 @@ import { shuffle } from "./shuffle";
  */
 export const VIDEOS_PATH = "/play/alt-f4/videos.json";
 
+// TODO(RRNNM-114): 特別仕様が終わったら、この時刻と isCelebrating を消す
+/**
+ * 登録者10万人の記念の特別仕様（広告に全件の一覧から出し、始める前に記念配信を置く）が終わる時刻。11月限定にして、
+ * 一覧を作るのに使った API のデータを、30日より長く使わない（ADR-0033「払うもの」）。
+ */
+export const CELEBRATION_ENDS_AT = Date.parse("2026-12-01T00:00:00+09:00");
+
+/** 特別仕様のあいだか。`now` は `Date.now()` と同じ、ミリ秒の時刻。 */
+export function isCelebrating(now: number): boolean {
+  return now < CELEBRATION_ENDS_AT;
+}
+
 /** 1回に広告に出す動画の数。遊ぶ回ごとに youtube.com へ出す oEmbed の数でもある（ADR-0033「払うもの」）。 */
 export const VIDEOS_PER_ROUND = 15;
 

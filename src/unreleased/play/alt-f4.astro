@@ -77,6 +77,7 @@ import fairy from './_alt-f4/fairy.webp';
     CHAIN_START_MARGIN,
     centerPosition,
     chainStep,
+    isCelebrating,
     pickVideos,
     randomPosition,
     remainingSeconds,
@@ -300,10 +301,12 @@ import fairy from './_alt-f4/fairy.webp';
     if (focusWasInLayer) yesButton.focus();
   }
 
-  // 始める前の画面のまん中に、記念配信の広告を1枚置く。取れる前に遊び始めていたら、置かない。
-  void loadThumbnails([OPENING_VIDEO_ID], (thumbnail) => {
-    if (lastScore === null && !playing) spawn(centerPosition, thumbnail);
-  });
+  // 登録者10万人の記念の特別仕様のあいだは、始める前の画面のまん中に、記念配信の広告を1枚置く。取れる前に遊び始めていたら、置かない。
+  if (isCelebrating(Date.now())) {
+    void loadThumbnails([OPENING_VIDEO_ID], (thumbnail) => {
+      if (lastScore === null && !playing) spawn(centerPosition, thumbnail);
+    });
+  }
 
   startButton.addEventListener('click', start);
   yesButton.addEventListener('click', start);

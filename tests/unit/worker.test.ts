@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { LISTED_VIDEO_IDS, VIDEO_SOURCE, type VideoSource } from "../../src/data/alt-f4-videos";
-import { VIDEOS_PATH } from "../../src/lib/alt-f4";
+import {
+  currentVideoSource,
+  LISTED_VIDEO_IDS,
+  type VideoSource,
+} from "../../src/data/alt-f4-videos";
+import { CELEBRATION_ENDS_AT, VIDEOS_PATH } from "../../src/lib/alt-f4";
 import { channelFeedUrl } from "../../src/lib/youtube-feed";
 import { OFFICIAL } from "../../src/data/official";
 import { type Env, type FeedFetch, handle } from "../../worker/index";
@@ -85,8 +89,15 @@ describe("一覧のパス", () => {
     const { fetchFeed } = feedFetch(() => new Response(xml("aaaaaaaaaaa")));
     const response = await handle(get(VIDEOS_PATH), env, fetchFeed);
     expect(await response.json()).toEqual(
-      VIDEO_SOURCE === "list" ? LISTED_VIDEO_IDS : ["aaaaaaaaaaa"],
+      currentVideoSource() === "list" ? LISTED_VIDEO_IDS : ["aaaaaaaaaaa"],
     );
+  });
+});
+
+describe("今の出どころ", () => {
+  it("登録者10万人の記念の特別仕様のあいだはリポジトリの一覧、終わったらフィード", () => {
+    expect(currentVideoSource(CELEBRATION_ENDS_AT - 1)).toBe("list");
+    expect(currentVideoSource(CELEBRATION_ENDS_AT)).toBe("feed");
   });
 });
 

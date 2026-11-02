@@ -7,10 +7,12 @@ import {
   CHAIN_CHANCE,
   CHAIN_COOLDOWN_MS,
   CHAIN_START_DIRECTION,
+  CELEBRATION_ENDS_AT,
   CHAIN_STEP_RATIO,
   centerPosition,
   chainStep,
   type Direction,
+  isCelebrating,
   pickVideos,
   randomPosition,
   remainingSeconds,
@@ -228,6 +230,18 @@ describe("残りの秒数", () => {
   it("時間切れのあとは 0（負にしない）", () => {
     expect(remainingSeconds(ROUND_MS)).toBe(0);
     expect(remainingSeconds(ROUND_MS + 5_000)).toBe(0);
+  });
+});
+
+describe("登録者10万人の記念の特別仕様", () => {
+  it("2026年11月の終わり（日本時間の 12/1 0:00）で終わる", () => {
+    expect(new Date(CELEBRATION_ENDS_AT).toISOString()).toBe("2026-11-30T15:00:00.000Z");
+  });
+
+  it("終わる時刻の直前まではそのあいだで、終わる時刻からは外", () => {
+    expect(isCelebrating(CELEBRATION_ENDS_AT - 1)).toBe(true);
+    expect(isCelebrating(CELEBRATION_ENDS_AT)).toBe(false);
+    expect(isCelebrating(CELEBRATION_ENDS_AT + 1)).toBe(false);
   });
 });
 

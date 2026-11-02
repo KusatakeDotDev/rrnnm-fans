@@ -1,6 +1,6 @@
 import type { AstroIntegration } from "astro";
 
-import { LISTED_VIDEO_IDS, VIDEO_SOURCE } from "../data/alt-f4-videos.ts";
+import { currentVideoSource, LISTED_VIDEO_IDS } from "../data/alt-f4-videos.ts";
 import { OFFICIAL } from "../data/official.ts";
 import { VIDEOS_PATH } from "../lib/alt-f4.ts";
 import { channelFeedUrl, latestVideoIds } from "../lib/youtube-feed.ts";
@@ -32,7 +32,7 @@ export default function altF4Videos(): AstroIntegration {
       "astro:server:setup": ({ server }) => {
         server.middlewares.use(VIDEOS_PATH, (_request, response) => {
           void (async () => {
-            const ids = VIDEO_SOURCE === "list" ? LISTED_VIDEO_IDS : await feedVideoIds();
+            const ids = currentVideoSource() === "list" ? LISTED_VIDEO_IDS : await feedVideoIds();
             response.statusCode = ids ? 200 : 502;
             response.setHeader("content-type", "application/json; charset=utf-8");
             response.end(JSON.stringify(ids ?? []));

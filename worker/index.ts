@@ -1,11 +1,12 @@
 /**
  * サイトの Worker。ミニゲーム「広告をとじろ」の動画の一覧（VIDEOS_PATH）だけを返し、ほかは静的なファイル（dist）に回す
- * （ADR-0033 の決定）。一覧は、src/data/alt-f4-videos.ts の切り替えで、リポジトリに置いた一覧か、チャンネルのフィードの最新を返す。
+ * （ADR-0033 の決定）。一覧は、src/data/alt-f4-videos.ts の切り替え（登録者10万人の記念の特別仕様のあいだかどうか）で、
+ * リポジトリに置いた一覧か、チャンネルのフィードの最新を返す。
  * フィードは CORS を許さず、ブラウザから読めないので、同じオリジンで中継する。
  * ほかのサイトのページから読ませないよう、`Access-Control-Allow-Origin` は付けない（CORS が止めるのはブラウザだけで、
  * ブラウザの外からは読めるが、返すのはこのチャンネルの公開の動画の ID だけ）。
  */
-import { LISTED_VIDEO_IDS, VIDEO_SOURCE, type VideoSource } from "../src/data/alt-f4-videos";
+import { currentVideoSource, LISTED_VIDEO_IDS, type VideoSource } from "../src/data/alt-f4-videos";
 import { OFFICIAL } from "../src/data/official";
 import { VIDEOS_PATH } from "../src/lib/alt-f4";
 import { channelFeedUrl, latestVideoIds } from "../src/lib/youtube-feed";
@@ -44,7 +45,7 @@ export async function handle(
   request: Request,
   env: Env,
   fetchFeed: FeedFetch = fetch,
-  source: VideoSource = VIDEO_SOURCE,
+  source: VideoSource = currentVideoSource(),
 ): Promise<Response> {
   const url = new URL(request.url);
   // 静的なファイルが無いリクエストだけがここへ来る。Worker が無かったときと同じ 404 にするため、ASSETS に返させる。
