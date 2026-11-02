@@ -5,11 +5,39 @@
  * `random` は `Math.random` と同じ契約（0 以上 1 未満を返す）の関数。テストで決め打ちできるよう注入にする。
  */
 
+import { shuffle } from "./shuffle";
+
 /**
  * 広告に出す動画の ID の一覧を返すパス。チャンネルのフィードはブラウザから読めないので、同じオリジンで中継する
  * （ADR-0033 の決定）。本番とテストは Worker（worker/index.ts）、開発サーバーは src/integrations/alt-f4-videos.ts が返す。
+ * 一覧の出どころ（src/data/alt-f4-videos.ts）は返す側で替え、ページは替えない。
  */
 export const VIDEOS_PATH = "/play/alt-f4/videos.json";
+
+// TODO(RRNNM-114): 特別仕様が終わったら、この時刻と isCelebrating を消す
+/**
+ * 登録者10万人の記念の特別仕様（広告に全件の一覧から出し、始める前に記念配信を置く）が終わる時刻。11月限定にして、
+ * 一覧を作るのに使った API のデータを、30日より長く使わない（ADR-0033「払うもの」）。
+ */
+export const CELEBRATION_ENDS_AT = Date.parse("2026-12-01T00:00:00+09:00");
+
+/** 特別仕様のあいだか。`now` は `Date.now()` と同じ、ミリ秒の時刻。 */
+export function isCelebrating(now: number): boolean {
+  return now < CELEBRATION_ENDS_AT;
+}
+
+/** 一覧の応答を覚えさせる秒数。`ttl` 秒までで、特別仕様が終わる時刻は越えない。 */
+export function maxAgeUntilCelebrationEnds(now: number, ttl: number): number {
+  return Math.max(0, Math.min(ttl, Math.floor((CELEBRATION_ENDS_AT - now) / 1000)));
+}
+
+/** 1回に広告に出す動画の数。遊ぶ回ごとに youtube.com へ出す oEmbed の数でもある（ADR-0033「払うもの」）。 */
+export const VIDEOS_PER_ROUND = 15;
+
+/** 1回に広告に出す動画を、一覧から選ぶ。重ねずに選び、一覧が VIDEOS_PER_ROUND に足りなければ全部を混ぜて返す。 */
+export function pickVideos(ids: readonly string[], random: () => number): string[] {
+  return shuffle(ids, random).slice(0, VIDEOS_PER_ROUND);
+}
 
 /** 1回の制限時間（ミリ秒）。 */
 export const ROUND_MS = 30_000;
@@ -65,6 +93,11 @@ export function boundsOf(desktop: Size, popup: Size): Bounds {
 export function randomPosition(bounds: Bounds, random: () => number, margin = 0): Point {
   const along = (max: number) => Math.floor(max * margin + random() * max * (1 - 2 * margin));
   return { x: along(bounds.maxX), y: along(bounds.maxY) };
+}
+
+/** 範囲のまん中。px は整数にそろえる。 */
+export function centerPosition(bounds: Bounds): Point {
+  return { x: Math.floor(bounds.maxX / 2), y: Math.floor(bounds.maxY / 2) };
 }
 
 /** 連鎖の次の1枚。範囲の端に着く（越える）向きは、跳ね返して逆に進める。 */

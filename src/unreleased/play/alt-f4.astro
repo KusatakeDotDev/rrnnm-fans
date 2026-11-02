@@ -75,7 +75,10 @@ import fairy from './_alt-f4/fairy.webp';
     CHAIN_INTERVAL_MS,
     CHAIN_START_DIRECTION,
     CHAIN_START_MARGIN,
+    centerPosition,
     chainStep,
+    isCelebrating,
+    pickVideos,
     randomPosition,
     remainingSeconds,
     ROUND_MS,
@@ -85,6 +88,7 @@ import fairy from './_alt-f4/fairy.webp';
     type Point,
   } from '../../lib/alt-f4';
   import { shuffle } from '../../lib/shuffle';
+  import { OPENING_VIDEO_ID } from './_alt-f4/opening';
   import { loadThumbnails, loadVideoIds, type Thumbnail } from './_alt-f4/thumbnails';
 
   /** サムネイルを取り終えるのを待つ上限（ミリ秒）。過ぎたら、取れた分だけで始められるようにする。 */
@@ -107,8 +111,10 @@ import fairy from './_alt-f4/fairy.webp';
   const status = document.querySelector<HTMLElement>('[data-altf4-status]')!;
   const template = document.querySelector<HTMLTemplateElement>('[data-altf4-popup-template]')!;
 
-  /** 取れたサムネイル。取れたものから足していく。 */
-  const thumbnails: Thumbnail[] = [];
+  /** この回に出しているサムネイル。 */
+  let thumbnails: Thumbnail[] = [];
+  /** 次の回に出すサムネイル。取れたものから足していく。 */
+  let upcoming: Thumbnail[] = [];
   let deck: Thumbnail[] = [];
   let ready = false;
   /** 前に遊んだときに閉じた数。まだ遊んでいなければ null。 */
@@ -128,11 +134,22 @@ import fairy from './_alt-f4/fairy.webp';
     openBalloon(true);
   }
 
+  /**
+   * 次の回に出す動画を一覧から選び直し、サムネイルを取り始める。取り終えるか LOAD_WAIT_MS が過ぎたら解決する。
+   * 回ごとに別の配列に足すので、前の回の分が遅れて届いても、次の回には混ざらない。一覧も回ごとに取り直し、返す側が
+   * 出どころを替えたら、開いたままのページも次の回から替わるようにする。
+   */
+  function prepare(): Promise<unknown> {
+    const batch: Thumbnail[] = [];
+    upcoming = batch;
+    const loaded = loadVideoIds().then((ids) =>
+      loadThumbnails(pickVideos(ids, Math.random), (thumbnail) => batch.push(thumbnail)),
+    );
+    return Promise.race([loaded, new Promise((resolve) => setTimeout(resolve, LOAD_WAIT_MS))]);
+  }
+
   ask();
-  const loaded = loadVideoIds().then((ids) =>
-    loadThumbnails(shuffle(ids, Math.random), (thumbnail) => thumbnails.push(thumbnail)),
-  );
-  void Promise.race([loaded, new Promise((resolve) => setTimeout(resolve, LOAD_WAIT_MS))]).then(() => {
+  void prepare().then(() => {
     ready = true;
     startButton.disabled = false;
     // 待ってもらっていた吹き出しが開いたままなら、続けて尋ねる。閉じられていたら、開き直さない。
@@ -173,12 +190,14 @@ import fairy from './_alt-f4/fairy.webp';
   }
 
   /** ウィンドウを1枚作って、デスクトップに置く。置く位置は、置いたウィンドウの大きさから決める。 */
-  function spawn(positionFor: (bounds: ReturnType<typeof boundsOf>) => Point): void {
+  function spawn(
+    positionFor: (bounds: ReturnType<typeof boundsOf>) => Point,
+    thumbnail: Thumbnail | undefined = nextThumbnail(),
+  ): void {
     const popup = (template.content.firstElementChild as HTMLElement).cloneNode(true) as HTMLElement;
     const ad = popup.querySelector<HTMLAnchorElement>('[data-altf4-ad]')!;
     const image = popup.querySelector<HTMLImageElement>('[data-altf4-image]')!;
     const caption = popup.querySelector<HTMLElement>('[data-altf4-caption]')!;
-    const thumbnail = nextThumbnail();
     if (thumbnail) {
       ad.href = thumbnail.href;
       image.src = thumbnail.image;
@@ -241,6 +260,10 @@ import fairy from './_alt-f4/fairy.webp';
     score.textContent = '0';
     lastChainAt = null;
     chaining = false;
+    thumbnails = upcoming;
+    deck = [];
+    // もう一回で出す動画を、遊んでいるあいだに選び直して取っておく。終わってから取ると、すぐ始め直したときに広告が出そろわない。
+    void prepare();
     playing = true;
     startedAt = performance.now();
     startButton.disabled = true;
@@ -275,6 +298,13 @@ import fairy from './_alt-f4/fairy.webp';
     assistant.hidden = false;
     ask();
     if (focusWasInLayer) yesButton.focus();
+  }
+
+  // 登録者10万人の記念の特別仕様のあいだは、始める前の画面のまん中に、記念配信の広告を1枚置く。取れる前に遊び始めていたら、置かない。
+  if (isCelebrating(Date.now())) {
+    void loadThumbnails([OPENING_VIDEO_ID], (thumbnail) => {
+      if (lastScore === null && !playing && isCelebrating(Date.now())) spawn(centerPosition, thumbnail);
+    });
   }
 
   startButton.addEventListener('click', start);
