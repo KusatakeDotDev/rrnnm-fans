@@ -76,6 +76,7 @@ import fairy from './_alt-f4/fairy.webp';
     CHAIN_START_DIRECTION,
     CHAIN_START_MARGIN,
     chainStep,
+    pickVideos,
     randomPosition,
     remainingSeconds,
     ROUND_MS,
@@ -107,8 +108,10 @@ import fairy from './_alt-f4/fairy.webp';
   const status = document.querySelector<HTMLElement>('[data-altf4-status]')!;
   const template = document.querySelector<HTMLTemplateElement>('[data-altf4-popup-template]')!;
 
-  /** 取れたサムネイル。取れたものから足していく。 */
-  const thumbnails: Thumbnail[] = [];
+  /** この回に出しているサムネイル。 */
+  let thumbnails: Thumbnail[] = [];
+  /** 次の回に出すサムネイル。取れたものから足していく。 */
+  let upcoming: Thumbnail[] = [];
   let deck: Thumbnail[] = [];
   let ready = false;
   /** 前に遊んだときに閉じた数。まだ遊んでいなければ null。 */
@@ -128,11 +131,23 @@ import fairy from './_alt-f4/fairy.webp';
     openBalloon(true);
   }
 
+  const videoIds = loadVideoIds();
+
+  /**
+   * 次の回に出す動画を一覧から選び直し、サムネイルを取り始める。取り終えるか LOAD_WAIT_MS が過ぎたら解決する。
+   * 回ごとに別の配列に足すので、前の回の分が遅れて届いても、次の回には混ざらない。
+   */
+  function prepare(): Promise<unknown> {
+    const batch: Thumbnail[] = [];
+    upcoming = batch;
+    const loaded = videoIds.then((ids) =>
+      loadThumbnails(pickVideos(ids, Math.random), (thumbnail) => batch.push(thumbnail)),
+    );
+    return Promise.race([loaded, new Promise((resolve) => setTimeout(resolve, LOAD_WAIT_MS))]);
+  }
+
   ask();
-  const loaded = loadVideoIds().then((ids) =>
-    loadThumbnails(shuffle(ids, Math.random), (thumbnail) => thumbnails.push(thumbnail)),
-  );
-  void Promise.race([loaded, new Promise((resolve) => setTimeout(resolve, LOAD_WAIT_MS))]).then(() => {
+  void prepare().then(() => {
     ready = true;
     startButton.disabled = false;
     // 待ってもらっていた吹き出しが開いたままなら、続けて尋ねる。閉じられていたら、開き直さない。
@@ -241,6 +256,10 @@ import fairy from './_alt-f4/fairy.webp';
     score.textContent = '0';
     lastChainAt = null;
     chaining = false;
+    thumbnails = upcoming;
+    deck = [];
+    // もう一回で出す動画を、遊んでいるあいだに選び直して取っておく。終わってから取ると、すぐ始め直したときに広告が出そろわない。
+    void prepare();
     playing = true;
     startedAt = performance.now();
     startButton.disabled = true;

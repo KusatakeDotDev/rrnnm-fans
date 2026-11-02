@@ -5,11 +5,22 @@
  * `random` は `Math.random` と同じ契約（0 以上 1 未満を返す）の関数。テストで決め打ちできるよう注入にする。
  */
 
+import { shuffle } from "./shuffle";
+
 /**
  * 広告に出す動画の ID の一覧を返すパス。チャンネルのフィードはブラウザから読めないので、同じオリジンで中継する
  * （ADR-0033 の決定）。本番とテストは Worker（worker/index.ts）、開発サーバーは src/integrations/alt-f4-videos.ts が返す。
+ * 一覧の出どころ（src/data/alt-f4-videos.ts）は返す側で替え、ページは替えない。
  */
 export const VIDEOS_PATH = "/play/alt-f4/videos.json";
+
+/** 1回に広告に出す動画の数。遊ぶ回ごとに youtube.com へ出す oEmbed の数でもある（ADR-0033「払うもの」）。 */
+export const VIDEOS_PER_ROUND = 15;
+
+/** 1回に広告に出す動画を、一覧から選ぶ。重ねずに選び、一覧が VIDEOS_PER_ROUND に足りなければ全部を混ぜて返す。 */
+export function pickVideos(ids: readonly string[], random: () => number): string[] {
+  return shuffle(ids, random).slice(0, VIDEOS_PER_ROUND);
+}
 
 /** 1回の制限時間（ミリ秒）。 */
 export const ROUND_MS = 30_000;

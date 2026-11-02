@@ -10,17 +10,20 @@ import {
   CHAIN_STEP_RATIO,
   chainStep,
   type Direction,
+  pickVideos,
   randomPosition,
   remainingSeconds,
   ROUND_MS,
   shouldChain,
+  VIDEOS_PER_ROUND,
   watchUrl,
 } from "../../src/lib/alt-f4";
 
 /**
  * src/lib/alt-f4.ts — 広告のウィンドウを閉じるミニゲーム（src/unreleased/play/alt-f4.astro）の、DOM に触らないところ。
  * 壊れると「ウィンドウがデスクトップの外にはみ出す」「連鎖が端で跳ね返らずに外へ抜ける」「連鎖が続けて起きて画面が埋まる」
- * 「残り時間の表示がずれる」「広告を押して開く視聴ページのウィンドウが、画面を覆う」の形で出る。
+ * 「残り時間の表示がずれる」「広告を押して開く視聴ページのウィンドウが、画面を覆う」「1回に出す動画が多すぎて、oEmbed を投げすぎる」
+ * 「回ごとに選び直しても、同じ動画しか出ない」の形で出る。
  */
 
 const unitInterval = fc.double({ min: 0, max: 1, maxExcluded: true, noNaN: true });
@@ -213,6 +216,37 @@ describe("残りの秒数", () => {
   it("時間切れのあとは 0（負にしない）", () => {
     expect(remainingSeconds(ROUND_MS)).toBe(0);
     expect(remainingSeconds(ROUND_MS + 5_000)).toBe(0);
+  });
+});
+
+describe("1回に広告に出す動画", () => {
+  /** 番号から、重ならない動画の ID の一覧を作る。 */
+  const videoIds = (count: number) =>
+    Array.from({ length: count }, (_, n) => `video${String(n).padStart(6, "0")}`);
+
+  it("一覧から重ねずに選び、VIDEOS_PER_ROUND 本までにする。一覧が足りなければ全部を出す", () => {
+    fc.assert(
+      fc.property(fc.integer({ min: 0, max: 60 }), unitInterval, (count, value) => {
+        const ids = videoIds(count);
+        const picked = pickVideos(ids, () => value);
+        expect(picked).toHaveLength(Math.min(count, VIDEOS_PER_ROUND));
+        expect(new Set(picked).size).toBe(picked.length);
+        for (const id of picked) expect(ids).toContain(id);
+      }),
+    );
+  });
+
+  it("乱数が違えば、別の動画を選ぶ（回ごとに選び直すと、出る動画が変わる）", () => {
+    const ids = videoIds(VIDEOS_PER_ROUND * 3);
+    const first = new Set(pickVideos(ids, () => 0));
+    const second = pickVideos(ids, () => 0.99);
+    expect(second.some((id) => !first.has(id))).toBe(true);
+  });
+
+  it("渡した一覧を書き換えない", () => {
+    const ids = videoIds(VIDEOS_PER_ROUND + 5);
+    pickVideos(ids, () => 0);
+    expect(ids).toEqual(videoIds(VIDEOS_PER_ROUND + 5));
   });
 });
 

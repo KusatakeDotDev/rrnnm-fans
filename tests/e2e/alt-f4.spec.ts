@@ -7,6 +7,7 @@ import {
   ROUND_MS,
   SPAWN_INTERVAL_MS,
   VIDEOS_PATH,
+  VIDEOS_PER_ROUND,
   watchUrl,
 } from "../../src/lib/alt-f4";
 import { builtRoutes } from "../helpers/dist";
@@ -14,22 +15,28 @@ import { builtRoutes } from "../helpers/dist";
 /**
  * src/unreleased/play/alt-f4.astro。妖精の吹き出しかタスクバーのスタートで始めると広告のウィンドウが開き、× で閉じた数を数え、
  * 広告を押すと動画の視聴ページを小さな別のウィンドウで開き、ウィンドウの外を押すともう1枚開き、時間切れで妖精がもう一回やるかを
- * 尋ねて × が効かなくなる。
- * 位置・連鎖・残り時間と、視聴ページのウィンドウの大きさと位置の計算は tests/unit/alt-f4.test.ts が見るので、ここでは乱数を 0 に留め、時計を進めて、つなぎを見る。
+ * 尋ねて × が効かなくなる。広告に出す動画は、一覧から回ごとに選び直す。
+ * 位置・連鎖・残り時間・動画の選び方と、視聴ページのウィンドウの大きさと位置の計算は tests/unit/alt-f4.test.ts が見るので、ここでは
+ * 乱数を 0 に留め（何度選んでも同じ動画になる）、時計を進めて、つなぎを見る。
  */
 
 const ROUTE = "/play/alt-f4/";
 const hasPage = builtRoutes().includes(ROUTE);
 /** 動画ごとに別の URL にする。同じ URL だと、ブラウザは2本目からキャッシュを使い、取りに行った数で待てない。 */
 const imageOf = (video: string) => `https://i.ytimg.com/vi/${video}/hqdefault.jpg`;
-/** Worker が中継するチャンネルの最新の動画の代わり（テストの Worker は、YouTube へ出ない。playwright.config.ts）。 */
-const VIDEO_IDS = ["fixture0001", "fixture0002", "fixture0003"];
+/** Worker が返す一覧の代わり。1回に出す数より多くして、そこから選ぶことを見る。 */
+const VIDEO_IDS = Array.from(
+  { length: VIDEOS_PER_ROUND + 5 },
+  (_, n) => `fixture${String(n + 1).padStart(4, "0")}`,
+);
 
 test("広告のウィンドウを閉じて数え、時間切れで止まる", async ({ page }) => {
   test.skip(!hasPage, "本番モードではページを生成しない");
 
   await page.route(`**${VIDEOS_PATH}`, (route) => route.fulfill({ json: VIDEO_IDS }));
+  let oembeds = 0;
   await page.route("https://www.youtube.com/oembed?**", (route) => {
+    oembeds++;
     const video = new URL(new URL(route.request().url()).searchParams.get("url")!).searchParams.get(
       "v",
     );
@@ -71,8 +78,10 @@ test("広告のウィンドウを閉じて数え、時間切れで止まる", as
   await page.goto(ROUTE);
   // サムネイルは取れたものから広告に出るので、全部を取り終えてから始める。時計を止める前に待つのは、止めるときに進める10秒で、
   // 取っている途中の fetch の AbortSignal.timeout（Playwright の時計に従う）が切れ、取れる数が減るため（PR #18 の CI）。
-  await expect.poll(() => images).toBe(VIDEO_IDS.length);
+  await expect.poll(() => images).toBe(VIDEOS_PER_ROUND);
   await expect(start).toBeEnabled();
+  // 一覧の全部ではなく、1回に出す数だけを取る。
+  expect(oembeds).toBe(VIDEOS_PER_ROUND);
   // 時計は止めて、runFor で進めた分だけ進める。流れたままだと、手順のあいだに次の1枚が開いて、数がずれる。
   await page.clock.pauseAt(new Date("2026-10-25T00:00:10Z"));
 
@@ -85,6 +94,10 @@ test("広告のウィンドウを閉じて数え、時間切れで止まる", as
   });
 
   await yes.click();
+
+  await test.step("遊び始めると、もう一回で出す動画を選び直して取り始める", async () => {
+    await expect.poll(() => oembeds).toBe(2 * VIDEOS_PER_ROUND);
+  });
 
   await test.step("妖精の「はい」で1枚開いて妖精は隠れ、広告は選んだ動画のどれかの視聴ページを指す", async () => {
     await expect(popups).toHaveCount(1);
