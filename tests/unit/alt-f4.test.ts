@@ -8,6 +8,7 @@ import {
   CHAIN_COOLDOWN_MS,
   CHAIN_START_DIRECTION,
   CHAIN_STEP_RATIO,
+  centerPosition,
   chainStep,
   type Direction,
   pickVideos,
@@ -89,6 +90,17 @@ describe("ふだんの1枚を置く位置", () => {
     const bounds = { maxX: 1000, maxY: 500, step: 10 };
     expect(randomPosition(bounds, () => 0, 0.1)).toEqual({ x: 100, y: 50 });
     expect(randomPosition(bounds, () => 0.999999, 0.1)).toEqual({ x: 899, y: 449 });
+  });
+});
+
+describe("始める前に置く1枚の位置", () => {
+  it("範囲のまん中。横と縦はそれぞれの範囲から決め、px は整数にそろえる", () => {
+    expect(centerPosition({ maxX: 500, maxY: 300, step: 10 })).toEqual({ x: 250, y: 150 });
+    expect(centerPosition({ maxX: 501, maxY: 301, step: 10 })).toEqual({ x: 250, y: 150 });
+  });
+
+  it("範囲が 0（デスクトップより大きいウィンドウ）なら、左上にそろえる", () => {
+    expect(centerPosition({ maxX: 0, maxY: 0, step: 10 })).toEqual({ x: 0, y: 0 });
   });
 });
 

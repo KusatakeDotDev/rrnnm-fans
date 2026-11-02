@@ -10,12 +10,13 @@ import {
   VIDEOS_PER_ROUND,
   watchUrl,
 } from "../../src/lib/alt-f4";
+import { OPENING_VIDEO_ID } from "../../src/unreleased/play/_alt-f4/opening";
 import { builtRoutes } from "../helpers/dist";
 
 /**
  * src/unreleased/play/alt-f4.astro。妖精の吹き出しかタスクバーのスタートで始めると広告のウィンドウが開き、× で閉じた数を数え、
  * 広告を押すと動画の視聴ページを小さな別のウィンドウで開き、ウィンドウの外を押すともう1枚開き、時間切れで妖精がもう一回やるかを
- * 尋ねて × が効かなくなる。広告に出す動画は、一覧から回ごとに選び直す。
+ * 尋ねて × が効かなくなる。広告に出す動画は、一覧から回ごとに選び直す。始める前は、記念配信の広告を1枚、まん中に置く。
  * 位置・連鎖・残り時間・動画の選び方と、視聴ページのウィンドウの大きさと位置の計算は tests/unit/alt-f4.test.ts が見るので、ここでは
  * 乱数を 0 に留め（何度選んでも同じ動画になる）、時計を進めて、つなぎを見る。
  */
@@ -78,12 +79,30 @@ test("広告のウィンドウを閉じて数え、時間切れで止まる", as
   await page.goto(ROUTE);
   // サムネイルは取れたものから広告に出るので、全部を取り終えてから始める。時計を止める前に待つのは、止めるときに進める10秒で、
   // 取っている途中の fetch の AbortSignal.timeout（Playwright の時計に従う）が切れ、取れる数が減るため（PR #18 の CI）。
-  await expect.poll(() => images).toBe(VIDEOS_PER_ROUND);
+  // 1回めの回の分と、始める前に置く1枚の分。
+  await expect.poll(() => images).toBe(VIDEOS_PER_ROUND + 1);
   await expect(start).toBeEnabled();
   // 一覧の全部ではなく、1回に出す数だけを取る。
-  expect(oembeds).toBe(VIDEOS_PER_ROUND);
+  expect(oembeds).toBe(VIDEOS_PER_ROUND + 1);
   // 時計は止めて、runFor で進めた分だけ進める。流れたままだと、手順のあいだに次の1枚が開いて、数がずれる。
   await page.clock.pauseAt(new Date("2026-10-25T00:00:10Z"));
+
+  await test.step("始める前は、記念配信の広告を1枚、デスクトップのまん中に置く", async () => {
+    await expect(popups).toHaveCount(1);
+    await expect(popups.locator("[data-altf4-ad]")).toHaveAttribute(
+      "href",
+      watchUrl(OPENING_VIDEO_ID),
+    );
+    const desktopBox = (await page.locator("[data-altf4-popups]").boundingBox())!;
+    const popupBox = (await popups.boundingBox())!;
+    // 位置は整数の px にそろえるので、1 px までずれる。
+    expect(
+      Math.abs(popupBox.x - desktopBox.x - (desktopBox.width - popupBox.width) / 2),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(popupBox.y - desktopBox.y - (desktopBox.height - popupBox.height) / 2),
+    ).toBeLessThanOrEqual(1);
+  });
 
   await test.step("妖精が吹き出しで始めるかを尋ね、「いいえ」で閉じても、妖精を押せば尋ね直す", async () => {
     await expect(yes).toBeVisible();
@@ -96,7 +115,7 @@ test("広告のウィンドウを閉じて数え、時間切れで止まる", as
   await yes.click();
 
   await test.step("遊び始めると、もう一回で出す動画を選び直して取り始める", async () => {
-    await expect.poll(() => oembeds).toBe(2 * VIDEOS_PER_ROUND);
+    await expect.poll(() => oembeds).toBe(2 * VIDEOS_PER_ROUND + 1);
   });
 
   await test.step("妖精の「はい」で1枚開いて妖精は隠れ、広告は選んだ動画のどれかの視聴ページを指す", async () => {

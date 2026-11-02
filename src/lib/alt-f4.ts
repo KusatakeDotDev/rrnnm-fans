@@ -78,6 +78,11 @@ export function randomPosition(bounds: Bounds, random: () => number, margin = 0)
   return { x: along(bounds.maxX), y: along(bounds.maxY) };
 }
 
+/** 範囲のまん中。px は整数にそろえる。 */
+export function centerPosition(bounds: Bounds): Point {
+  return { x: Math.floor(bounds.maxX / 2), y: Math.floor(bounds.maxY / 2) };
+}
+
 /** 連鎖の次の1枚。範囲の端に着く（越える）向きは、跳ね返して逆に進める。 */
 export function chainStep(
   from: Point,

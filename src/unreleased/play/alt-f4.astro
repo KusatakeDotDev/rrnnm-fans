@@ -75,6 +75,7 @@ import fairy from './_alt-f4/fairy.webp';
     CHAIN_INTERVAL_MS,
     CHAIN_START_DIRECTION,
     CHAIN_START_MARGIN,
+    centerPosition,
     chainStep,
     pickVideos,
     randomPosition,
@@ -86,6 +87,7 @@ import fairy from './_alt-f4/fairy.webp';
     type Point,
   } from '../../lib/alt-f4';
   import { shuffle } from '../../lib/shuffle';
+  import { OPENING_VIDEO_ID } from './_alt-f4/opening';
   import { loadThumbnails, loadVideoIds, type Thumbnail } from './_alt-f4/thumbnails';
 
   /** サムネイルを取り終えるのを待つ上限（ミリ秒）。過ぎたら、取れた分だけで始められるようにする。 */
@@ -188,12 +190,14 @@ import fairy from './_alt-f4/fairy.webp';
   }
 
   /** ウィンドウを1枚作って、デスクトップに置く。置く位置は、置いたウィンドウの大きさから決める。 */
-  function spawn(positionFor: (bounds: ReturnType<typeof boundsOf>) => Point): void {
+  function spawn(
+    positionFor: (bounds: ReturnType<typeof boundsOf>) => Point,
+    thumbnail: Thumbnail | undefined = nextThumbnail(),
+  ): void {
     const popup = (template.content.firstElementChild as HTMLElement).cloneNode(true) as HTMLElement;
     const ad = popup.querySelector<HTMLAnchorElement>('[data-altf4-ad]')!;
     const image = popup.querySelector<HTMLImageElement>('[data-altf4-image]')!;
     const caption = popup.querySelector<HTMLElement>('[data-altf4-caption]')!;
-    const thumbnail = nextThumbnail();
     if (thumbnail) {
       ad.href = thumbnail.href;
       image.src = thumbnail.image;
@@ -295,6 +299,11 @@ import fairy from './_alt-f4/fairy.webp';
     ask();
     if (focusWasInLayer) yesButton.focus();
   }
+
+  // 始める前の画面のまん中に、記念配信の広告を1枚置く。取れる前に遊び始めていたら、置かない。
+  void loadThumbnails([OPENING_VIDEO_ID], (thumbnail) => {
+    if (lastScore === null && !playing) spawn(centerPosition, thumbnail);
+  });
 
   startButton.addEventListener('click', start);
   yesButton.addEventListener('click', start);
