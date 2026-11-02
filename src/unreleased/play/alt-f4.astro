@@ -134,16 +134,15 @@ import fairy from './_alt-f4/fairy.webp';
     openBalloon(true);
   }
 
-  const videoIds = loadVideoIds();
-
   /**
    * 次の回に出す動画を一覧から選び直し、サムネイルを取り始める。取り終えるか LOAD_WAIT_MS が過ぎたら解決する。
-   * 回ごとに別の配列に足すので、前の回の分が遅れて届いても、次の回には混ざらない。
+   * 回ごとに別の配列に足すので、前の回の分が遅れて届いても、次の回には混ざらない。一覧も回ごとに取り直し、返す側が
+   * 出どころを替えたら、開いたままのページも次の回から替わるようにする。
    */
   function prepare(): Promise<unknown> {
     const batch: Thumbnail[] = [];
     upcoming = batch;
-    const loaded = videoIds.then((ids) =>
+    const loaded = loadVideoIds().then((ids) =>
       loadThumbnails(pickVideos(ids, Math.random), (thumbnail) => batch.push(thumbnail)),
     );
     return Promise.race([loaded, new Promise((resolve) => setTimeout(resolve, LOAD_WAIT_MS))]);
@@ -304,7 +303,7 @@ import fairy from './_alt-f4/fairy.webp';
   // 登録者10万人の記念の特別仕様のあいだは、始める前の画面のまん中に、記念配信の広告を1枚置く。取れる前に遊び始めていたら、置かない。
   if (isCelebrating(Date.now())) {
     void loadThumbnails([OPENING_VIDEO_ID], (thumbnail) => {
-      if (lastScore === null && !playing) spawn(centerPosition, thumbnail);
+      if (lastScore === null && !playing && isCelebrating(Date.now())) spawn(centerPosition, thumbnail);
     });
   }
 

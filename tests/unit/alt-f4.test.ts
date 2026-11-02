@@ -13,6 +13,7 @@ import {
   chainStep,
   type Direction,
   isCelebrating,
+  maxAgeUntilCelebrationEnds,
   pickVideos,
   randomPosition,
   remainingSeconds,
@@ -242,6 +243,15 @@ describe("登録者10万人の記念の特別仕様", () => {
     expect(isCelebrating(CELEBRATION_ENDS_AT - 1)).toBe(true);
     expect(isCelebrating(CELEBRATION_ENDS_AT)).toBe(false);
     expect(isCelebrating(CELEBRATION_ENDS_AT + 1)).toBe(false);
+  });
+
+  it("一覧を覚えさせる秒数は、決めた秒数までで、終わる時刻を越えない（秒に満たない分は切り捨てる）", () => {
+    expect(maxAgeUntilCelebrationEnds(CELEBRATION_ENDS_AT - 3_600_000, 600)).toBe(600);
+    expect(maxAgeUntilCelebrationEnds(CELEBRATION_ENDS_AT - 600_000, 600)).toBe(600);
+    expect(maxAgeUntilCelebrationEnds(CELEBRATION_ENDS_AT - 90_500, 600)).toBe(90);
+    expect(maxAgeUntilCelebrationEnds(CELEBRATION_ENDS_AT - 999, 600)).toBe(0);
+    expect(maxAgeUntilCelebrationEnds(CELEBRATION_ENDS_AT, 600)).toBe(0);
+    expect(maxAgeUntilCelebrationEnds(CELEBRATION_ENDS_AT + 5_000, 600)).toBe(0);
   });
 });
 

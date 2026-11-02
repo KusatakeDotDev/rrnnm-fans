@@ -26,6 +26,11 @@ export function isCelebrating(now: number): boolean {
   return now < CELEBRATION_ENDS_AT;
 }
 
+/** 一覧の応答を覚えさせる秒数。`ttl` 秒までで、特別仕様が終わる時刻は越えない。 */
+export function maxAgeUntilCelebrationEnds(now: number, ttl: number): number {
+  return Math.max(0, Math.min(ttl, Math.floor((CELEBRATION_ENDS_AT - now) / 1000)));
+}
+
 /** 1回に広告に出す動画の数。遊ぶ回ごとに youtube.com へ出す oEmbed の数でもある（ADR-0033「払うもの」）。 */
 export const VIDEOS_PER_ROUND = 15;
 

@@ -6,9 +6,9 @@
  * ほかのサイトのページから読ませないよう、`Access-Control-Allow-Origin` は付けない（CORS が止めるのはブラウザだけで、
  * ブラウザの外からは読めるが、返すのはこのチャンネルの公開の動画の ID だけ）。
  */
-import { currentVideoSource, LISTED_VIDEO_IDS, type VideoSource } from "../src/data/alt-f4-videos";
+import { currentVideoSource, LISTED_VIDEO_IDS } from "../src/data/alt-f4-videos";
 import { OFFICIAL } from "../src/data/official";
-import { VIDEOS_PATH } from "../src/lib/alt-f4";
+import { maxAgeUntilCelebrationEnds, VIDEOS_PATH } from "../src/lib/alt-f4";
 import { channelFeedUrl, latestVideoIds } from "../src/lib/youtube-feed";
 
 export interface Env {
@@ -25,7 +25,7 @@ export type FeedFetch = (url: string, init: FeedInit) => Promise<Response>;
 const GAME_PAGE = "/play/alt-f4/";
 /**
  * 一覧を覚えさせる間（秒）。フィードは、開く人ごとに YouTube へ取りに行かないため、この間をおいて取り直す。新しい動画は、
- * 最大でこれだけ遅れて出る。リポジトリの一覧も、差し替えたデプロイが、開いた人に最大でこれだけ遅れて届く。
+ * 最大でこれだけ遅れて出る。リポジトリの一覧は、特別仕様が終わる時刻を越えては覚えさせない。
  */
 const LIST_TTL_S = 600;
 /** 取れなかったときに覚えさせる間（秒）。YouTube の一時的な不調から、早めに戻るため。 */
@@ -45,7 +45,7 @@ export async function handle(
   request: Request,
   env: Env,
   fetchFeed: FeedFetch = fetch,
-  source: VideoSource = currentVideoSource(),
+  now: number = Date.now(),
 ): Promise<Response> {
   const url = new URL(request.url);
   // 静的なファイルが無いリクエストだけがここへ来る。Worker が無かったときと同じ 404 にするため、ASSETS に返させる。
@@ -53,7 +53,9 @@ export async function handle(
   const page = await env.ASSETS.fetch(new URL(GAME_PAGE, url).href);
   await page.body?.cancel();
   if (!page.ok) return env.ASSETS.fetch(request);
-  if (source === "list") return videoList(LISTED_VIDEO_IDS, 200, LIST_TTL_S);
+  if (currentVideoSource(now) === "list") {
+    return videoList(LISTED_VIDEO_IDS, 200, maxAgeUntilCelebrationEnds(now, LIST_TTL_S));
+  }
   try {
     const feed = await fetchFeed(env.YOUTUBE_FEED_URL || channelFeedUrl(OFFICIAL.youtube)!, {
       cf: { cacheTtl: LIST_TTL_S, cacheEverything: true },
