@@ -28,6 +28,7 @@
     "field:contrast": "node scripts/measure-field-contrast.mjs",
     "css:compare": "node scripts/compare-computed-style.mjs",
     "playlists:check": "node scripts/check-playlists.mjs",
+    "alt-f4:videos": "node scripts/alt-f4-videos.mjs",
     "storybook": "storybook dev -p 6006 --no-open",
     "build-storybook": "storybook build",
     "build:test": "node scripts/build.mjs success",

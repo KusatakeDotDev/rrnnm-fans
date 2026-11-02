@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
+import { LISTED_VIDEO_IDS, VIDEO_SOURCE, type VideoSource } from "../../src/data/alt-f4-videos";
 import { VIDEOS_PATH } from "../../src/lib/alt-f4";
 import { channelFeedUrl } from "../../src/lib/youtube-feed";
 import { OFFICIAL } from "../../src/data/official";
@@ -7,7 +8,8 @@ import { type Env, type FeedFetch, handle } from "../../worker/index";
 
 /**
  * worker/index.ts — 「広告をとじろ」の動画の一覧だけを返し、ほかは静的なファイルに回す（docs/adr/0033-alt-f4-thumbnails.md）。
- * 壊れると「Worker が無かったときと 404 が変わる」「未公開のあいだの本番で一覧を返す」「YouTube の不調がページに素通しになる」の形で出る。
+ * 壊れると「Worker が無かったときと 404 が変わる」「未公開のあいだの本番で一覧を返す」「YouTube の不調がページに素通しになる」
+ * 「切り替えた出どころと違う一覧を返す」の形で出る。
  */
 
 const ORIGIN = "https://rrnnm.fans";
@@ -66,19 +68,53 @@ describe("一覧のパス", () => {
     expect(VIDEOS_PATH).toBe("/play/alt-f4/videos.json");
   });
 
-  it("ゲームのページが無いビルド（未公開のあいだの本番）では、一覧を返さず静的なファイルの 404 にする", async () => {
-    const { env, requested } = assets([]);
-    const { fetchFeed, calls } = feedFetch(() => new Response(xml("aaaaaaaaaaa")));
+  it.each<VideoSource>(["list", "feed"])(
+    "ゲームのページが無いビルド（未公開のあいだの本番）では、一覧を返さず静的なファイルの 404 にする（出どころ: %s）",
+    async (source) => {
+      const { env, requested } = assets([]);
+      const { fetchFeed, calls } = feedFetch(() => new Response(xml("aaaaaaaaaaa")));
+      const response = await handle(get(VIDEOS_PATH), env, fetchFeed, source);
+      expect(response.status).toBe(404);
+      expect(requested).toEqual(["/play/alt-f4/", VIDEOS_PATH]);
+      expect(calls).toEqual([]);
+    },
+  );
+
+  it("出どころを渡さなければ、切り替え（src/data/alt-f4-videos.ts）に従う", async () => {
+    const { env } = assets(["/play/alt-f4/"]);
+    const { fetchFeed } = feedFetch(() => new Response(xml("aaaaaaaaaaa")));
     const response = await handle(get(VIDEOS_PATH), env, fetchFeed);
-    expect(response.status).toBe(404);
-    expect(requested).toEqual(["/play/alt-f4/", VIDEOS_PATH]);
+    expect(await response.json()).toEqual(
+      VIDEO_SOURCE === "list" ? LISTED_VIDEO_IDS : ["aaaaaaaaaaa"],
+    );
+  });
+});
+
+describe("出どころがリポジトリの一覧", () => {
+  it("一覧の全部を JSON で返し、10分覚えさせる。フィードは読まず、ほかのオリジンには開かない", async () => {
+    const { env } = assets(["/play/alt-f4/"]);
+    const { fetchFeed, calls } = feedFetch(() => new Response(xml("aaaaaaaaaaa")));
+    const response = await handle(get(VIDEOS_PATH), env, fetchFeed, "list");
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(LISTED_VIDEO_IDS);
+    expect(response.headers.get("content-type")).toBe("application/json; charset=utf-8");
+    expect(response.headers.get("cache-control")).toBe("public, max-age=600");
+    expect(response.headers.get("access-control-allow-origin")).toBeNull();
     expect(calls).toEqual([]);
   });
 
+  it("一覧は、重ならない11文字の動画の ID だけ", () => {
+    expect(LISTED_VIDEO_IDS.length).toBeGreaterThan(0);
+    for (const id of LISTED_VIDEO_IDS) expect(id).toMatch(/^[\w-]{11}$/);
+    expect(new Set(LISTED_VIDEO_IDS).size).toBe(LISTED_VIDEO_IDS.length);
+  });
+});
+
+describe("出どころがフィード", () => {
   it("フィードの最新の動画の ID を JSON で返し、10分覚えさせる。ほかのオリジンには開かない", async () => {
     const { env } = assets(["/play/alt-f4/"]);
     const { fetchFeed, calls } = feedFetch(() => new Response(xml("bbbbbbbbbbb", "aaaaaaaaaaa")));
-    const response = await handle(get(VIDEOS_PATH), env, fetchFeed);
+    const response = await handle(get(VIDEOS_PATH), env, fetchFeed, "feed");
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual(["bbbbbbbbbbb", "aaaaaaaaaaa"]);
     expect(response.headers.get("content-type")).toBe("application/json; charset=utf-8");
@@ -90,14 +126,14 @@ describe("一覧のパス", () => {
   it("中継する先を書かなければ、公式のチャンネルのフィードを読む", async () => {
     const { env } = assets(["/play/alt-f4/"]);
     const { fetchFeed, calls } = feedFetch(() => new Response(xml()));
-    await handle(get(VIDEOS_PATH), { ...env, YOUTUBE_FEED_URL: "" }, fetchFeed);
+    await handle(get(VIDEOS_PATH), { ...env, YOUTUBE_FEED_URL: "" }, fetchFeed, "feed");
     expect(calls.map((call) => call.url)).toEqual([channelFeedUrl(OFFICIAL.youtube)]);
   });
 
   it("フィードがエラーを返したら、502 と空の一覧にし、1分だけ覚えさせる", async () => {
     const { env } = assets(["/play/alt-f4/"]);
     const { fetchFeed } = feedFetch(() => new Response("", { status: 500 }));
-    const response = await handle(get(VIDEOS_PATH), env, fetchFeed);
+    const response = await handle(get(VIDEOS_PATH), env, fetchFeed, "feed");
     expect(response.status).toBe(502);
     expect(await response.json()).toEqual([]);
     expect(response.headers.get("cache-control")).toBe("public, max-age=60");
@@ -106,7 +142,7 @@ describe("一覧のパス", () => {
   it("フィードに繋がらなければ、502 と空の一覧にする", async () => {
     const { env } = assets(["/play/alt-f4/"]);
     const { fetchFeed } = feedFetch(() => Promise.reject(new TypeError("fetch failed")));
-    const response = await handle(get(VIDEOS_PATH), env, fetchFeed);
+    const response = await handle(get(VIDEOS_PATH), env, fetchFeed, "feed");
     expect(response.status).toBe(502);
     expect(await response.json()).toEqual([]);
     expect(response.headers.get("cache-control")).toBe("public, max-age=60");
