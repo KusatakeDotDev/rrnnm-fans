@@ -1,5 +1,5 @@
 /**
- * 広告のウィンドウに出すサムネイルを、ブラウザで取る（src/unreleased/play/alt-f4.astro）。
+ * 配信のウィンドウに出すサムネイルを、ブラウザで取る（src/unreleased/play/alt-f4.astro）。
  * 動画は、Worker が返す一覧から回ごとに選ぶ（一覧の出どころは返す側で替える。src/data/alt-f4-videos.ts）。サムネイルの
  * 取り方は再生リストのタイルと同じで、oEmbed の `thumbnail_url` をそのまま使い、`https://i.ytimg.com` の画像だけを受け入れる
  * （ADR-0033 の決定。ADR-0008「名前と表紙は、ブラウザで取る」と同じ形）。サムネイルの出どころを変えるときは、このファイルだけを替える。
@@ -18,7 +18,7 @@ const LOAD_TIMEOUT_MS = 8_000;
 /** youtube.com へ一度に投げる数。全部を同時に投げると、まとめて制限に掛かったときに全部が落ちる。 */
 const CONCURRENCY = 4;
 
-/** 広告に出す動画の ID の一覧。取れなければ空。 */
+/** 配信のウィンドウに出す動画の ID の一覧。取れなければ空。 */
 export async function loadVideoIds(): Promise<string[]> {
   try {
     const res = await fetch(VIDEOS_PATH, { signal: AbortSignal.timeout(LOAD_TIMEOUT_MS) });
@@ -26,7 +26,7 @@ export async function loadVideoIds(): Promise<string[]> {
     const body: unknown = await res.json();
     return Array.isArray(body) ? body.filter((id): id is string => typeof id === "string") : [];
   } catch {
-    // 通信断・タイムアウト・JSON として読めない。チャンネルへの広告に落とす。
+    // 通信断・タイムアウト・JSON として読めない。チャンネルを指すウィンドウに落とす。
     return [];
   }
 }
@@ -59,7 +59,7 @@ async function loadOne(videoId: string): Promise<Thumbnail | null> {
   }
 }
 
-/** `videoIds` の順に取り、取れたものから `onLoad` に渡す。全部を待たずに、取れた分から広告に出せるようにするため。 */
+/** `videoIds` の順に取り、取れたものから `onLoad` に渡す。全部を待たずに、取れた分からウィンドウに出せるようにするため。 */
 export async function loadThumbnails(
   videoIds: readonly string[],
   onLoad: (thumbnail: Thumbnail) => void,

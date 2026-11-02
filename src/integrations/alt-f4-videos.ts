@@ -15,13 +15,13 @@ async function feedVideoIds(): Promise<string[] | null> {
     });
     return feed.ok ? latestVideoIds(await feed.text()) : null;
   } catch {
-    // 通信断・タイムアウト。Worker と同じく 502 を返し、ページはチャンネルへの広告に落とす。
+    // 通信断・タイムアウト。Worker と同じく 502 を返し、ページはチャンネルを指すウィンドウに落とす。
     return null;
   }
 }
 
 /**
- * 開発サーバー（`pnpm dev`）で、Worker（worker/index.ts）の代わりに「広告をとじろ」の動画の一覧を返す。出どころは Worker と
+ * 開発サーバー（`pnpm dev`）で、Worker（worker/index.ts）の代わりに「配信をとじろ」の動画の一覧を返す。出どころは Worker と
  * 同じ切り替え（src/data/alt-f4-videos.ts）に従う。astro dev は Worker を通さないので、無いと手元でサムネイルが出ない。
  * ビルドには効かない。Astro のエンドポイントにしないのは、ビルドに一覧のファイルが出て、本番で Worker より先に配られてしまうため。
  */

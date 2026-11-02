@@ -1,5 +1,5 @@
 /**
- * 広告のウィンドウを閉じるミニゲーム（src/unreleased/play/alt-f4.astro）のうち、DOM に触らないところ（ADR-0003「層1 — 純関数だけを置く」）。
+ * 配信のウィンドウを閉じるミニゲーム（src/unreleased/play/alt-f4.astro）のうち、DOM に触らないところ（ADR-0003「層1 — 純関数だけを置く」）。
  *
  * 位置は、デスクトップ（ウィンドウを出す面）の左上からの px。ウィンドウの左上の角の位置で持つ。
  * `random` は `Math.random` と同じ契約（0 以上 1 未満を返す）の関数。テストで決め打ちできるよう注入にする。
@@ -8,7 +8,7 @@
 import { shuffle } from "./shuffle";
 
 /**
- * 広告に出す動画の ID の一覧を返すパス。チャンネルのフィードはブラウザから読めないので、同じオリジンで中継する
+ * 配信のウィンドウに出す動画の ID の一覧を返すパス。チャンネルのフィードはブラウザから読めないので、同じオリジンで中継する
  * （ADR-0033 の決定）。本番とテストは Worker（worker/index.ts）、開発サーバーは src/integrations/alt-f4-videos.ts が返す。
  * 一覧の出どころ（src/data/alt-f4-videos.ts）は返す側で替え、ページは替えない。
  */
@@ -16,7 +16,7 @@ export const VIDEOS_PATH = "/play/alt-f4/videos.json";
 
 // TODO(RRNNM-114): 特別仕様が終わったら、この時刻と isCelebrating を消す
 /**
- * 登録者10万人の記念の特別仕様（広告に全件の一覧から出し、始める前に記念配信を置く）が終わる時刻。11月限定にして、
+ * 登録者10万人の記念の特別仕様（配信のウィンドウに全件の一覧から出し、始める前に記念配信を置く）が終わる時刻。11月限定にして、
  * 一覧を作るのに使った API のデータを、30日より長く使わない（ADR-0033「払うもの」）。
  */
 export const CELEBRATION_ENDS_AT = Date.parse("2026-12-01T00:00:00+09:00");
@@ -31,10 +31,10 @@ export function maxAgeUntilCelebrationEnds(now: number, ttl: number): number {
   return Math.max(0, Math.min(ttl, Math.floor((CELEBRATION_ENDS_AT - now) / 1000)));
 }
 
-/** 1回に広告に出す動画の数。遊ぶ回ごとに youtube.com へ出す oEmbed の数でもある（ADR-0033「払うもの」）。 */
+/** 1回に配信のウィンドウに出す動画の数。遊ぶ回ごとに youtube.com へ出す oEmbed の数でもある（ADR-0033「払うもの」）。 */
 export const VIDEOS_PER_ROUND = 15;
 
-/** 1回に広告に出す動画を、一覧から選ぶ。重ねずに選び、一覧が VIDEOS_PER_ROUND に足りなければ全部を混ぜて返す。 */
+/** 1回に配信のウィンドウに出す動画を、一覧から選ぶ。重ねずに選び、一覧が VIDEOS_PER_ROUND に足りなければ全部を混ぜて返す。 */
 export function pickVideos(ids: readonly string[], random: () => number): string[] {
   return shuffle(ids, random).slice(0, VIDEOS_PER_ROUND);
 }
@@ -140,7 +140,7 @@ export function watchUrl(videoId: string): string {
   return `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`;
 }
 
-/** 広告を押して開く視聴ページのウィンドウの、中身の大きさ（px）。視聴ページのプレイヤーと題名が収まり、横にスクロールしない。 */
+/** 配信を押して開く視聴ページのウィンドウの、中身の大きさ（px）。視聴ページのプレイヤーと題名が収まり、横にスクロールしない。 */
 export const AD_WINDOW: Size = { width: 480, height: 360 };
 
 /** 画面のうち、ウィンドウを置ける範囲（タスクバーなどを除く）。`screen.availLeft` などの値（px）。 */
@@ -152,7 +152,7 @@ export interface ScreenArea {
 }
 
 /**
- * 広告を押したときの `window.open` の features。大きさを指定しないと、ゲームのウィンドウとほぼ同じ大きさで開いて画面を覆うので、
+ * 配信を押したときの `window.open` の features。大きさを指定しないと、ゲームのウィンドウとほぼ同じ大きさで開いて画面を覆うので、
  * 画面の右下の隅に小さく開く。位置は中身の大きさで決め、ツールバーの分は、ブラウザが画面の中に押し戻す。
  */
 export function adWindowFeatures(area: ScreenArea): string {

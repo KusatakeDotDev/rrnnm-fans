@@ -1,6 +1,6 @@
 ---
-// 広告のウィンドウを閉じるミニゲーム。昔のパソコンで、広告のウィンドウが次々に開いて止まらなくなったときの見た目を借り、
-// 広告の画像を瑠璃野ねもさんの動画・配信のサムネイルにしたもの。制限時間のうちに閉じた数を数える。
+// 配信のウィンドウを閉じるミニゲーム。昔のパソコンで、広告のウィンドウが次々に開いて止まらなくなったときの見た目を借り、
+// ウィンドウに瑠璃野ねもさんの動画・配信のサムネイルを出す。制限時間のうちに閉じた数を数える。
 // フッターには出さない（src/data/site-navigation.ts の UNLINKED_ROUTES）。
 // サムネイルは、その動画の視聴ページへのリンクの中にだけ出し、押すと視聴ページを別のウィンドウで開く（ADR-0033 の決定）。
 // スタートのボタンだけでは始め方が分かりにくかったので、昔のパソコンの手伝いのキャラクターのように、妖精が吹き出しで
@@ -11,13 +11,13 @@ import { ROUND_MS } from '../../lib/alt-f4';
 import fairy from './_alt-f4/fairy.webp';
 ---
 
-<Base title="広告をとじろ" description="次々に開く広告のウィンドウを、制限時間のうちに何枚とじられるかのミニゲームです。広告には瑠璃野ねもさんの動画のサムネイルが出ます。">
+<Base title="配信をとじろ" description="次々に開く配信のウィンドウを、制限時間のうちに何枚とじられるかのミニゲームです。ウィンドウには瑠璃野ねもさんの動画のサムネイルが出ます。">
   <Fragment slot="head">
-    <h1>広告をとじろ</h1>
+    <h1>配信をとじろ</h1>
   </Fragment>
 
   <p class="how">
-    はじめると、広告のウィンドウが次々に開きます。{ROUND_MS / 1000}秒のうちに、右上の × で何枚とじられるか。広告を押すと、その動画が開きます。
+    はじめると、配信のウィンドウが次々に開きます。{ROUND_MS / 1000}秒のうちに、右上の × で何枚とじられるか。配信を押すと、その動画が開きます。
   </p>
 
   <div class="desktop" data-altf4-desktop>
@@ -127,7 +127,7 @@ import fairy from './_alt-f4/fairy.webp';
 
   /** サムネイルを取り終えるまでは待ってもらい、終えたら始めるかを尋ねる。遊んだあとは、閉じた数を添えて尋ねる。 */
   function ask(): void {
-    if (!ready) message.textContent = '広告をあつめています…';
+    if (!ready) message.textContent = '配信をあつめています…';
     else if (lastScore === null) message.textContent = 'はじめますか？';
     else message.textContent = `記録: ${lastScore}\nもう一度遊びますか？`;
     options.hidden = !ready;
@@ -156,7 +156,7 @@ import fairy from './_alt-f4/fairy.webp';
     if (!balloon.hidden) ask();
   });
 
-  /** 同じ広告が続けて出ないよう、全部を1回ずつ出してから混ぜ直す。 */
+  /** 同じ配信が続けて出ないよう、全部を1回ずつ出してから混ぜ直す。 */
   function nextThumbnail(): Thumbnail | undefined {
     if (deck.length === 0) deck = shuffle(thumbnails, Math.random);
     return deck.pop();
@@ -262,7 +262,7 @@ import fairy from './_alt-f4/fairy.webp';
     chaining = false;
     thumbnails = upcoming;
     deck = [];
-    // もう一回で出す動画を、遊んでいるあいだに選び直して取っておく。終わってから取ると、すぐ始め直したときに広告が出そろわない。
+    // もう一回で出す動画を、遊んでいるあいだに選び直して取っておく。終わってから取ると、すぐ始め直したときに配信が出そろわない。
     void prepare();
     playing = true;
     startedAt = performance.now();
@@ -300,7 +300,7 @@ import fairy from './_alt-f4/fairy.webp';
     if (focusWasInLayer) yesButton.focus();
   }
 
-  // 登録者10万人の記念の特別仕様のあいだは、始める前の画面のまん中に、記念配信の広告を1枚置く。取れる前に遊び始めていたら、置かない。
+  // 登録者10万人の記念の特別仕様のあいだは、始める前の画面のまん中に、記念配信のウィンドウを1枚置く。取れる前に遊び始めていたら、置かない。
   if (isCelebrating(Date.now())) {
     void loadThumbnails([OPENING_VIDEO_ID], (thumbnail) => {
       if (lastScore === null && !playing && isCelebrating(Date.now())) spawn(centerPosition, thumbnail);
@@ -496,9 +496,9 @@ import fairy from './_alt-f4/fairy.webp';
       font-weight: 700;
     }
 
-    /* 画像が無い（1枚も取れなかった）ときの広告の中身。 */
+    /* 画像が無い（1枚も取れなかった）ときの配信のウィンドウの中身。 */
     .frame:empty::before {
-      content: 'AD';
+      content: 'LIVE';
     }
 
     /* oEmbed のサムネイル（hqdefault）は 4:3 で、16:9 の動画なら上下に黒い帯が付く。枠に重ねて、帯を切り落とす。

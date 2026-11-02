@@ -4,8 +4,8 @@ import { OFFICIAL } from "../../src/data/official";
 import { channelFeedUrl, FEED_LIMIT, latestVideoIds } from "../../src/lib/youtube-feed";
 
 /**
- * src/lib/youtube-feed.ts — チャンネルのフィードから、広告に出す最新の動画の ID を読む（docs/adr/0033-alt-f4-thumbnails.md）。
- * 壊れると「広告にショートが出る」「同じ広告が重なる」「中継が別のチャンネルや別のホストを読む」の形で出る。
+ * src/lib/youtube-feed.ts — チャンネルのフィードから、配信のウィンドウに出す最新の動画の ID を読む（docs/adr/0033-alt-f4-thumbnails.md）。
+ * 壊れると「ウィンドウにショートが出る」「同じ動画が重なる」「中継が別のチャンネルや別のホストを読む」の形で出る。
  */
 
 const entry = (id: string, path = `/watch?v=${id}`) => `

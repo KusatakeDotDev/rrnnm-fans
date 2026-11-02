@@ -24,9 +24,9 @@ import {
 } from "../../src/lib/alt-f4";
 
 /**
- * src/lib/alt-f4.ts — 広告のウィンドウを閉じるミニゲーム（src/unreleased/play/alt-f4.astro）の、DOM に触らないところ。
+ * src/lib/alt-f4.ts — 配信のウィンドウを閉じるミニゲーム（src/unreleased/play/alt-f4.astro）の、DOM に触らないところ。
  * 壊れると「ウィンドウがデスクトップの外にはみ出す」「連鎖が端で跳ね返らずに外へ抜ける」「連鎖が続けて起きて画面が埋まる」
- * 「残り時間の表示がずれる」「広告を押して開く視聴ページのウィンドウが、画面を覆う」「1回に出す動画が多すぎて、oEmbed を投げすぎる」
+ * 「残り時間の表示がずれる」「配信を押して開く視聴ページのウィンドウが、画面を覆う」「1回に出す動画が多すぎて、oEmbed を投げすぎる」
  * 「回ごとに選び直しても、同じ動画しか出ない」の形で出る。
  */
 
@@ -255,7 +255,7 @@ describe("登録者10万人の記念の特別仕様", () => {
   });
 });
 
-describe("1回に広告に出す動画", () => {
+describe("1回に配信のウィンドウに出す動画", () => {
   /** 番号から、重ならない動画の ID の一覧を作る。 */
   const videoIds = (count: number) =>
     Array.from({ length: count }, (_, n) => `video${String(n).padStart(6, "0")}`);
@@ -296,7 +296,7 @@ describe("動画の視聴ページ", () => {
   });
 });
 
-describe("広告を押して開く視聴ページのウィンドウ", () => {
+describe("配信を押して開く視聴ページのウィンドウ", () => {
   it("画面の右下の隅に、480×360 の小さなウィンドウで開く。開いた側は触れさせない", () => {
     expect(adWindowFeatures({ left: 0, top: 0, width: 1920, height: 1040 })).toBe(
       "popup,noopener,noreferrer,width=480,height=360,left=1440,top=680",
