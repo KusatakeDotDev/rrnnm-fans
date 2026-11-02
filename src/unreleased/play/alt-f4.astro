@@ -16,10 +16,6 @@ import fairy from './_alt-f4/fairy.webp';
     <h1>配信をとじろ</h1>
   </Fragment>
 
-  <p class="how">
-    はじめると、配信のウィンドウが次々に開きます。{ROUND_MS / 1000}秒のうちに、右上の × で何枚とじられるか。配信を押すと、その動画が開きます。
-  </p>
-
   <div class="desktop" data-altf4-desktop>
     <div class="popups" data-altf4-popups>
       {/* 吹き出しの言葉は、サムネイルを取り終えたか・1回遊んだかで変わるので、スクリプトが書いて開く。 */}
@@ -39,7 +35,6 @@ import fairy from './_alt-f4/fairy.webp';
     <div class="taskbar">
       {/* サムネイルを取り終えるまで押せない形で出す（スクリプトが disabled を外す）。 */}
       <button type="button" class="start" data-altf4-start disabled>スタート</button>
-      <p class="score">とじた <span class="tabular" data-altf4-score>0</span></p>
       <p class="clock tabular" data-altf4-clock>0:{String(ROUND_MS / 1000).padStart(2, '0')}</p>
     </div>
   </div>
@@ -106,7 +101,6 @@ import fairy from './_alt-f4/fairy.webp';
   const noButton = assistant.querySelector<HTMLButtonElement>('[data-altf4-no]')!;
   const fairy = assistant.querySelector<HTMLButtonElement>('[data-altf4-fairy]')!;
   const startButton = desktop.querySelector<HTMLButtonElement>('[data-altf4-start]')!;
-  const score = desktop.querySelector<HTMLElement>('[data-altf4-score]')!;
   const clock = desktop.querySelector<HTMLElement>('[data-altf4-clock]')!;
   const status = document.querySelector<HTMLElement>('[data-altf4-status]')!;
   const template = document.querySelector<HTMLTemplateElement>('[data-altf4-popup-template]')!;
@@ -257,7 +251,6 @@ import fairy from './_alt-f4/fairy.webp';
     for (const popup of layer.querySelectorAll('[data-altf4-popup]')) popup.remove();
     assistant.hidden = true;
     closed = 0;
-    score.textContent = '0';
     lastChainAt = null;
     chaining = false;
     thumbnails = upcoming;
@@ -327,7 +320,6 @@ import fairy from './_alt-f4/fairy.webp';
       const hadFocus = document.activeElement === close;
       close.closest('[data-altf4-popup]')!.remove();
       closed++;
-      score.textContent = String(closed);
       // キーボードで遊ぶ人が続けて閉じられるよう、いちばん上（最後に開いた）のウィンドウの × へ移る。
       if (hadFocus) [...layer.querySelectorAll<HTMLButtonElement>('[data-altf4-close]')].at(-1)?.focus();
       return;
@@ -352,10 +344,6 @@ import fairy from './_alt-f4/fairy.webp';
   @layer pages {
     h1 {
       margin: 0;
-    }
-
-    .how {
-      margin: var(--space-8) 0 0;
     }
 
     .desktop {
@@ -397,7 +385,9 @@ import fairy from './_alt-f4/fairy.webp';
       padding: 0 var(--space-3);
     }
 
+    /* 右を空けて、時計を右の端に寄せる。 */
     .start {
+      margin-right: auto;
       padding: 0 var(--space-5) 0 var(--space-4);
       border: 0;
       border-radius: 0 0.75rem 0.75rem 0;
@@ -412,10 +402,6 @@ import fairy from './_alt-f4/fairy.webp';
     .start:disabled {
       background: #5a7d5a;
       cursor: default;
-    }
-
-    .score {
-      flex: 1;
     }
 
     .clock {

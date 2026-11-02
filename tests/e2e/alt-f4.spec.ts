@@ -70,7 +70,6 @@ test("配信のウィンドウを閉じて数え、時間切れで止まる", as
   });
   const start = page.locator("[data-altf4-start]");
   const popups = page.locator("[data-altf4-popup]");
-  const score = page.locator("[data-altf4-score]");
   const assistant = page.locator("[data-altf4-assistant]");
   const balloon = page.locator("[data-altf4-balloon]");
   const yes = page.locator("[data-altf4-yes]");
@@ -130,17 +129,15 @@ test("配信のウィンドウを閉じて数え、時間切れで止まる", as
     );
   });
 
-  await test.step("× で閉じると、閉じた数が増える", async () => {
+  await test.step("× で閉じる", async () => {
     await popups.locator("[data-altf4-close]").click();
     await expect(popups).toHaveCount(0);
-    await expect(score).toHaveText("1");
   });
 
   await test.step("ウィンドウの外を押すと、もう1枚開く", async () => {
     // 角はデスクトップの角丸で切り抜かれていて押せないので、まん中（ウィンドウを全部閉じたあとで空いている）を押す。
     await page.locator("[data-altf4-popups]").click();
     await expect(popups).toHaveCount(1);
-    await expect(score).toHaveText("1");
   });
 
   await test.step("配信を押すと、視聴ページを画面の右下に小さな別のウィンドウで開き、ページは移らない", async () => {
@@ -162,21 +159,21 @@ test("配信のウィンドウを閉じて数え、時間切れで止まる", as
     await expect(popups).toHaveCount(1 + CHAIN_COUNT);
   });
 
-  await test.step("時間切れで妖精がもう一回やるかを尋ね、× が効かなくなる", async () => {
+  await test.step("時間切れで妖精が閉じた数を記録として伝え、もう一回やるかを尋ね、× が効かなくなる", async () => {
     await page.clock.runFor(ROUND_MS);
     await expect(yes).toBeVisible();
+    await expect(page.locator("[data-altf4-message]")).toContainText("記録: 1");
     const count = await popups.count();
     // 妖精の吹き出しが上に重なって押せないことがあるので、× に直接押したことにする。
     await popups.last().locator("[data-altf4-close]").dispatchEvent("click");
     await expect(popups).toHaveCount(count);
-    await expect(score).toHaveText("1");
+    await expect(page.locator("[data-altf4-message]")).toContainText("記録: 1");
     await expect(start).toBeEnabled();
   });
 
-  await test.step("タスクバーのスタートからも、ウィンドウと数を戻して始め直せる", async () => {
+  await test.step("タスクバーのスタートからも、ウィンドウを戻して始め直せる", async () => {
     await start.click();
     await expect(assistant).toBeHidden();
     await expect(popups).toHaveCount(1);
-    await expect(score).toHaveText("0");
   });
 });

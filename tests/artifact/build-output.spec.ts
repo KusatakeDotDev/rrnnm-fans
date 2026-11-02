@@ -445,7 +445,6 @@ test("ラッパーのスクリプトが探すマーカーが、コンポーネ�
           "data-altf4-no",
           "data-altf4-fairy",
           "data-altf4-start",
-          "data-altf4-score",
           "data-altf4-clock",
           "data-altf4-status",
           "data-altf4-popup-template",
