@@ -133,8 +133,12 @@ test("配信のウィンドウを閉じて数え、時間切れで止まる", as
       .evaluate((caption) => getComputedStyle(caption).fontSize),
   });
 
-  await test.step("始める前は、記念配信のウィンドウを1枚、デスクトップのまん中に置く", async () => {
+  await test.step("始める前は、記念配信のウィンドウを1枚、パソコンでも小さい大きさ（18rem）で、デスクトップのまん中に置く", async () => {
     await expectOpeningCentered();
+    const rem = await page.evaluate(() =>
+      parseFloat(getComputedStyle(document.documentElement).fontSize),
+    );
+    expect((await popups.boundingBox())!.width).toBeCloseTo(18 * rem, 0);
   });
 
   await test.step("始める前の1枚は × で閉じられ、少しして、画像だけを大きくしてまん中に開き直す。閉じるたびに早く開き直す", async () => {
