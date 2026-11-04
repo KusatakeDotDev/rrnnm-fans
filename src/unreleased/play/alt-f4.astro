@@ -3,6 +3,7 @@
 // ウィンドウに瑠璃野ねもさんの動画・配信のサムネイルを出す。制限時間のうちに閉じた数を数える。
 // フッターには出さない（src/data/site-navigation.ts の UNLINKED_ROUTES）。
 // サムネイルは、その動画の視聴ページへのリンクの中にだけ出し、押すと視聴ページを別のウィンドウで開く（ADR-0033 の決定）。
+// 遊んでいるあいだに配信を押したら、その回はそこで終え、× 以外を押したら10枚の連鎖を起こす（RRNNM-116）。
 // スタートのボタンだけでは始め方が分かりにくかったので、昔のパソコンの手伝いのキャラクターのように、妖精が吹き出しで
 // 始めるかを尋ねる（RRNNM-112）。妖精の絵はいらすとやの素材（LICENSE の「第三者の素材」）。
 import { OFFICIAL } from '../../data/official';
@@ -160,7 +161,8 @@ import fairy from './_alt-f4/fairy.webp';
   let startedAt = 0;
   let closed = 0;
   let lastChainAt: number | null = null;
-  let chaining = false;
+  /** 開いている途中の連鎖の数。× 以外を押すたびに連鎖を起こすので、いくつも重なる。 */
+  let chains = 0;
   const timers = new Set<number>();
 
   function stopTimers(): void {
@@ -219,7 +221,7 @@ import fairy from './_alt-f4/fairy.webp';
 
   /** 連鎖。1枚めは内側のどこかに置き、そこから斜めにずらしながら続けて開き、端で跳ね返す。 */
   function startChain(): void {
-    chaining = true;
+    chains++;
     lastChainAt = performance.now();
     let opened = 0;
     let position: Point = { x: 0, y: 0 };
@@ -238,7 +240,7 @@ import fairy from './_alt-f4/fairy.webp';
       if (opened >= CHAIN_COUNT) {
         clearInterval(id);
         timers.delete(id);
-        chaining = false;
+        chains--;
       }
     }, CHAIN_INTERVAL_MS);
     timers.add(id);
@@ -252,7 +254,7 @@ import fairy from './_alt-f4/fairy.webp';
     assistant.hidden = true;
     closed = 0;
     lastChainAt = null;
-    chaining = false;
+    chains = 0;
     thumbnails = upcoming;
     deck = [];
     // もう一回で出す動画を、遊んでいるあいだに選び直して取っておく。終わってから取ると、すぐ始め直したときに配信が出そろわない。
@@ -266,7 +268,7 @@ import fairy from './_alt-f4/fairy.webp';
     timers.add(
       window.setInterval(() => {
         if (timeIsUp()) return;
-        if (shouldChain(performance.now(), lastChainAt, chaining, Math.random)) startChain();
+        if (shouldChain(performance.now(), lastChainAt, chains > 0, Math.random)) startChain();
         else spawnAnywhere();
       }, SPAWN_INTERVAL_MS),
     );
@@ -285,7 +287,7 @@ import fairy from './_alt-f4/fairy.webp';
     status.textContent = `おわり。${closed}枚とじました`;
     startButton.textContent = 'もう一回';
     startButton.disabled = false;
-    // 時間切れで × が効かなくなるので、ウィンドウの中にいたフォーカスを、妖精の「はい」へ移す。
+    // 終えると × が効かなくなるので、ウィンドウの中にいたフォーカスを、妖精の「はい」へ移す。
     const focusWasInLayer = layer.contains(document.activeElement);
     lastScore = closed;
     assistant.hidden = false;
@@ -332,11 +334,13 @@ import fairy from './_alt-f4/fairy.webp';
       const { availLeft, availTop, availWidth, availHeight } = screen as Screen & { availLeft?: number; availTop?: number };
       const features = adWindowFeatures({ left: availLeft ?? 0, top: availTop ?? 0, width: availWidth, height: availHeight });
       window.open(ad.href, '_blank', features);
+      // 遊んでいるあいだなら、その回はここで終える。時間切れを過ぎていたら、timeIsUp が終える。
+      if (!timeIsUp()) finish();
       return;
     }
-    // ウィンドウの外やタイトルバーを押してしまったら、もう1枚開く。
+    // ウィンドウの外やタイトルバーを押してしまったら、連鎖を起こす。
     // 始めるボタン（タスクバー・妖精）を押したクリックは、始めた直後にここへ届くので数えない。
-    if (!target.closest('.taskbar, [data-altf4-assistant]') && !timeIsUp()) spawnAnywhere();
+    if (!target.closest('.taskbar, [data-altf4-assistant]') && !timeIsUp()) startChain();
   });
 </script>
 
@@ -363,10 +367,12 @@ import fairy from './_alt-f4/fairy.webp';
       touch-action: manipulation;
     }
 
+    /* 配信のウィンドウの大きさを、ここの幅と高さから決める。 */
     .popups {
       position: relative;
       flex: 1;
       overflow: hidden;
+      container-type: size;
     }
 
     .taskbar {
@@ -409,16 +415,25 @@ import fairy from './_alt-f4/fairy.webp';
       background: linear-gradient(to bottom, #0b6fc4 0%, #095aa0 100%);
     }
 
+    /* パソコンでは、ゲーム画面を覆う大きさで出す（RRNNM-116）。高さでもはみ出さないよう、16:9 の枠のほか（タイトルバー・余白・
+       2行の題名で 6rem ほど）を引いた高さからも、幅を決める。 */
     .popup {
       position: absolute;
       display: flex;
       flex-direction: column;
-      width: min(18rem, 85%);
+      width: min(85cqw, (85cqh - 6rem) * 16 / 9);
       border: 1px solid #0a246a;
       border-radius: 0.5rem 0.5rem 0 0;
       overflow: hidden;
       background: #ece9d8;
       box-shadow: 2px 2px 8px rgb(0 0 0 / 35%);
+    }
+
+    /* スマートフォンでは、今までの大きさのまま（RRNNM-116）。 */
+    @media (max-width: 40rem) {
+      .popup {
+        width: min(18rem, 85%);
+      }
     }
 
     .titlebar {
