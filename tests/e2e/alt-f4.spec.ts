@@ -133,12 +133,11 @@ test("配信のウィンドウを閉じて数え、時間切れで止まる", as
       .evaluate((caption) => getComputedStyle(caption).fontSize),
   });
 
-  await test.step("始める前は、記念配信のウィンドウを1枚、パソコンでも小さい大きさ（18rem）で、デスクトップのまん中に置く", async () => {
+  /** 始める前の1枚の、開き直す前の幅。遊び始めて開くウィンドウと同じ大きさから始める。 */
+  let openingFirstWidth = 0;
+  await test.step("始める前は、記念配信のウィンドウを1枚、デスクトップのまん中に置く", async () => {
     await expectOpeningCentered();
-    const rem = await page.evaluate(() =>
-      parseFloat(getComputedStyle(document.documentElement).fontSize),
-    );
-    expect((await popups.boundingBox())!.width).toBeCloseTo(18 * rem, 0);
+    openingFirstWidth = (await popups.boundingBox())!.width;
   });
 
   await test.step("始める前の1枚は × で閉じられ、少しして、画像だけを大きくしてまん中に開き直す。閉じるたびに早く開き直す", async () => {
@@ -203,9 +202,13 @@ test("配信のウィンドウを閉じて数え、時間切れで止まる", as
     await expect.poll(() => oembeds).toBe(2 * VIDEOS_PER_ROUND + 1);
   });
 
-  await test.step("妖精の「はい」で1枚開いて妖精は隠れ、配信は選んだ動画のどれかの視聴ページを指す", async () => {
+  await test.step("妖精の「はい」で1枚開いて妖精は隠れ、配信は選んだ動画のどれかの視聴ページを指す。大きさは、始める前の1枚の最初と同じ", async () => {
     await expect(popups).toHaveCount(1);
     await expect(assistant).toBeHidden();
+    // 始める前の1枚は、幅を整数の px にそろえるので、1 px までずれる。
+    expect(Math.abs((await popups.boundingBox())!.width - openingFirstWidth)).toBeLessThanOrEqual(
+      1,
+    );
     const ad = popups.locator("[data-altf4-ad]");
     const href = await ad.getAttribute("href");
     expect(VIDEO_IDS.map(watchUrl)).toContain(href);

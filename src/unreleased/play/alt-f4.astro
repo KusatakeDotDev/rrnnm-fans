@@ -288,7 +288,6 @@ import fairy from './_alt-f4/fairy.webp';
   function placeOpening(): void {
     if (lastScore !== null || playing || !isCelebrating(Date.now())) return;
     opening = spawn(centerPosition, openingThumbnail, (popup) => {
-      popup.classList.add('opening');
       const image = popup.querySelector<HTMLElement>('[data-altf4-image]')!;
       const limit = maxPopupWidth(
         { width: layer.clientWidth, height: layer.clientHeight },
@@ -552,12 +551,6 @@ import fairy from './_alt-f4/fairy.webp';
       overflow: hidden;
       background: #ece9d8;
       box-shadow: 2px 2px 8px rgb(0 0 0 / 35%);
-    }
-
-    /* TODO(RRNNM-114): 特別仕様が終わったら、始める前の1枚の大きさを消す */
-    /* 始める前の1枚は、閉じるたびに広げる余地を残すため、ゲーム中のウィンドウより小さい大きさから出す（主の判断）。 */
-    .popup.opening {
-      width: min(18rem, 85%);
     }
 
     .titlebar {
