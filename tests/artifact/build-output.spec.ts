@@ -453,6 +453,9 @@ test("ラッパーのスクリプトが探すマーカーが、コンポーネ�
           "data-altf4-ad",
           "data-altf4-image",
           "data-altf4-caption",
+          "data-altf4-bgm",
+          "data-altf4-bgm-toggle",
+          "data-altf4-bgm-volume",
         ]
       : []),
   ];
