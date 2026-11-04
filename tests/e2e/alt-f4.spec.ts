@@ -2,6 +2,8 @@ import { expect, test } from "@playwright/test";
 
 import {
   adWindowFeatures,
+  BGM_LEVEL,
+  bgmGain,
   CHAIN_COUNT,
   CHAIN_INTERVAL_MS,
   ROUND_MS,
@@ -18,6 +20,7 @@ import { builtRoutes } from "../helpers/dist";
  * ウィンドウの外を押すと10枚続けて開き、配信を押すと動画の視聴ページを小さな別のウィンドウで開いてその回を終える。終えたときも
  * 時間切れのときも、妖精が記録を伝えてもう一回やるかを尋ね、× が効かなくなる。配信のウィンドウに出す動画は、一覧から回ごとに
  * 選び直す。始める前は、記念配信のウィンドウを1枚、まん中に置く。
+ * BGM は、デスクトップの外のボタンで鳴らし・止め、スライダーで大きさを変える。
  * 位置・連鎖・残り時間・動画の選び方と、視聴ページのウィンドウの大きさと位置の計算は tests/unit/alt-f4.test.ts が見るので、ここでは
  * 乱数を 0 に留め（何度選んでも同じ動画になる）、時計を進めて、つなぎを見る。
  */
@@ -60,6 +63,11 @@ test("配信のウィンドウを閉じて数え、時間切れで止まる", as
       body: '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="360"/>',
     });
   });
+  // BGM の曲（重ねていなければ無音の mp3）。ページにほかの音は無い。
+  let tracks = 0;
+  page.on("request", (request) => {
+    if (/\/_astro\/[^/]+\.(?:m4a|mp3)$/.test(request.url())) tracks++;
+  });
   await page.addInitScript(() => {
     Math.random = () => 0;
     const opened: unknown[][] = [];
@@ -67,6 +75,15 @@ test("配信のウィンドウを閉じて数え、時間切れで止まる", as
     window.open = (...args: unknown[]) => {
       opened.push(args);
       return null;
+    };
+    const gains: GainNode[] = [];
+    (window as unknown as { gains: GainNode[] }).gains = gains;
+    // oxlint-disable-next-line typescript/unbound-method -- 差し替える前のものを取っておき、call で this を渡して呼ぶ
+    const createGain = BaseAudioContext.prototype.createGain;
+    BaseAudioContext.prototype.createGain = function (this: BaseAudioContext) {
+      const gain = createGain.call(this);
+      gains.push(gain);
+      return gain;
     };
   });
   const start = page.locator("[data-altf4-start]");
@@ -111,6 +128,35 @@ test("配信のウィンドウを閉じて数え、時間切れで止まる", as
     await expect(balloon).toBeHidden();
     await page.locator("[data-altf4-fairy]").click();
     await expect(yes).toBeVisible();
+  });
+
+  await test.step("BGM は押すまで曲を取らず、押すと鳴り、つまみで大きさを変えて覚え、もう一度押すと止まる。押してもウィンドウは開かない", async () => {
+    const toggle = page.locator("[data-altf4-bgm-toggle]");
+    const volume = page.locator("[data-altf4-bgm-volume]");
+    const audio = page.locator("[data-altf4-bgm] audio");
+    const gain = () =>
+      page.evaluate(() => (window as unknown as { gains: GainNode[] }).gains[0]?.gain.value);
+    await expect(toggle).toBeEnabled();
+    await expect(toggle).toHaveAttribute("aria-pressed", "false");
+    await expect(volume).toHaveValue(String(BGM_LEVEL));
+    expect(tracks).toBe(0);
+
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-pressed", "true");
+    await expect
+      .poll(() => audio.evaluate((el: HTMLAudioElement) => !el.paused && el.readyState >= 3))
+      .toBe(true);
+    expect(tracks).toBeGreaterThan(0);
+    expect(await gain()).toBeCloseTo(bgmGain(BGM_LEVEL), 5);
+
+    await volume.fill("80");
+    expect(await gain()).toBeCloseTo(bgmGain(80), 5);
+    expect(await page.evaluate(() => localStorage.getItem("alt-f4-bgm-level"))).toBe("80");
+
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-pressed", "false");
+    expect(await audio.evaluate((el: HTMLAudioElement) => el.paused)).toBe(true);
+    await expect(popups).toHaveCount(1);
   });
 
   await yes.click();

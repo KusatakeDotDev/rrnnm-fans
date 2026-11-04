@@ -6,10 +6,10 @@ import { DIST } from "../helpers/dist";
 
 test("クソバカスロットの本物の音を、名前ごとに1本ずつ配る", () => {
   const dir = path.join(DIST, "_astro");
-  // ビルドの出力は _astro/<名前>.<フィンガープリント>.mp3。無音のファイル（kusobaka-slot-silent）は本物ではないので数えない。
+  // ビルドの出力は _astro/<名前>.<フィンガープリント>.mp3。無音のファイル（kusobaka-slot-silent・alt-f4-bgm-silent）は本物ではないので数えない。
   const shipped = (existsSync(dir) ? readdirSync(dir) : [])
     .flatMap((file) => /^([\w-]+)\.[\w-]+\.mp3$/.exec(file)?.[1] ?? [])
-    .filter((name) => name !== "kusobaka-slot-silent")
+    .filter((name) => !name.endsWith("-silent"))
     .sort();
   // 音は非公開のリポジトリから重ねる（ADR-0029 の決定）。重ねていないビルドは無音で鳴らすので、Release は無ければ止める。
   test.skip(

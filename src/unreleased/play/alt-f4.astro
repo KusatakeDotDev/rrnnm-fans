@@ -8,7 +8,7 @@
 // 始めるかを尋ねる（RRNNM-112）。妖精の絵はいらすとやの素材（LICENSE の「第三者の素材」）。
 import { OFFICIAL } from '../../data/official';
 import Base from '../../layouts/Base.astro';
-import { ROUND_MS } from '../../lib/alt-f4';
+import { BGM_LEVEL, BGM_LEVEL_MAX, ROUND_MS } from '../../lib/alt-f4';
 import fairy from './_alt-f4/fairy.webp';
 ---
 
@@ -16,6 +16,19 @@ import fairy from './_alt-f4/fairy.webp';
   <Fragment slot="head">
     <h1>配信をとじろ</h1>
   </Fragment>
+
+  {/* デスクトップの中を押すと配信のウィンドウが開くので、BGM はその外に置く。JS が無いと鳴らせないので、押せない形で出す（スクリプトが disabled を外す）。 */}
+  <div class="bgm" data-altf4-bgm>
+    <button type="button" class="bgm-toggle" aria-pressed="false" data-altf4-bgm-toggle disabled>
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path class="body" d="M3 9h4l5-4v14l-5-4H3z" />
+        <path class="waves" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" />
+        <path class="cross" d="M16 9l6 6M22 9l-6 6" />
+      </svg>
+      BGM
+    </button>
+    <input type="range" class="bgm-volume" min="0" max={BGM_LEVEL_MAX} step="5" value={BGM_LEVEL} aria-label="BGM の音量" data-altf4-bgm-volume disabled />
+  </div>
 
   <div class="desktop" data-altf4-desktop>
     <div class="popups" data-altf4-popups>
@@ -43,6 +56,9 @@ import fairy from './_alt-f4/fairy.webp';
 
   <p class="credit">
     出典：YouTube <a href={OFFICIAL.youtube} target="_blank" rel="noopener noreferrer">瑠璃野ねも<span class="sr-only">（YouTube チャンネル。外部サイトを新しいタブで開く）</span></a>
+    <br />
+    {/* 魔王魂の利用規約が、著作表記を求めるため。 */}
+    BGM：<a href="https://maou.audio/" target="_blank" rel="noopener noreferrer">魔王魂<span class="sr-only">（外部サイトを新しいタブで開く）</span></a>
   </p>
 
   <template data-altf4-popup-template>
@@ -86,6 +102,9 @@ import fairy from './_alt-f4/fairy.webp';
   import { shuffle } from '../../lib/shuffle';
   import { OPENING_VIDEO_ID } from './_alt-f4/opening';
   import { loadThumbnails, loadVideoIds, type Thumbnail } from './_alt-f4/thumbnails';
+  import { setUpBgm } from './_alt-f4/bgm';
+
+  setUpBgm(document.querySelector<HTMLElement>('[data-altf4-bgm]')!);
 
   /** サムネイルを取り終えるのを待つ上限（ミリ秒）。過ぎたら、取れた分だけで始められるようにする。 */
   const LOAD_WAIT_MS = 5_000;
@@ -350,11 +369,67 @@ import fairy from './_alt-f4/fairy.webp';
       margin: 0;
     }
 
+    /* ゲームの外なので、昔のパソコンの見た目にせず、サイトのボタンの形にする。右の端に寄せる。 */
+    .bgm {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: var(--space-3);
+      margin: var(--space-6) 0 0;
+    }
+
+    .bgm-toggle {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+      min-height: var(--tap-size);
+      padding: 0 var(--space-4) 0 var(--space-3);
+      border: var(--border-thumb) solid var(--color-outline);
+      border-radius: var(--radius-pill);
+      background-color: var(--color-surface);
+      color: var(--color-text);
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    /* 鳴っているかは、色と絵（音の波か ×）の両方で分ける。 */
+    .bgm-toggle[aria-pressed='true'] {
+      background-color: var(--color-fill-violet);
+      color: var(--color-text-on-fill);
+    }
+
+    .bgm-toggle:disabled {
+      cursor: default;
+    }
+
+    .bgm-toggle svg {
+      width: 1.5rem;
+      height: 1.5rem;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .bgm-toggle[aria-pressed='false'] .waves,
+    .bgm-toggle[aria-pressed='true'] .cross {
+      display: none;
+    }
+
+    .bgm-volume {
+      width: min(10rem, 40vw);
+      min-height: var(--tap-size);
+      margin: 0;
+    }
+
     .desktop {
       display: flex;
       flex-direction: column;
       height: clamp(26rem, 70vh, 40rem);
-      margin: var(--space-6) 0 0;
+      margin: var(--space-3) 0 0;
       border: var(--border-card) solid var(--color-outline);
       border-radius: var(--radius-card);
       overflow: hidden;
