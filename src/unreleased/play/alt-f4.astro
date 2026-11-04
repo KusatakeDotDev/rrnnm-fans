@@ -90,6 +90,9 @@ import fairy from './_alt-f4/fairy.webp';
     centerPosition,
     chainStep,
     isCelebrating,
+    maxPopupWidth,
+    openingReopenDelay,
+    openingWidth,
     pickVideos,
     randomPosition,
     remainingSeconds,
@@ -204,11 +207,15 @@ import fairy from './_alt-f4/fairy.webp';
     return true;
   }
 
-  /** ウィンドウを1枚作って、デスクトップに置く。置く位置は、置いたウィンドウの大きさから決める。 */
+  /**
+   * ウィンドウを1枚作って、デスクトップに置く。置く位置は、置いたウィンドウの大きさから決めるので、大きさを変える `resize` は、
+   * 位置を決める前に呼ぶ。
+   */
   function spawn(
     positionFor: (bounds: ReturnType<typeof boundsOf>) => Point,
     thumbnail: Thumbnail | undefined = nextThumbnail(),
-  ): void {
+    resize?: (popup: HTMLElement) => void,
+  ): HTMLElement {
     const popup = (template.content.firstElementChild as HTMLElement).cloneNode(true) as HTMLElement;
     const ad = popup.querySelector<HTMLAnchorElement>('[data-altf4-ad]')!;
     const image = popup.querySelector<HTMLImageElement>('[data-altf4-image]')!;
@@ -224,6 +231,7 @@ import fairy from './_alt-f4/fairy.webp';
     popup.style.visibility = 'hidden';
     // 妖精より下に重ねる。時間切れのあと、残ったウィンドウの上で尋ねるため。
     layer.insertBefore(popup, assistant);
+    resize?.(popup);
     const bounds = boundsOf(
       { width: layer.clientWidth, height: layer.clientHeight },
       { width: popup.offsetWidth, height: popup.offsetHeight },
@@ -232,6 +240,7 @@ import fairy from './_alt-f4/fairy.webp';
     popup.style.left = `${x}px`;
     popup.style.top = `${y}px`;
     popup.style.visibility = '';
+    return popup;
   }
 
   function spawnAnywhere(): void {
@@ -265,10 +274,45 @@ import fairy from './_alt-f4/fairy.webp';
     timers.add(id);
   }
 
+  // TODO(RRNNM-114): 特別仕様が終わったら、始める前の1枚と、それを開き直す仕組みを消す
+  /** 始める前に置いた1枚。× で閉じられるのは、遊ぶ前のこの1枚だけ。 */
+  let opening: HTMLElement | null = null;
+  let openingThumbnail: Thumbnail | undefined;
+  let openingClosedTimes = 0;
+  let reopenTimer: number | undefined;
+
+  /**
+   * 登録者10万人の記念の特別仕様のあいだは、始める前の画面のまん中に、記念配信のウィンドウを1枚置く。閉じられたら、閉じた回数だけ
+   * 広げて置き直す。遊び始めていたら、置かない。
+   */
+  function placeOpening(): void {
+    if (lastScore !== null || playing || !isCelebrating(Date.now())) return;
+    opening = spawn(centerPosition, openingThumbnail, (popup) => {
+      const image = popup.querySelector<HTMLElement>('[data-altf4-image]')!;
+      const limit = maxPopupWidth(
+        { width: layer.clientWidth, height: layer.clientHeight },
+        { width: popup.offsetWidth, height: popup.offsetHeight },
+        { width: image.offsetWidth, height: image.offsetHeight },
+      );
+      popup.style.width = `${openingWidth(popup.offsetWidth, openingClosedTimes, limit)}px`;
+    });
+  }
+
+  function closeOpening(hadFocus: boolean): void {
+    opening?.remove();
+    opening = null;
+    reopenTimer = window.setTimeout(placeOpening, openingReopenDelay(openingClosedTimes));
+    openingClosedTimes++;
+    // 閉じたウィンドウと一緒にフォーカスが消えるので、開き直すのを待つあいだも押せる妖精へ移す。
+    if (hadFocus) fairy.focus();
+  }
+
   function start(): void {
     // キーボードで始めた人が、そのまま × へ進めるようにする（押したボタンは消えるか押せなくなる）。
     const fromButton = document.activeElement === yesButton || document.activeElement === startButton;
     stopTimers();
+    clearTimeout(reopenTimer);
+    opening = null;
     for (const popup of layer.querySelectorAll('[data-altf4-popup]')) popup.remove();
     assistant.hidden = true;
     closed = 0;
@@ -314,10 +358,10 @@ import fairy from './_alt-f4/fairy.webp';
     if (focusWasInLayer) yesButton.focus();
   }
 
-  // 登録者10万人の記念の特別仕様のあいだは、始める前の画面のまん中に、記念配信のウィンドウを1枚置く。取れる前に遊び始めていたら、置かない。
   if (isCelebrating(Date.now())) {
     void loadThumbnails([OPENING_VIDEO_ID], (thumbnail) => {
-      if (lastScore === null && !playing && isCelebrating(Date.now())) spawn(centerPosition, thumbnail);
+      openingThumbnail = thumbnail;
+      placeOpening();
     });
   }
 
@@ -337,6 +381,10 @@ import fairy from './_alt-f4/fairy.webp';
     const target = event.target as Element;
     const close = target.closest<HTMLButtonElement>('[data-altf4-close]');
     if (close) {
+      if (opening && close.closest('[data-altf4-popup]') === opening) {
+        closeOpening(document.activeElement === close);
+        return;
+      }
       if (timeIsUp()) return;
       const hadFocus = document.activeElement === close;
       close.closest('[data-altf4-popup]')!.remove();
@@ -490,25 +538,19 @@ import fairy from './_alt-f4/fairy.webp';
       background: linear-gradient(to bottom, #0b6fc4 0%, #095aa0 100%);
     }
 
-    /* パソコンでは、ゲーム画面を覆う大きさで出す（RRNNM-116）。高さでもはみ出さないよう、16:9 の枠のほか（タイトルバー・余白・
-       2行の題名で 6rem ほど）を引いた高さからも、幅を決める。 */
+    /* ゲーム画面を覆う大きさ（RRNNM-116）では大きすぎ、18rem では小さすぎたので、その間の 24rem までにする（主の判断）。
+       狭い画面でもはみ出さないよう、デスクトップの幅と、16:9 の枠のほか（タイトルバー・余白・2行の題名で 6rem ほど）を
+       引いた高さからも、幅を決める。 */
     .popup {
       position: absolute;
       display: flex;
       flex-direction: column;
-      width: min(85cqw, (85cqh - 6rem) * 16 / 9);
+      width: min(24rem, 85cqw, (85cqh - 6rem) * 16 / 9);
       border: 1px solid #0a246a;
       border-radius: 0.5rem 0.5rem 0 0;
       overflow: hidden;
       background: #ece9d8;
       box-shadow: 2px 2px 8px rgb(0 0 0 / 35%);
-    }
-
-    /* スマートフォンでは、今までの大きさのまま（RRNNM-116）。 */
-    @media (max-width: 40rem) {
-      .popup {
-        width: min(18rem, 85%);
-      }
     }
 
     .titlebar {

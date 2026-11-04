@@ -6,6 +6,7 @@ import {
   bgmGain,
   CHAIN_COUNT,
   CHAIN_INTERVAL_MS,
+  openingReopenDelay,
   ROUND_MS,
   SPAWN_INTERVAL_MS,
   VIDEOS_PATH,
@@ -19,10 +20,10 @@ import { builtRoutes } from "../helpers/dist";
  * src/unreleased/play/alt-f4.astro。妖精の吹き出しかタスクバーのスタートで始めると配信のウィンドウが開き、× で閉じた数を数え、
  * ウィンドウの外を押すと10枚続けて開き、配信を押すと動画の視聴ページを小さな別のウィンドウで開いてその回を終える。終えたときも
  * 時間切れのときも、妖精が記録を伝えてもう一回やるかを尋ね、× が効かなくなる。配信のウィンドウに出す動画は、一覧から回ごとに
- * 選び直す。始める前は、記念配信のウィンドウを1枚、まん中に置く。
+ * 選び直す。始める前は、記念配信のウィンドウを1枚、まん中に置き、× で閉じると、少しして画像だけを大きくして開き直す。
  * BGM は、デスクトップの外のボタンで鳴らし・止め、スライダーで大きさを変える。
- * 位置・連鎖・残り時間・動画の選び方と、視聴ページのウィンドウの大きさと位置の計算は tests/unit/alt-f4.test.ts が見るので、ここでは
- * 乱数を 0 に留め（何度選んでも同じ動画になる）、時計を進めて、つなぎを見る。
+ * 位置・連鎖・残り時間・動画の選び方、視聴ページのウィンドウの大きさと位置、始める前の1枚を開き直すまでの時間と幅の計算は
+ * tests/unit/alt-f4.test.ts が見るので、ここでは乱数を 0 に留め（何度選んでも同じ動画になる）、時計を進めて、つなぎを見る。
  */
 
 const ROUTE = "/play/alt-f4/";
@@ -105,7 +106,8 @@ test("配信のウィンドウを閉じて数え、時間切れで止まる", as
   // 時計は止めて、runFor で進めた分だけ進める。流れたままだと、手順のあいだに次の1枚が開いて、数がずれる。
   await page.clock.pauseAt(new Date("2026-10-25T00:00:10Z"));
 
-  await test.step("始める前は、記念配信のウィンドウを1枚、デスクトップのまん中に置く", async () => {
+  /** 始める前の1枚を、記念配信を指して、デスクトップのまん中に置いていること。 */
+  const expectOpeningCentered = async () => {
     await expect(popups).toHaveCount(1);
     await expect(popups.locator("[data-altf4-ad]")).toHaveAttribute(
       "href",
@@ -120,6 +122,41 @@ test("配信のウィンドウを閉じて数え、時間切れで止まる", as
     expect(
       Math.abs(popupBox.y - desktopBox.y - (desktopBox.height - popupBox.height) / 2),
     ).toBeLessThanOrEqual(1);
+  };
+  /** 始める前の1枚の、ウィンドウ・画像・× の大きさと、題名の字の大きさ。 */
+  const measureOpening = async () => ({
+    popup: (await popups.boundingBox())!,
+    image: (await popups.locator("[data-altf4-image]").boundingBox())!,
+    close: (await popups.locator("[data-altf4-close]").boundingBox())!,
+    captionFont: await popups
+      .locator("[data-altf4-caption]")
+      .evaluate((caption) => getComputedStyle(caption).fontSize),
+  });
+
+  /** 始める前の1枚の、開き直す前の幅。遊び始めて開くウィンドウと同じ大きさから始める。 */
+  let openingFirstWidth = 0;
+  await test.step("始める前は、記念配信のウィンドウを1枚、デスクトップのまん中に置く", async () => {
+    await expectOpeningCentered();
+    openingFirstWidth = (await popups.boundingBox())!.width;
+  });
+
+  await test.step("始める前の1枚は × で閉じられ、少しして、画像だけを大きくしてまん中に開き直す。閉じるたびに早く開き直す", async () => {
+    let previous = await measureOpening();
+    for (const closedTimes of [0, 1]) {
+      await popups.locator("[data-altf4-close]").click();
+      await expect(popups).toHaveCount(0);
+      await page.clock.runFor(openingReopenDelay(closedTimes) - 1);
+      await expect(popups).toHaveCount(0);
+      await page.clock.runFor(1);
+      await expectOpeningCentered();
+      const current = await measureOpening();
+      expect(current.popup.width).toBeGreaterThan(previous.popup.width);
+      expect(current.image.width).toBeGreaterThan(previous.image.width);
+      expect(current.close.width).toBe(previous.close.width);
+      expect(current.close.height).toBe(previous.close.height);
+      expect(current.captionFont).toBe(previous.captionFont);
+      previous = current;
+    }
   });
 
   await test.step("妖精が吹き出しで始めるかを尋ね、「いいえ」で閉じても、妖精を押せば尋ね直す", async () => {
@@ -165,9 +202,13 @@ test("配信のウィンドウを閉じて数え、時間切れで止まる", as
     await expect.poll(() => oembeds).toBe(2 * VIDEOS_PER_ROUND + 1);
   });
 
-  await test.step("妖精の「はい」で1枚開いて妖精は隠れ、配信は選んだ動画のどれかの視聴ページを指す", async () => {
+  await test.step("妖精の「はい」で1枚開いて妖精は隠れ、配信は選んだ動画のどれかの視聴ページを指す。大きさは、始める前の1枚の最初と同じ", async () => {
     await expect(popups).toHaveCount(1);
     await expect(assistant).toBeHidden();
+    // 始める前の1枚は、幅を整数の px にそろえるので、1 px までずれる。
+    expect(Math.abs((await popups.boundingBox())!.width - openingFirstWidth)).toBeLessThanOrEqual(
+      1,
+    );
     const ad = popups.locator("[data-altf4-ad]");
     const href = await ad.getAttribute("href");
     expect(VIDEO_IDS.map(watchUrl)).toContain(href);

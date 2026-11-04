@@ -100,6 +100,41 @@ export function centerPosition(bounds: Bounds): Point {
   return { x: Math.floor(bounds.maxX / 2), y: Math.floor(bounds.maxY / 2) };
 }
 
+// TODO(RRNNM-114): 特別仕様が終わったら、始める前の1枚を開き直す時間と幅の、ここから openingWidth までを消す
+/** 始める前の1枚を閉じてから、開き直すまでの時間（ミリ秒）。1回めに閉じたとき。 */
+export const OPENING_REOPEN_FIRST_MS = 3_000;
+/** 開き直すまでの時間は、閉じるたびにこの値へ近づける。0 に近づけると、閉じた瞬間に開き直して、閉じたことが見えなくなる。 */
+export const OPENING_REOPEN_MIN_MS = 300;
+/** 閉じるたびに、開き直すまでの時間の、下限を越える分に掛ける割合。 */
+export const OPENING_REOPEN_RATIO = 0.6;
+/** 開き直すたびに、ウィンドウの幅に掛ける割合。 */
+export const OPENING_GROWTH = 1.15;
+
+/** 始める前の1枚を、`closedTimes` 回めに閉じたあと、開き直すまでの時間（ミリ秒）。`closedTimes` は 0 から数える。 */
+export function openingReopenDelay(closedTimes: number): number {
+  return Math.round(
+    OPENING_REOPEN_MIN_MS +
+      (OPENING_REOPEN_FIRST_MS - OPENING_REOPEN_MIN_MS) * OPENING_REOPEN_RATIO ** closedTimes,
+  );
+}
+
+/**
+ * ウィンドウを広げられる上限の幅（px）。広げても、画像の枠だけが縦横比を保って大きくなり、タイトルバー・文字・余白は大きさを
+ * 変えない。`popup` と `image` は、今の幅で測ったウィンドウと画像の枠の大きさ。題名は広げるほど行が減るので、狭いときに測ると
+ * 安全側になる。
+ */
+export function maxPopupWidth(desktop: Size, popup: Size, image: Size): number {
+  const fixedWidth = popup.width - image.width;
+  const fixedHeight = popup.height - image.height;
+  const byHeight = ((desktop.height - fixedHeight) * image.width) / image.height + fixedWidth;
+  return Math.floor(Math.max(0, Math.min(desktop.width, byHeight)));
+}
+
+/** 開き直した1枚の幅（px）。元の幅 `base` を、開き直した回数だけ広げ、`limit` を越えない。 */
+export function openingWidth(base: number, reopened: number, limit: number): number {
+  return Math.floor(Math.min(limit, base * OPENING_GROWTH ** reopened));
+}
+
 /** 連鎖の次の1枚。範囲の端に着く（越える）向きは、跳ね返して逆に進める。 */
 export function chainStep(
   from: Point,

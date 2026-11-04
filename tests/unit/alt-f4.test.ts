@@ -17,6 +17,12 @@ import {
   type Direction,
   isCelebrating,
   maxAgeUntilCelebrationEnds,
+  maxPopupWidth,
+  OPENING_GROWTH,
+  OPENING_REOPEN_FIRST_MS,
+  OPENING_REOPEN_MIN_MS,
+  openingReopenDelay,
+  openingWidth,
   parseBgmLevel,
   pickVideos,
   randomPosition,
@@ -31,7 +37,8 @@ import {
  * src/lib/alt-f4.ts — 配信のウィンドウを閉じるミニゲーム（src/unreleased/play/alt-f4.astro）の、DOM に触らないところ。
  * 壊れると「ウィンドウがデスクトップの外にはみ出す」「連鎖が端で跳ね返らずに外へ抜ける」「連鎖が続けて起きて画面が埋まる」
  * 「残り時間の表示がずれる」「配信を押して開く視聴ページのウィンドウが、画面を覆う」「1回に出す動画が多すぎて、oEmbed を投げすぎる」
- * 「回ごとに選び直しても、同じ動画しか出ない」「BGM が、前に選んだ大きさに戻らない・つまみが端でも鳴る・最大でも小さい」の形で出る。
+ * 「回ごとに選び直しても、同じ動画しか出ない」「始める前の1枚が、閉じた瞬間に開き直して閉じられなくなる」「開き直した1枚が
+ * デスクトップからはみ出して、× が切れる」「BGM が、前に選んだ大きさに戻らない・つまみが端でも鳴る・最大でも小さい」の形で出る。
  */
 
 const unitInterval = fc.double({ min: 0, max: 1, maxExcluded: true, noNaN: true });
@@ -108,6 +115,72 @@ describe("始める前に置く1枚の位置", () => {
 
   it("範囲が 0（デスクトップより大きいウィンドウ）なら、左上にそろえる", () => {
     expect(centerPosition({ maxX: 0, maxY: 0, step: 10 })).toEqual({ x: 0, y: 0 });
+  });
+});
+
+describe("始める前の1枚を閉じてから、開き直すまでの時間", () => {
+  it("1回めに閉じたときは、決めた時間で開き直す", () => {
+    expect(openingReopenDelay(0)).toBe(OPENING_REOPEN_FIRST_MS);
+  });
+
+  it("閉じるたびに、下限を越える分を割合で縮める（ミリ秒は整数にそろえる）", () => {
+    expect(openingReopenDelay(1)).toBe(1920);
+    expect(openingReopenDelay(2)).toBe(1272);
+    expect(openingReopenDelay(3)).toBe(883);
+  });
+
+  it("閉じるたびに短くなり、下限より短くはならない", () => {
+    let previous = openingReopenDelay(0);
+    for (let times = 1; times <= 12; times++) {
+      const delay = openingReopenDelay(times);
+      expect(delay).toBeLessThan(previous);
+      expect(delay).toBeGreaterThan(OPENING_REOPEN_MIN_MS);
+      previous = delay;
+    }
+    expect(openingReopenDelay(100)).toBe(OPENING_REOPEN_MIN_MS);
+  });
+});
+
+describe("始める前の1枚を広げられる上限の幅", () => {
+  // 幅 288 のウィンドウ（画像の枠は 270×151.875、ほかに横 18・縦 90）。
+  const popup = { width: 288, height: 241.875 };
+  const image = { width: 270, height: 151.875 };
+
+  it("デスクトップの高さに収まるまで。画像の枠だけが縦横比を保って伸び、ほかの部分の高さは変えない", () => {
+    // 画像の枠に使える高さは 450 - 90 = 360、その幅は 360 × 16 / 9 = 640、ウィンドウは 640 + 18。
+    expect(maxPopupWidth({ width: 1000, height: 450 }, popup, image)).toBe(658);
+  });
+
+  it("デスクトップの幅を越えない", () => {
+    expect(maxPopupWidth({ width: 330, height: 450 }, popup, image)).toBe(330);
+  });
+
+  it("px は整数に切り捨てて、はみ出さないようにする", () => {
+    expect(maxPopupWidth({ width: 1000, height: 450.5 }, popup, image)).toBe(658);
+    expect(maxPopupWidth({ width: 330.9, height: 450 }, popup, image)).toBe(330);
+  });
+
+  it("デスクトップがほかの部分の高さより低くても、負にしない", () => {
+    expect(maxPopupWidth({ width: 1000, height: 50 }, popup, image)).toBe(0);
+  });
+});
+
+describe("開き直した1枚の幅", () => {
+  it("開き直した回数だけ広げる。まだ開き直していなければ元の幅のまま", () => {
+    expect(openingWidth(288, 0, 1000)).toBe(288);
+    expect(openingWidth(288, 1, 1000)).toBe(Math.floor(288 * OPENING_GROWTH));
+    expect(openingWidth(288, 2, 1000)).toBe(Math.floor(288 * OPENING_GROWTH ** 2));
+  });
+
+  it("上限で止める。元の幅が上限より広くても、上限にそろえる", () => {
+    expect(openingWidth(288, 20, 658)).toBe(658);
+    expect(openingWidth(288, 0, 250)).toBe(250);
+  });
+
+  it("px は整数に切り捨てる", () => {
+    expect(openingWidth(100.9, 0, 1000)).toBe(100);
+    expect(openingWidth(288, 0, 300.7)).toBe(288);
+    expect(openingWidth(288, 9, 300.7)).toBe(300);
   });
 });
 
