@@ -1,5 +1,5 @@
 /**
- * 「広告をとじろ」（src/unreleased/play/alt-f4.astro）の広告に出す動画の出どころ（docs/adr/0033-alt-f4-thumbnails.md）。
+ * 「配信をとじろ」（src/unreleased/play/alt-f4.astro）のウィンドウに出す動画の出どころ（docs/adr/0033-alt-f4-thumbnails.md）。
  * 一覧を返す側（worker/index.ts と src/integrations/alt-f4-videos.ts）だけが読む。ページは返った一覧から回ごとに選ぶだけで、
  * どちらの出どころかを知らない。
  */

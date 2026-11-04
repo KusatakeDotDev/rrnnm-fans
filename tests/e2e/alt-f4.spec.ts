@@ -14,9 +14,9 @@ import { OPENING_VIDEO_ID } from "../../src/unreleased/play/_alt-f4/opening";
 import { builtRoutes } from "../helpers/dist";
 
 /**
- * src/unreleased/play/alt-f4.astro。妖精の吹き出しかタスクバーのスタートで始めると広告のウィンドウが開き、× で閉じた数を数え、
- * 広告を押すと動画の視聴ページを小さな別のウィンドウで開き、ウィンドウの外を押すともう1枚開き、時間切れで妖精がもう一回やるかを
- * 尋ねて × が効かなくなる。広告に出す動画は、一覧から回ごとに選び直す。始める前は、記念配信の広告を1枚、まん中に置く。
+ * src/unreleased/play/alt-f4.astro。妖精の吹き出しかタスクバーのスタートで始めると配信のウィンドウが開き、× で閉じた数を数え、
+ * 配信を押すと動画の視聴ページを小さな別のウィンドウで開き、ウィンドウの外を押すともう1枚開き、時間切れで妖精がもう一回やるかを
+ * 尋ねて × が効かなくなる。配信のウィンドウに出す動画は、一覧から回ごとに選び直す。始める前は、記念配信のウィンドウを1枚、まん中に置く。
  * 位置・連鎖・残り時間・動画の選び方と、視聴ページのウィンドウの大きさと位置の計算は tests/unit/alt-f4.test.ts が見るので、ここでは
  * 乱数を 0 に留め（何度選んでも同じ動画になる）、時計を進めて、つなぎを見る。
  */
@@ -31,7 +31,7 @@ const VIDEO_IDS = Array.from(
   (_, n) => `fixture${String(n + 1).padStart(4, "0")}`,
 );
 
-test("広告のウィンドウを閉じて数え、時間切れで止まる", async ({ page }) => {
+test("配信のウィンドウを閉じて数え、時間切れで止まる", async ({ page }) => {
   test.skip(!hasPage, "本番モードではページを生成しない");
 
   await page.route(`**${VIDEOS_PATH}`, (route) => route.fulfill({ json: VIDEO_IDS }));
@@ -70,14 +70,13 @@ test("広告のウィンドウを閉じて数え、時間切れで止まる", as
   });
   const start = page.locator("[data-altf4-start]");
   const popups = page.locator("[data-altf4-popup]");
-  const score = page.locator("[data-altf4-score]");
   const assistant = page.locator("[data-altf4-assistant]");
   const balloon = page.locator("[data-altf4-balloon]");
   const yes = page.locator("[data-altf4-yes]");
 
   await page.clock.install({ time: new Date("2026-10-25T00:00:00Z") });
   await page.goto(ROUTE);
-  // サムネイルは取れたものから広告に出るので、全部を取り終えてから始める。時計を止める前に待つのは、止めるときに進める10秒で、
+  // サムネイルは取れたものからウィンドウに出るので、全部を取り終えてから始める。時計を止める前に待つのは、止めるときに進める10秒で、
   // 取っている途中の fetch の AbortSignal.timeout（Playwright の時計に従う）が切れ、取れる数が減るため（PR #18 の CI）。
   // 1回めの回の分と、始める前に置く1枚の分。
   await expect.poll(() => images).toBe(VIDEOS_PER_ROUND + 1);
@@ -87,7 +86,7 @@ test("広告のウィンドウを閉じて数え、時間切れで止まる", as
   // 時計は止めて、runFor で進めた分だけ進める。流れたままだと、手順のあいだに次の1枚が開いて、数がずれる。
   await page.clock.pauseAt(new Date("2026-10-25T00:00:10Z"));
 
-  await test.step("始める前は、記念配信の広告を1枚、デスクトップのまん中に置く", async () => {
+  await test.step("始める前は、記念配信のウィンドウを1枚、デスクトップのまん中に置く", async () => {
     await expect(popups).toHaveCount(1);
     await expect(popups.locator("[data-altf4-ad]")).toHaveAttribute(
       "href",
@@ -118,7 +117,7 @@ test("広告のウィンドウを閉じて数え、時間切れで止まる", as
     await expect.poll(() => oembeds).toBe(2 * VIDEOS_PER_ROUND + 1);
   });
 
-  await test.step("妖精の「はい」で1枚開いて妖精は隠れ、広告は選んだ動画のどれかの視聴ページを指す", async () => {
+  await test.step("妖精の「はい」で1枚開いて妖精は隠れ、配信は選んだ動画のどれかの視聴ページを指す", async () => {
     await expect(popups).toHaveCount(1);
     await expect(assistant).toBeHidden();
     const ad = popups.locator("[data-altf4-ad]");
@@ -130,20 +129,18 @@ test("広告のウィンドウを閉じて数え、時間切れで止まる", as
     );
   });
 
-  await test.step("× で閉じると、閉じた数が増える", async () => {
+  await test.step("× で閉じる", async () => {
     await popups.locator("[data-altf4-close]").click();
     await expect(popups).toHaveCount(0);
-    await expect(score).toHaveText("1");
   });
 
   await test.step("ウィンドウの外を押すと、もう1枚開く", async () => {
     // 角はデスクトップの角丸で切り抜かれていて押せないので、まん中（ウィンドウを全部閉じたあとで空いている）を押す。
     await page.locator("[data-altf4-popups]").click();
     await expect(popups).toHaveCount(1);
-    await expect(score).toHaveText("1");
   });
 
-  await test.step("広告を押すと、視聴ページを画面の右下に小さな別のウィンドウで開き、ページは移らない", async () => {
+  await test.step("配信を押すと、視聴ページを画面の右下に小さな別のウィンドウで開き、ページは移らない", async () => {
     const ad = popups.locator("[data-altf4-ad]");
     const href = await ad.getAttribute("href");
     const area = await page.evaluate(() => {
@@ -162,21 +159,21 @@ test("広告のウィンドウを閉じて数え、時間切れで止まる", as
     await expect(popups).toHaveCount(1 + CHAIN_COUNT);
   });
 
-  await test.step("時間切れで妖精がもう一回やるかを尋ね、× が効かなくなる", async () => {
+  await test.step("時間切れで妖精が閉じた数を記録として伝え、もう一回やるかを尋ね、× が効かなくなる", async () => {
     await page.clock.runFor(ROUND_MS);
     await expect(yes).toBeVisible();
+    await expect(page.locator("[data-altf4-message]")).toContainText("記録: 1");
     const count = await popups.count();
     // 妖精の吹き出しが上に重なって押せないことがあるので、× に直接押したことにする。
     await popups.last().locator("[data-altf4-close]").dispatchEvent("click");
     await expect(popups).toHaveCount(count);
-    await expect(score).toHaveText("1");
+    await expect(page.locator("[data-altf4-message]")).toContainText("記録: 1");
     await expect(start).toBeEnabled();
   });
 
-  await test.step("タスクバーのスタートからも、ウィンドウと数を戻して始め直せる", async () => {
+  await test.step("タスクバーのスタートからも、ウィンドウを戻して始め直せる", async () => {
     await start.click();
     await expect(assistant).toBeHidden();
     await expect(popups).toHaveCount(1);
-    await expect(score).toHaveText("0");
   });
 });

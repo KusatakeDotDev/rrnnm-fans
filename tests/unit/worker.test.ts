@@ -7,7 +7,7 @@ import { OFFICIAL } from "../../src/data/official";
 import { type Env, type FeedFetch, handle } from "../../worker/index";
 
 /**
- * worker/index.ts — 「広告をとじろ」の動画の一覧だけを返し、ほかは静的なファイルに回す（docs/adr/0033-alt-f4-thumbnails.md）。
+ * worker/index.ts — 「配信をとじろ」の動画の一覧だけを返し、ほかは静的なファイルに回す（docs/adr/0033-alt-f4-thumbnails.md）。
  * 壊れると「Worker が無かったときと 404 が変わる」「未公開のあいだの本番で一覧を返す」「YouTube の不調がページに素通しになる」
  * 「特別仕様のあいだかどうかと違う一覧を返す」「特別仕様が終わっても、一覧をブラウザに覚えさせたままにする」の形で出る。
  */

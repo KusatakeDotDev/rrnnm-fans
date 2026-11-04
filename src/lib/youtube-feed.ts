@@ -13,7 +13,7 @@ export function channelFeedUrl(channelUrl: string): string | null {
 }
 
 /**
- * フィードの動画の ID を、フィードの順（新しい順）に返す。ショート（リンクが `/shorts/`）は外す。広告に出すのは動画と配信にしたため
+ * フィードの動画の ID を、フィードの順（新しい順）に返す。ショート（リンクが `/shorts/`）は外す。ゲームに出すのは動画と配信にしたため
  * （RRNNM-112）。形の違う ID と重なった ID も外し、FEED_LIMIT 件までにする。
  */
 export function latestVideoIds(xml: string): string[] {
