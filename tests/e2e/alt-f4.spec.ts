@@ -13,11 +13,10 @@ import {
   VIDEOS_PER_ROUND,
   watchUrl,
 } from "../../src/lib/alt-f4";
-import { OPENING_VIDEO_ID } from "../../src/unreleased/play/_alt-f4/opening";
-import { builtRoutes } from "../helpers/dist";
+import { OPENING_VIDEO_ID } from "../../src/pages/play/_alt-f4/opening";
 
 /**
- * src/unreleased/play/alt-f4.astro。妖精の吹き出しかタスクバーのスタートで始めると配信のウィンドウが開き、× で閉じた数を数え、
+ * src/pages/play/alt-f4.astro。妖精の吹き出しかタスクバーのスタートで始めると配信のウィンドウが開き、× で閉じた数を数え、
  * ウィンドウの外を押すと10枚続けて開き、配信を押すと動画の視聴ページを小さな別のウィンドウで開いてその回を終える。終えたときも
  * 時間切れのときも、妖精が記録を伝えてもう一回やるかを尋ね、× が効かなくなる。配信のウィンドウに出す動画は、一覧から回ごとに
  * 選び直す。始める前は、記念配信のウィンドウを1枚、まん中に置き、× で閉じると、少しして画像だけを大きくして開き直す。
@@ -27,7 +26,6 @@ import { builtRoutes } from "../helpers/dist";
  */
 
 const ROUTE = "/play/alt-f4/";
-const hasPage = builtRoutes().includes(ROUTE);
 /** 動画ごとに別の URL にする。同じ URL だと、ブラウザは2本目からキャッシュを使い、取りに行った数で待てない。 */
 const imageOf = (video: string) => `https://i.ytimg.com/vi/${video}/hqdefault.jpg`;
 /** Worker が返す一覧の代わり。1回に出す数より多くして、そこから選ぶことを見る。 */
@@ -37,8 +35,6 @@ const VIDEO_IDS = Array.from(
 );
 
 test("配信のウィンドウを閉じて数え、時間切れで止まる", async ({ page }) => {
-  test.skip(!hasPage, "本番モードではページを生成しない");
-
   await page.route(`**${VIDEOS_PATH}`, (route) => route.fulfill({ json: VIDEO_IDS }));
   let oembeds = 0;
   await page.route("https://www.youtube.com/oembed?**", (route) => {

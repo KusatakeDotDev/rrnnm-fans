@@ -1,10 +1,9 @@
 import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
-import { builtRoutes, DIST } from "../helpers/dist";
+import { DIST } from "../helpers/dist";
 
 test("配信をとじろの本物の BGM を配る", () => {
-  test.skip(!builtRoutes().includes("/play/alt-f4/"), "配信をとじろのページを生成しないビルド");
   const dir = path.join(DIST, "_astro");
   // ビルドの出力は _astro/<名前>.<フィンガープリント>.m4a。
   const shipped = (existsSync(dir) ? readdirSync(dir) : []).filter((file) =>
