@@ -8,7 +8,6 @@ import { BOOTH_GOODS, boothItemUrl } from "../../src/data/goods";
 import { SCHEDULE_VIDEO_ID } from "../../src/data/schedule";
 import {
   builtPages,
-  builtRoutes,
   DIST,
   distTextFiles,
   fixtureBuild,
@@ -409,7 +408,7 @@ test("公開ページにクライアントアイランド（astro-island）が�
  * だけ名前が残っていても通らず、文字列の中の `/*`（`'image/*'` など）をコメントと取り違えることもない。
  *
  * **マーカーは、ページに置いているスクリプト（PlaylistGrid.astro のラッパー、XPost.astro の oEmbed を差し込むもの、
- * src/pages/play/kusobaka-slot.astro のスロット、src/unreleased/play/alt-f4.astro のゲーム）が
+ * src/pages/play/kusobaka-slot.astro のスロット、src/pages/play/alt-f4.astro のゲーム）が
  * 属性セレクタで探すものを全部並べる。**
  * スクリプトにマーカーを足したら、ここにも足す。スクリプトが自分で付け外しするマーカー（`data-loading`）は、
  * コンポーネントの出力には出ないので入れない。
@@ -432,32 +431,27 @@ test("ラッパーのスクリプトが探すマーカーが、コンポーネ�
     "data-slot-stop",
     "data-slot-until",
     "data-slot-mute",
-    // 未公開のページ（src/unreleased/play/alt-f4.astro）。オフのビルドには無いので、ページがあるときだけ見る（ADR-0018）。
-    ...(builtRoutes().includes("/play/alt-f4/")
-      ? [
-          "data-altf4-desktop",
-          "data-altf4-popups",
-          "data-altf4-assistant",
-          "data-altf4-balloon",
-          "data-altf4-message",
-          "data-altf4-options",
-          "data-altf4-yes",
-          "data-altf4-no",
-          "data-altf4-fairy",
-          "data-altf4-start",
-          "data-altf4-clock",
-          "data-altf4-status",
-          "data-altf4-popup-template",
-          "data-altf4-popup",
-          "data-altf4-close",
-          "data-altf4-ad",
-          "data-altf4-image",
-          "data-altf4-caption",
-          "data-altf4-bgm",
-          "data-altf4-bgm-toggle",
-          "data-altf4-bgm-volume",
-        ]
-      : []),
+    "data-altf4-desktop",
+    "data-altf4-popups",
+    "data-altf4-assistant",
+    "data-altf4-balloon",
+    "data-altf4-message",
+    "data-altf4-options",
+    "data-altf4-yes",
+    "data-altf4-no",
+    "data-altf4-fairy",
+    "data-altf4-start",
+    "data-altf4-clock",
+    "data-altf4-status",
+    "data-altf4-popup-template",
+    "data-altf4-popup",
+    "data-altf4-close",
+    "data-altf4-ad",
+    "data-altf4-image",
+    "data-altf4-caption",
+    "data-altf4-bgm",
+    "data-altf4-bgm-toggle",
+    "data-altf4-bgm-volume",
   ];
   const scriptTag = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
   const pages = builtPages().map(({ file }) => {

@@ -66,6 +66,37 @@
   --c-field-petal-edge:  #5B9DDF; /* 花びらの縁                   */
   --c-field-petal-vein:  #3E519B; /* 花びらの筋                   */
 
+  /* 配信をとじろ（src/pages/play/alt-f4.astro）の、昔のパソコンのデスクトップ。見た目を借りた色で、こちらの配色ではない。
+     ほかに使わない。末尾の数字は、グラデーションの上から順の止め。 */
+  --c-altf4-sky-1:       #3A7BD5; /* 壁紙の空                     */
+  --c-altf4-sky-2:       #8CC0F2;
+  --c-altf4-hill-1:      #6FAE4A; /* 壁紙の丘                     */
+  --c-altf4-hill-2:      #4E8F33;
+  --c-altf4-taskbar-1:   #3168D5; /* タスクバー                   */
+  --c-altf4-taskbar-2:   #2457C4;
+  --c-altf4-taskbar-3:   #1F4FB5;
+  --c-altf4-taskbar-4:   #173E93;
+  --c-altf4-start-1:     #2E7D32; /* スタート                     */
+  --c-altf4-start-2:     #276B2A;
+  --c-altf4-start-3:     #1F5A22;
+  --c-altf4-start-off:   #5A7D5A; /* 遊んでいるあいだのスタート     */
+  --c-altf4-clock-edge:  #0B2F75; /* 時計の左の区切り               */
+  --c-altf4-clock-1:     #0B6FC4; /* 時計                         */
+  --c-altf4-clock-2:     #095AA0;
+  --c-altf4-window:      #ECE9D8; /* 配信のウィンドウの面           */
+  --c-altf4-window-edge: #0A246A; /* 配信のウィンドウの縁           */
+  --c-altf4-title-1:     #2A6FD6; /* タイトルバー。選択肢の丸も     */
+  --c-altf4-title-2:     #1C5BBF; /* サムネイルが来るまでの枠も     */
+  --c-altf4-title-3:     #13489F;
+  --c-altf4-close-1:     #D6492B; /* ×                            */
+  --c-altf4-close-2:     #C23A1F;
+  --c-altf4-close-3:     #A82A15;
+  --c-altf4-ink:         #000000; /* ウィンドウと吹き出しの文字・縁 */
+  --c-altf4-balloon:     #FFFFE1; /* 吹き出しの面                   */
+  --c-altf4-choice:      #0033CC; /* 吹き出しの選択肢の文字         */
+  --c-altf4-shadow:      rgb(0 0 0 / 35%); /* 配信のウィンドウの影 */
+  --c-altf4-shadow-soft: rgb(0 0 0 / 30%); /* 吹き出しの影         */
+
   /* ---------------------------------------------------------------------------
      役割 — 面
      ------------------------------------------------------------------------- */
@@ -215,6 +246,12 @@
   --radius-thumb-lg: 1.375rem; /* 22px カードの中のサムネイル            */
   --radius-thumb:    1rem;     /* 16px タイルの中のサムネイル            */
   --radius-pill:     999px;    /* ボタン・ピル・見出しステッカー          */
+
+  /* 配信をとじろの、昔のパソコンの見た目の角丸（--c-altf4-* と同じく、ほかに使わない）。 */
+  --radius-altf4-window:  0.5rem;  /* 8px  配信のウィンドウの上の角   */
+  --radius-altf4-close:   0.25rem; /* 4px  ×                       */
+  --radius-altf4-start:   0.75rem; /* 12px スタートの右の角         */
+  --radius-altf4-balloon: 0.75rem; /* 12px 吹き出し                 */
 
   --border-sticker: 3px; /* ボタン・タイル・見出し */
   --border-card:    4px; /* 大きいカード           */

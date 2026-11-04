@@ -481,7 +481,13 @@ import fairy from './_alt-f4/fairy.webp';
       border: var(--border-card) solid var(--color-outline);
       border-radius: var(--radius-card);
       overflow: hidden;
-      background: linear-gradient(to bottom, #3a7bd5 0%, #8cc0f2 62%, #6fae4a 62%, #4e8f33 100%);
+      background: linear-gradient(
+        to bottom,
+        var(--c-altf4-sky-1) 0%,
+        var(--c-altf4-sky-2) 62%,
+        var(--c-altf4-hill-1) 62%,
+        var(--c-altf4-hill-2) 100%
+      );
       box-shadow: var(--offset-card) var(--offset-card) 0 var(--color-outline);
       /* 続けて押すと字が選ばれ、すばやく2回押すと拡大されてしまうため。Safari は接頭辞付きしか読まない。 */
       -webkit-user-select: none;
@@ -503,8 +509,14 @@ import fairy from './_alt-f4/fairy.webp';
       align-items: stretch;
       gap: var(--space-2);
       min-height: var(--tap-size);
-      background: linear-gradient(to bottom, #3168d5 0%, #2457c4 10%, #1f4fb5 90%, #173e93 100%);
-      color: #fff;
+      background: linear-gradient(
+        to bottom,
+        var(--c-altf4-taskbar-1) 0%,
+        var(--c-altf4-taskbar-2) 10%,
+        var(--c-altf4-taskbar-3) 90%,
+        var(--c-altf4-taskbar-4) 100%
+      );
+      color: var(--color-text-on-fill);
     }
 
     .taskbar p {
@@ -519,9 +531,11 @@ import fairy from './_alt-f4/fairy.webp';
       margin-right: auto;
       padding: 0 var(--space-5) 0 var(--space-4);
       border: 0;
-      border-radius: 0 0.75rem 0.75rem 0;
-      background: linear-gradient(to bottom, #2e7d32 0%, #276b2a 50%, #1f5a22 100%);
-      color: #fff;
+      border-radius: 0;
+      border-top-right-radius: var(--radius-altf4-start);
+      border-bottom-right-radius: var(--radius-altf4-start);
+      background: linear-gradient(to bottom, var(--c-altf4-start-1) 0%, var(--c-altf4-start-2) 50%, var(--c-altf4-start-3) 100%);
+      color: var(--color-text-on-fill);
       font: inherit;
       font-weight: 700;
       font-style: italic;
@@ -529,13 +543,13 @@ import fairy from './_alt-f4/fairy.webp';
     }
 
     .start:disabled {
-      background: #5a7d5a;
+      background: var(--c-altf4-start-off);
       cursor: default;
     }
 
     .clock {
-      border-left: 1px solid #0b2f75;
-      background: linear-gradient(to bottom, #0b6fc4 0%, #095aa0 100%);
+      border-left: 1px solid var(--c-altf4-clock-edge);
+      background: linear-gradient(to bottom, var(--c-altf4-clock-1) 0%, var(--c-altf4-clock-2) 100%);
     }
 
     /* ゲーム画面を覆う大きさ（RRNNM-116）では大きすぎ、18rem では小さすぎたので、その間の 24rem までにする（主の判断）。
@@ -546,11 +560,12 @@ import fairy from './_alt-f4/fairy.webp';
       display: flex;
       flex-direction: column;
       width: min(24rem, 85cqw, (85cqh - 6rem) * 16 / 9);
-      border: 1px solid #0a246a;
-      border-radius: 0.5rem 0.5rem 0 0;
+      border: 1px solid var(--c-altf4-window-edge);
+      border-top-left-radius: var(--radius-altf4-window);
+      border-top-right-radius: var(--radius-altf4-window);
       overflow: hidden;
-      background: #ece9d8;
-      box-shadow: 2px 2px 8px rgb(0 0 0 / 35%);
+      background: var(--c-altf4-window);
+      box-shadow: 2px 2px 8px var(--c-altf4-shadow);
     }
 
     .titlebar {
@@ -559,8 +574,8 @@ import fairy from './_alt-f4/fairy.webp';
       justify-content: space-between;
       gap: var(--space-2);
       padding: var(--space-1) var(--space-1) var(--space-1) var(--space-2);
-      background: linear-gradient(to bottom, #2a6fd6 0%, #1c5bbf 40%, #13489f 100%);
-      color: #fff;
+      background: linear-gradient(to bottom, var(--c-altf4-title-1) 0%, var(--c-altf4-title-2) 40%, var(--c-altf4-title-3) 100%);
+      color: var(--color-text-on-fill);
       font-size: var(--text-small);
       font-weight: 700;
     }
@@ -578,10 +593,10 @@ import fairy from './_alt-f4/fairy.webp';
       width: 1.75rem;
       height: 1.5rem;
       padding: 0;
-      border: 1px solid #fff;
-      border-radius: 0.25rem;
-      background: linear-gradient(to bottom, #d6492b 0%, #c23a1f 50%, #a82a15 100%);
-      color: #fff;
+      border: 1px solid var(--color-text-on-fill);
+      border-radius: var(--radius-altf4-close);
+      background: linear-gradient(to bottom, var(--c-altf4-close-1) 0%, var(--c-altf4-close-2) 50%, var(--c-altf4-close-3) 100%);
+      color: var(--color-text-on-fill);
       cursor: pointer;
     }
 
@@ -599,7 +614,7 @@ import fairy from './_alt-f4/fairy.webp';
       flex-direction: column;
       gap: var(--space-1);
       padding: var(--space-2);
-      color: #000;
+      color: var(--c-altf4-ink);
       text-decoration-line: none;
     }
 
@@ -609,8 +624,8 @@ import fairy from './_alt-f4/fairy.webp';
       place-items: center;
       aspect-ratio: 16 / 9;
       overflow: hidden;
-      background: #1c5bbf;
-      color: #fff;
+      background: var(--c-altf4-title-2);
+      color: var(--color-text-on-fill);
       font-weight: 700;
     }
 
@@ -664,12 +679,12 @@ import fairy from './_alt-f4/fairy.webp';
       position: relative;
       width: 17rem;
       max-width: 100%;
-      border: 1px solid #000;
-      border-radius: 0.75rem;
+      border: 1px solid var(--c-altf4-ink);
+      border-radius: var(--radius-altf4-balloon);
       padding: var(--space-3) var(--space-4);
-      background: #ffffe1;
-      color: #000;
-      box-shadow: 2px 2px 6px rgb(0 0 0 / 30%);
+      background: var(--c-altf4-balloon);
+      color: var(--c-altf4-ink);
+      box-shadow: 2px 2px 6px var(--c-altf4-shadow-soft);
     }
 
     /* しっぽ。下の妖精のほうへ向ける。 */
@@ -679,8 +694,8 @@ import fairy from './_alt-f4/fairy.webp';
       bottom: -0.45rem;
       width: 0.8rem;
       height: 0.8rem;
-      border-right: 1px solid #000;
-      border-bottom: 1px solid #000;
+      border-right: 1px solid var(--c-altf4-ink);
+      border-bottom: 1px solid var(--c-altf4-ink);
       background: inherit;
       transform: rotate(45deg);
       content: '';
@@ -707,7 +722,7 @@ import fairy from './_alt-f4/fairy.webp';
       padding: 0;
       border: 0;
       background: none;
-      color: #0033cc;
+      color: var(--c-altf4-choice);
       font: inherit;
       text-align: left;
       cursor: pointer;
@@ -718,7 +733,7 @@ import fairy from './_alt-f4/fairy.webp';
       width: 0.6rem;
       height: 0.6rem;
       border-radius: 50%;
-      background: #2a6fd6;
+      background: var(--c-altf4-title-1);
       content: '';
     }
 
