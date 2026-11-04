@@ -539,13 +539,14 @@ import fairy from './_alt-f4/fairy.webp';
       background: linear-gradient(to bottom, #0b6fc4 0%, #095aa0 100%);
     }
 
-    /* パソコンでは、ゲーム画面を覆う大きさで出す（RRNNM-116）。高さでもはみ出さないよう、16:9 の枠のほか（タイトルバー・余白・
-       2行の題名で 6rem ほど）を引いた高さからも、幅を決める。 */
+    /* ゲーム画面を覆う大きさ（RRNNM-116）では大きすぎ、18rem では小さすぎたので、その間の 24rem までにする（主の判断）。
+       狭い画面でもはみ出さないよう、デスクトップの幅と、16:9 の枠のほか（タイトルバー・余白・2行の題名で 6rem ほど）を
+       引いた高さからも、幅を決める。 */
     .popup {
       position: absolute;
       display: flex;
       flex-direction: column;
-      width: min(85cqw, (85cqh - 6rem) * 16 / 9);
+      width: min(24rem, 85cqw, (85cqh - 6rem) * 16 / 9);
       border: 1px solid #0a246a;
       border-radius: 0.5rem 0.5rem 0 0;
       overflow: hidden;
@@ -553,15 +554,8 @@ import fairy from './_alt-f4/fairy.webp';
       box-shadow: 2px 2px 8px rgb(0 0 0 / 35%);
     }
 
-    /* スマートフォンでは、今までの大きさのまま（RRNNM-116）。 */
-    @media (max-width: 40rem) {
-      .popup {
-        width: min(18rem, 85%);
-      }
-    }
-
     /* TODO(RRNNM-114): 特別仕様が終わったら、始める前の1枚の大きさを消す */
-    /* 始める前の1枚は、閉じるたびに広げる余地を残すため、パソコンでも小さい大きさから出す（主の判断）。 */
+    /* 始める前の1枚は、閉じるたびに広げる余地を残すため、ゲーム中のウィンドウより小さい大きさから出す（主の判断）。 */
     .popup.opening {
       width: min(18rem, 85%);
     }
