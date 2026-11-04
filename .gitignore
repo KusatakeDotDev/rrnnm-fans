@@ -67,6 +67,7 @@ dist.verified.json
 /scripts/generate-field-assets.mjs
 /tests/unit/field-bundle.test.ts
 /src/assets/kusobaka-slot/
+/src/assets/alt-f4/
 
 # 非公開の設計資料（rrnnm-fans-docs）。pnpm docs:pull が置く（RRNNM-45）
 /docs/

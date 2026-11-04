@@ -195,3 +195,21 @@ export function adWindowFeatures(area: ScreenArea): string {
   const top = area.top + Math.max(0, area.height - AD_WINDOW.height);
   return `popup,noopener,noreferrer,width=${AD_WINDOW.width},height=${AD_WINDOW.height},left=${left},top=${top}`;
 }
+
+/** BGM の音量のスライダーの値の上限。下限は 0。 */
+export const BGM_LEVEL_MAX = 100;
+/** BGM の音量のスライダーの初めの値。曲そのものの音が大きいので、半分から始める。 */
+export const BGM_LEVEL = 50;
+
+/** 0〜BGM_LEVEL_MAX の整数の書き方。 */
+const LEVEL_PATTERN = /^(?:\d{1,2}|100)$/;
+
+/** 覚えておいたスライダーの値を読む。覚えていないか、スライダーに無い値なら、初めの値にする。 */
+export function parseBgmLevel(stored: string | null): number {
+  return LEVEL_PATTERN.test(String(stored)) ? Number(stored) : BGM_LEVEL;
+}
+
+/** スライダーの値を、音に掛ける大きさ（0〜1）にする。そのまま掛けると、つまみの左の端の近くでしか大きさが変わって聞こえないので、2乗にする。 */
+export function bgmGain(level: number): number {
+  return (level / BGM_LEVEL_MAX) ** 2;
+}

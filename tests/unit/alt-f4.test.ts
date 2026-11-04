@@ -3,6 +3,9 @@ import { describe, expect, it } from "vite-plus/test";
 
 import {
   adWindowFeatures,
+  BGM_LEVEL,
+  BGM_LEVEL_MAX,
+  bgmGain,
   boundsOf,
   CHAIN_CHANCE,
   CHAIN_COOLDOWN_MS,
@@ -20,6 +23,7 @@ import {
   OPENING_REOPEN_MIN_MS,
   openingReopenDelay,
   openingWidth,
+  parseBgmLevel,
   pickVideos,
   randomPosition,
   remainingSeconds,
@@ -34,7 +38,7 @@ import {
  * 壊れると「ウィンドウがデスクトップの外にはみ出す」「連鎖が端で跳ね返らずに外へ抜ける」「連鎖が続けて起きて画面が埋まる」
  * 「残り時間の表示がずれる」「配信を押して開く視聴ページのウィンドウが、画面を覆う」「1回に出す動画が多すぎて、oEmbed を投げすぎる」
  * 「回ごとに選び直しても、同じ動画しか出ない」「始める前の1枚が、閉じた瞬間に開き直して閉じられなくなる」「開き直した1枚が
- * デスクトップからはみ出して、× が切れる」の形で出る。
+ * デスクトップからはみ出して、× が切れる」「BGM が、前に選んだ大きさに戻らない・つまみが端でも鳴る・最大でも小さい」の形で出る。
  */
 
 const unitInterval = fc.double({ min: 0, max: 1, maxExcluded: true, noNaN: true });
@@ -386,5 +390,26 @@ describe("配信を押して開く視聴ページのウィンドウ", () => {
     expect(adWindowFeatures({ left: 100, top: 50, width: 400, height: 300 })).toBe(
       "popup,noopener,noreferrer,width=480,height=360,left=100,top=50",
     );
+  });
+});
+
+describe("BGM の音量", () => {
+  it("覚えておいた 0〜100 の値は、そのまま使う", () => {
+    expect(parseBgmLevel("0")).toBe(0);
+    expect(parseBgmLevel("5")).toBe(5);
+    expect(parseBgmLevel("35")).toBe(35);
+    expect(parseBgmLevel("100")).toBe(BGM_LEVEL_MAX);
+  });
+
+  it("覚えていないか、スライダーに無い値なら、初めの値にする", () => {
+    for (const stored of [null, "", "101", "999", "-5", "5.5", "1e1", " 5", "50x", "x50", "a"])
+      expect(parseBgmLevel(stored), String(stored)).toBe(BGM_LEVEL);
+  });
+
+  it("つまみが左の端なら鳴らさず、右の端なら曲のままの大きさで鳴らし、あいだは2乗で変わる", () => {
+    expect(bgmGain(0)).toBe(0);
+    expect(bgmGain(BGM_LEVEL_MAX)).toBe(1);
+    expect(bgmGain(50)).toBeCloseTo(0.25, 10);
+    expect(bgmGain(10)).toBeCloseTo(0.01, 10);
   });
 });
