@@ -6,8 +6,8 @@ import {
   fromBase64url,
   hex,
   isGone,
-  MAX_ENDPOINT_LENGTH,
-  pushAudience,
+  MAX_METADATA_BYTES,
+  pushTarget,
   readEndpoint,
   VAPID_TTL_S,
   vapidAuthorization,
@@ -33,11 +33,18 @@ describe("宛先の URL", () => {
     ["https://web.push.apple.com/QGx-abc", "https://web.push.apple.com"],
     ["https://wns2-bl2p.notify.windows.com/w/?token=abc", "https://wns2-bl2p.notify.windows.com"],
   ])(
-    "push のサービスの URL なら、JWT の aud に入れるオリジンを返す（%s）",
+    "push のサービスの URL なら、その URL と、JWT の aud に入れるオリジンを返す（%s）",
     (endpoint, audience) => {
-      expect(pushAudience(endpoint)).toBe(audience);
+      expect(pushTarget(endpoint)).toEqual({ endpoint, audience });
     },
   );
+
+  it('URL は整えて返す（大文字のホスト・既定のポート・`..`・ASCII でない文字・`"`）', () => {
+    expect(pushTarget('https://WEB.push.apple.com:443/a/../b/é"')).toEqual({
+      endpoint: "https://web.push.apple.com/b/%C3%A9%22",
+      audience: "https://web.push.apple.com",
+    });
+  });
 
   it.each([
     ["http で来た", "http://fcm.googleapis.com/fcm/send/abc"],
@@ -50,27 +57,49 @@ describe("宛先の URL", () => {
     ["Windows の push のサービスの、点だけのホスト", "https://.notify.windows.com/w/?token=abc"],
     ["URL でない", "not a url"],
   ])("受け付けない（%s）", (_, endpoint) => {
-    expect(pushAudience(endpoint)).toBeNull();
+    expect(pushTarget(endpoint)).toBeNull();
   });
 
-  it("長すぎる URL は受け付けない（KV のメタデータに収まらない）", () => {
-    const head = "https://fcm.googleapis.com/fcm/send/";
-    expect(pushAudience(head + "a".repeat(MAX_ENDPOINT_LENGTH - head.length))).toBe(
-      "https://fcm.googleapis.com",
-    );
-    expect(pushAudience(head + "a".repeat(MAX_ENDPOINT_LENGTH - head.length + 1))).toBeNull();
-    expect(
-      JSON.stringify(head + "a".repeat(MAX_ENDPOINT_LENGTH - head.length)).length,
-    ).toBeLessThanOrEqual(1024);
+  /** KV のメタデータに置く形（JSON の文字列）の UTF-8 のバイト数。 */
+  const metadataBytes = (endpoint: string) =>
+    new TextEncoder().encode(JSON.stringify(endpoint)).length;
+  const head = "https://fcm.googleapis.com/fcm/send/";
+
+  it("KV のメタデータ（1024 バイト）に収まる URL までを受け付ける", () => {
+    expect(MAX_METADATA_BYTES).toBe(1024);
+    const longest = head + "a".repeat(MAX_METADATA_BYTES - 2 - head.length);
+    expect(metadataBytes(pushTarget(longest)!.endpoint)).toBe(MAX_METADATA_BYTES);
+    expect(pushTarget(longest + "a")).toBeNull();
   });
 
-  it.each([[null], [undefined], [1], [{}]])("文字列でなければ受け付けない（%j）", (value) => {
-    expect(pushAudience(value)).toBeNull();
+  it("ASCII でない文字は、整えた URL の長さ（%エンコードしたあと）で数える", () => {
+    // 1文字が %C3%A9 の6文字になる。文字数では1024に届かなくても、整えると越える。
+    expect(head.length + 170).toBeLessThan(MAX_METADATA_BYTES);
+    expect(pushTarget(head + "é".repeat(170))).toBeNull();
+    expect(metadataBytes(pushTarget(head + "é".repeat(150))!.endpoint)).toBeLessThanOrEqual(1024);
   });
+
+  it("JSON のエスケープで伸びる文字（クエリに残る `\\`）も数える", () => {
+    const backslash = String.fromCharCode(92);
+    const query = `${head}a?`;
+    const fits = query + backslash.repeat((MAX_METADATA_BYTES - 2 - query.length) / 2);
+    expect(metadataBytes(pushTarget(fits)!.endpoint)).toBe(MAX_METADATA_BYTES);
+    expect(pushTarget(fits + "a")).toBeNull();
+  });
+
+  it.each([[null], [undefined], [1], [{}], [new URL("https://web.push.apple.com/abc")]])(
+    "文字列でなければ、文字列にすると受け付ける URL になるものでも受け付けない（%j）",
+    (value) => {
+      expect(pushTarget(value)).toBeNull();
+    },
+  );
 });
 
 describe("購読のリクエストの本文", () => {
-  it("endpoint が受け付ける URL なら、その URL を返す", () => {
+  it("endpoint が受け付ける URL なら、整えた URL を返す", () => {
+    expect(readEndpoint({ endpoint: "https://WEB.push.apple.com:443/a/../abc" })).toBe(
+      "https://web.push.apple.com/abc",
+    );
     expect(readEndpoint({ endpoint: "https://web.push.apple.com/abc", keys: {} })).toBe(
       "https://web.push.apple.com/abc",
     );

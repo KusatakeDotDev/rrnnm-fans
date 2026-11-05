@@ -12,32 +12,39 @@ const PUSH_HOSTS: readonly string[] = [
 /** Windows の push のサービス（Edge）は、`wns2-bl2p.notify.windows.com` のように、ホストが地域ごとに分かれる。 */
 const PUSH_HOST_SUFFIX = ".notify.windows.com";
 
-/** 宛先の URL の長さの上限。宛先は KV のキーのメタデータ（1024 バイトまで）に、JSON の文字列として置くため。 */
-export const MAX_ENDPOINT_LENGTH = 1000;
+/** 宛先を置く KV のキーのメタデータの上限（バイト）。宛先は、JSON の文字列としてここに置く。 */
+export const MAX_METADATA_BYTES = 1024;
 
 /** VAPID の JWT を有効にしておく秒数。Apple は、1日より先の `exp` を受け付けない（BadJwtToken）。 */
 export const VAPID_TTL_S = 12 * 60 * 60;
 
+/** 受け付けた宛先。`endpoint` は整えた URL で、KV に置くのも送るのもこちら。`audience` は JWT の `aud` に入れるオリジン。 */
+export interface PushTarget {
+  endpoint: string;
+  audience: string;
+}
+
 /**
- * 宛先の URL が、受け付ける push のサービスのものなら、JWT の `aud` に入れるオリジンを返す。違えば null。
- * 型を問わずに受けるのは、ブラウザから届いた JSON の値をそのまま渡すため。
+ * 宛先の URL が、受け付ける push のサービスのものなら、整えた URL と JWT の `aud` を返す。違えば null。
+ * 型を問わずに受けるのは、ブラウザから届いた JSON の値と、KV のメタデータをそのまま渡すため。
  */
-export function pushAudience(endpoint: unknown): string | null {
-  if (typeof endpoint !== "string" || endpoint.length > MAX_ENDPOINT_LENGTH) return null;
-  const url = URL.parse(endpoint);
+export function pushTarget(value: unknown): PushTarget | null {
+  if (typeof value !== "string") return null;
+  const url = URL.parse(value);
   if (!url || url.protocol !== "https:" || url.port !== "" || url.username !== "") return null;
+  // 整えた URL は ASCII だけになるので、JSON の文字列の長さがそのままバイト数になる（クエリとフラグメントに残る `\` は、エスケープで伸びる）。
+  if (JSON.stringify(url.href).length > MAX_METADATA_BYTES) return null;
   const host = url.hostname;
   const known =
     PUSH_HOSTS.includes(host) ||
     (host.endsWith(PUSH_HOST_SUFFIX) && host.length > PUSH_HOST_SUFFIX.length);
-  return known ? url.origin : null;
+  return known ? { endpoint: url.href, audience: url.origin } : null;
 }
 
-/** 購読を足す・消すリクエストの本文（`{ "endpoint": "<宛先の URL>" }`）から、受け付ける宛先を読む。読めなければ null。 */
+/** 購読を足す・消すリクエストの本文（`{ "endpoint": "<宛先の URL>" }`）から、受け付ける宛先を整えて読む。読めなければ null。 */
 export function readEndpoint(body: unknown): string | null {
   if (typeof body !== "object" || body === null || !("endpoint" in body)) return null;
-  const { endpoint } = body;
-  return pushAudience(endpoint) === null ? null : (endpoint as string);
+  return pushTarget(body.endpoint)?.endpoint ?? null;
 }
 
 export function base64url(bytes: Uint8Array): string {

@@ -7,7 +7,7 @@ import { MAXRES_URL } from "../src/data/schedule";
 import {
   hex,
   isGone,
-  pushAudience,
+  pushTarget,
   readEndpoint,
   vapidAuthorization,
   vapidPrivateJwk,
@@ -127,11 +127,11 @@ function readState(value: string | null): CronState | null {
     // 読めない状態は、初めて見たときと同じに扱い、今のハッシュを覚え直す。毎回の Cron で落ち続けないため。
     return null;
   }
-  return typeof state === "object" &&
-    state !== null &&
-    typeof (state as CronState).hash === "string"
-    ? (state as CronState)
-    : null;
+  if (typeof state !== "object" || state === null) return null;
+  const { hash, cursor } = state as Partial<Record<keyof CronState, unknown>>;
+  // 形の違う状態は、読めない状態と同じに扱う。古いハッシュのまま送り続けたり、同じ回を送り直し続けたりしないため。
+  if (typeof hash !== "string" || (cursor !== undefined && typeof cursor !== "string")) return null;
+  return cursor === undefined ? { hash } : { hash, cursor };
 }
 
 /** push のサービスのオリジンごとに、JWT を1回だけ作る。 */
@@ -198,12 +198,14 @@ export async function runCron(
   const authorization = vapidSigner(privateKey, publicKey, now);
   await Promise.all(
     page.keys.map(async ({ name, metadata }) => {
-      const audience = pushAudience(metadata);
-      if (audience === null) return env.NOTIFY.delete(name);
-      const response = await fetchPush(metadata as string, {
+      const target = pushTarget(metadata);
+      if (target === null) return env.NOTIFY.delete(name);
+      const response = await fetchPush(target.endpoint, {
         method: "POST",
+        // 転送先は宛先の検査を通っていないので、VAPID の署名を付けたまま追わない。3xx は、ほかの失敗と同じく残す。
+        redirect: "manual",
         headers: {
-          authorization: await authorization(audience),
+          authorization: await authorization(target.audience),
           ttl: String(PUSH_TTL_S),
           urgency: "normal",
           "content-length": "0",
