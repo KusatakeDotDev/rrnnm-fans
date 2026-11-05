@@ -10,6 +10,19 @@ export const NOTIFY_PAGE = "/notify/";
 export const SUBSCRIPTIONS_PATH = "/notify/subscriptions";
 
 /**
+ * Service Worker のパス。Worker が返す（worker/service-worker.ts）。場所で範囲（scope）が `/notify/` になるが、push と、
+ * 通知を押したときは、範囲の外のページも開けるので、そのままにする。
+ */
+export const SERVICE_WORKER_PATH = "/notify/sw.js";
+
+/** 通知の文（主の判断）。非公式であることは、本文に書く（docs/CONCEPT.md §2）。 */
+export const NOTIFICATION_TITLE = "配信スケジュールが更新されました";
+export const NOTIFICATION_BODY = "非公式ファンサイト rrnnm.fans で今週の配信予定を見る";
+
+/** 通知を押したときに開くページ。トップの今週の配信予定。 */
+export const NOTIFICATION_URL = "/#schedule";
+
+/**
  * VAPID の公開鍵（圧縮していない P-256 の点を base64url にしたもの）。対になる秘密鍵は Worker のシークレット
  * `VAPID_PRIVATE_KEY` にある。替えると今の購読には送れなくなるので、作り直すのは秘密鍵を失くしたときだけにする
  * （ADR-0035「払うもの」）。作り方は scripts/vapid-keys.mjs。

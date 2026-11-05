@@ -6,6 +6,7 @@ export const PAGE_LINKS: readonly SiteLink[] = [
   { href: "/skeb/", label: "Skeb" },
   { href: "/goods/", label: "グッズ" },
   { href: "/play/", label: "あそぶ" },
+  { href: "/notify/", label: "通知" },
 ];
 
 /**

@@ -13,6 +13,7 @@ import {
   vapidPrivateJwk,
   vapidSigningInput,
 } from "../src/lib/web-push";
+import { serviceWorkerResponse } from "./service-worker";
 
 /** Workers KV のうち、ここで使う分。 */
 export interface NotifyKv {
@@ -68,11 +69,24 @@ async function sha256(data: ArrayBuffer | string): Promise<string> {
   return hex(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)));
 }
 
-/** 購読を足す（POST）・消す（DELETE）。設定のページが無いビルドでは、Worker が無かったときと同じ応答にする。 */
-export async function handleSubscriptions(request: Request, env: NotifyEnv): Promise<Response> {
+/** 設定のページがあるビルドか。無いビルド（未公開のあいだの本番）では、通知の API も Service Worker も返さない（ADR-0035 の決定）。 */
+async function hasNotifyPage(request: Request, env: NotifyEnv): Promise<boolean> {
   const page = await env.ASSETS.fetch(new URL(NOTIFY_PAGE, request.url).href);
   await page.body?.cancel();
-  if (!page.ok) return env.ASSETS.fetch(request);
+  return page.ok;
+}
+
+/** Service Worker（worker/service-worker.ts）。設定のページが無いビルドでは、Worker が無かったときと同じ応答にする。 */
+export async function handleServiceWorker(request: Request, env: NotifyEnv): Promise<Response> {
+  if (!(await hasNotifyPage(request, env))) return env.ASSETS.fetch(request);
+  if (request.method !== "GET" && request.method !== "HEAD")
+    return status(405, { allow: "GET, HEAD" });
+  return serviceWorkerResponse();
+}
+
+/** 購読を足す（POST）・消す（DELETE）。設定のページが無いビルドでは、Worker が無かったときと同じ応答にする。 */
+export async function handleSubscriptions(request: Request, env: NotifyEnv): Promise<Response> {
+  if (!(await hasNotifyPage(request, env))) return env.ASSETS.fetch(request);
   if (request.method !== "POST" && request.method !== "DELETE") {
     return status(405, { allow: "POST, DELETE" });
   }

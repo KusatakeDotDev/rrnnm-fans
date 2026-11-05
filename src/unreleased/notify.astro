@@ -1,0 +1,171 @@
+---
+// 配信スケジュールの更新の通知を受け取る設定のページ（ADR-0035 の決定）。入口はトップの今週の配信予定のカードと、フッター。
+// Service Worker は「通知を受け取る」を押したときだけ登録し、やめたら外す（ADR-0035「Service Worker は、押した人にだけ登録し、
+// push だけを受け持つ」）。購読の API と Service Worker は Worker が返すので、`pnpm dev` では設定できない（`wrangler dev` で見る）。
+//
+// 文は1行に書く。文字と文字の間で改行すると、日本語の間に空白が1つ入る（about.astro と同じ）。
+import Base from '../layouts/Base.astro';
+import '../styles/subpage.css';
+---
+
+<Base
+  title="配信スケジュールの更新の通知"
+  description="瑠璃野ねもさんの今週の配信スケジュールが更新されたら、ブラウザの通知でお知らせします。受け取る設定と、やめ方のページです。"
+>
+  <Fragment slot="head">
+    {/* 句ごとに <span> で包み、狭い画面ではこの境目で2行に分ける。 */}
+    <h1><span>配信スケジュールの</span><span>更新の通知</span></h1>
+  </Fragment>
+
+  <div class="subpage-paper on-paper">
+    <section aria-labelledby="receive">
+      <h2 id="receive">通知を受け取る</h2>
+      <p>今週の配信スケジュールが更新されたら、この端末に通知でお知らせします。通知を押すと、トップの今週の配信予定が開きます。</p>
+      {/* 押せるかどうかはスクリプトが決めるので、決まるまでボタンは出さない。 */}
+      <button type="button" class="toggle" data-notify-toggle hidden>通知を受け取る</button>
+      <p class="status" role="status" data-notify-status></p>
+    </section>
+
+    <section aria-labelledby="stop">
+      <h2 id="stop">やめるとき</h2>
+      <p>このページで「通知をやめる」を押してください。ブラウザや端末の設定で、このサイトの通知を止めても届かなくなります。</p>
+    </section>
+  </div>
+</Base>
+
+<script>
+  import { SERVICE_WORKER_PATH, SUBSCRIPTIONS_PATH, VAPID_PUBLIC_KEY } from '../data/notify';
+  import { fromBase64url } from '../lib/web-push';
+
+  const button = document.querySelector<HTMLButtonElement>('[data-notify-toggle]')!;
+  const status = document.querySelector<HTMLElement>('[data-notify-status]')!;
+  const scope = new URL('./', new URL(SERVICE_WORKER_PATH, location.href)).pathname;
+
+  const MESSAGE = {
+    on: 'この端末は、通知を受け取る設定になっています。',
+    ios: 'iPhone・iPad では、Safari の共有メニューから「ホーム画面に追加」したアプリで、このページを開くと設定できます。',
+    unsupported: 'このブラウザでは、通知を受け取れません。',
+    denied: '通知が許可されていません。ブラウザや端末の設定で、このサイトの通知を許可してください。',
+    failed: '設定できませんでした。少しおいて、もう一度お試しください。',
+  };
+
+  let subscribed = false;
+  const show = (on: boolean, message = on ? MESSAGE.on : '') => {
+    subscribed = on;
+    button.textContent = on ? '通知をやめる' : '通知を受け取る';
+    button.hidden = false;
+    status.textContent = message;
+  };
+
+  const send = async (method: 'POST' | 'DELETE', endpoint: string) => {
+    const response = await fetch(SUBSCRIPTIONS_PATH, {
+      method,
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ endpoint }),
+    });
+    if (!response.ok) throw new Error(`${method} ${response.status}`);
+  };
+
+  const registration = () => navigator.serviceWorker.getRegistration(scope);
+
+  const subscribe = async () => {
+    // iOS は、押した操作の中でしか許可を求めさせないので、ほかの処理より先に呼ぶ。
+    if ((await Notification.requestPermission()) !== 'granted') return show(false, MESSAGE.denied);
+    await navigator.serviceWorker.register(SERVICE_WORKER_PATH, { scope });
+    const ready = await navigator.serviceWorker.ready;
+    const subscription = await ready.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: fromBase64url(VAPID_PUBLIC_KEY),
+    });
+    try {
+      await send('POST', subscription.endpoint);
+    } catch (error) {
+      // 宛先を覚えてもらえないまま購読を残すと、届かないのに「受け取る設定」に見えるため。
+      await subscription.unsubscribe();
+      throw error;
+    }
+    show(true);
+  };
+
+  const unsubscribe = async () => {
+    const current = await registration();
+    const subscription = await current?.pushManager.getSubscription();
+    // 先に Worker から消す。消せなかったら購読を残し、届き続けるのに「やめた」に見えないようにする。
+    if (subscription) await send('DELETE', subscription.endpoint);
+    await subscription?.unsubscribe();
+    await current?.unregister();
+    show(false);
+  };
+
+  const supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  // iPadOS の Safari は、パソコンの Mac と名乗るので、触れる画面かどうかで見分ける。
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+
+  if (!supported) {
+    status.textContent = ios && !matchMedia('(display-mode: standalone)').matches ? MESSAGE.ios : MESSAGE.unsupported;
+  } else {
+    registration()
+      .then((current) => current?.pushManager.getSubscription())
+      .then(
+        (subscription) => show(Boolean(subscription), subscription ? MESSAGE.on : Notification.permission === 'denied' ? MESSAGE.denied : ''),
+        () => show(false),
+      );
+    button.addEventListener('click', () => {
+      button.disabled = true;
+      (subscribed ? unsubscribe() : subscribe())
+        .catch(() => (status.textContent = MESSAGE.failed))
+        .finally(() => (button.disabled = false));
+    });
+  }
+</script>
+
+<style>
+  @layer pages {
+    h1 {
+      margin: 0;
+    }
+
+    h1 span {
+      display: inline-block;
+    }
+
+    /* 押せるステッカーの見た目（skeb.astro の .profile-cta と同じ）。 */
+    .toggle {
+      align-self: flex-start;
+      min-height: var(--tap-size);
+      border: var(--border-thumb) solid var(--color-outline);
+      border-radius: var(--radius-pill);
+      padding: var(--space-1) var(--space-5);
+      background-color: var(--color-fill-blue-deep);
+      color: var(--color-text-on-fill);
+      box-shadow: var(--offset-button) var(--offset-button) 0 var(--color-outline);
+      font: inherit;
+      font-size: var(--text-small);
+      font-weight: 700;
+      cursor: pointer;
+      transition:
+        transform 0.12s ease,
+        box-shadow 0.12s ease;
+    }
+
+    .toggle:hover,
+    .toggle:focus-visible {
+      box-shadow: var(--offset-pressed) var(--offset-pressed) 0 var(--color-outline);
+      transform: translate(var(--offset-pressed), var(--offset-pressed));
+    }
+
+    .toggle:disabled {
+      cursor: progress;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .toggle {
+        transition: none;
+      }
+    }
+
+    .status:empty {
+      display: none;
+    }
+  }
+</style>
