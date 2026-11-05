@@ -4,7 +4,6 @@
 // 1本ずつのページはフッターに並べず、ここから入る。ここのリンクとビルドした /play/<slug>/ は、tests/conformance/routes.spec.ts が照らし合わせる。
 // 並びは公開した新しい順。カードの絵は、YouTube のサムネイルを出してよい例外（docs/CONCEPT.md）に当たらないので、ゲームの見た目を描く。
 import Base from '../../layouts/Base.astro';
-import { ROUND_MS } from '../../lib/alt-f4';
 import AltF4Art from './_alt-f4/CardArt.astro';
 import KusobakaSlotArt from './_kusobaka-slot/CardArt.astro';
 
@@ -12,37 +11,35 @@ const GAMES = [
   {
     href: '/play/alt-f4/',
     title: '配信をとじろ！',
-    howTo: `次々に開く配信のウィンドウを、${ROUND_MS / 1000}秒のうちに何枚とじられるか。`,
+    comment: '10万人記念',
     sound: 'BGM あり',
     Art: AltF4Art,
   },
   {
     href: '/play/kusobaka-slot/',
     title: 'クソバカスロット',
-    howTo: '4本のリールを止めて「クソバカ」をそろえる。',
+    comment: '確定連チャンだった日もあった',
     sound: '効果音あり',
     Art: KusobakaSlotArt,
   },
 ];
 ---
 
-<Base title="あそぶ" description="瑠璃野ねもさんにちなんだ、ファンが作ったミニゲームの一覧です。">
+<Base title="ミニゲーム" description="瑠璃野ねもさんにちなんだ、ファンが作ったミニゲームの一覧です。">
   <Fragment slot="head">
-    <h1>あそぶ</h1>
+    <h1>ミニゲーム</h1>
   </Fragment>
 
   <ul class="games" role="list">
     {
-      GAMES.map(({ href, title, howTo, sound, Art }) => (
+      GAMES.map(({ href, title, comment, sound, Art }) => (
         <li>
           <a class="game on-paper" href={href}>
             <Art />
             <h2 class="title">{title}</h2>
-            <p>{howTo}</p>
-            {/* 「非公式のファン制作」はカードごとに出す（docs/DESIGN.md §1「ミニゲームの導線」）。 */}
+            <p>{comment}</p>
             <span class="tags">
               <span>{sound}</span>
-              <span class="fan">非公式のファン制作</span>
             </span>
           </a>
         </li>
@@ -107,7 +104,7 @@ const GAMES = [
       margin: 0;
     }
 
-    /* あそびかたの行の数がカードごとに違っても、タグの行の高さをそろえる。 */
+    /* 一言の行の数がカードごとに違っても、タグの行の高さをそろえる。 */
     .tags {
       display: flex;
       flex-wrap: wrap;
@@ -122,10 +119,6 @@ const GAMES = [
       padding: 0 var(--space-3);
       font-size: var(--text-small);
       font-weight: 700;
-    }
-
-    .tags .fan {
-      background-color: var(--color-fill-lavender);
     }
 
     @media (max-width: 40rem) {
