@@ -39,10 +39,8 @@ const GAMES = [
             <Art />
             <h2 class="title">{title}</h2>
             <p>{howTo}</p>
-            {/* 「非公式のファン制作」はカードごとに出す（docs/DESIGN.md §1「ミニゲームの導線」）。 */}
             <span class="tags">
               <span>{sound}</span>
-              <span class="fan">非公式のファン制作</span>
             </span>
           </a>
         </li>
@@ -122,10 +120,6 @@ const GAMES = [
       padding: 0 var(--space-3);
       font-size: var(--text-small);
       font-weight: 700;
-    }
-
-    .tags .fan {
-      background-color: var(--color-fill-lavender);
     }
 
     @media (max-width: 40rem) {
