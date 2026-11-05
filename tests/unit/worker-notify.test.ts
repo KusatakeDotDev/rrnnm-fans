@@ -445,25 +445,51 @@ describe("Cron", () => {
     expect(net.pushes).toEqual([]);
   });
 
-  it("状態は、送り終えてから1回だけ書く（KV は同じキーへの書き込みが1秒に1回まで）", async () => {
-    const { ops, run } = await cronEnv({ ...seen("week-1"), ...subscribed(APPLE, FCM) });
+  it("状態は、送る前に1回だけ書く（KV は同じキーへの書き込みが1秒に1回まで）", async () => {
+    const { store, ops, run } = await cronEnv({ ...seen("week-1"), ...subscribed(APPLE, FCM) });
     const net = network(image("week-2"));
-    await run(net.fetchPush);
+    const statesAtPush: unknown[] = [];
+    await run(async (url, init) => {
+      if (!url.startsWith(MAXRES_URL)) statesAtPush.push(stateOf(store));
+      return net.fetchPush(url, init);
+    });
     expect(stateWrites(ops)).toEqual([`put ${STATE_KEY}`]);
-    expect(ops.at(-1)).toBe(`put ${STATE_KEY}`);
+    expect(statesAtPush).toEqual([{ hash: sha256("week-2") }, { hash: sha256("week-2") }]);
   });
 
-  it("送る途中で落ちたら、状態は前のままで、次の Cron が同じ回を最初から送り直す", async () => {
-    const { env, store, run } = await cronEnv({ ...seen("week-1"), ...subscribed(APPLE, FCM) });
-    const kv = env.NOTIFY;
-    env.NOTIFY = { ...kv, list: () => Promise.reject(new Error("KV が落ちた")) };
-    await expect(run(network(image("week-2")).fetchPush)).rejects.toThrow("KV が落ちた");
-    expect(stateOf(store)).toEqual({ hash: sha256("week-1") });
-    env.NOTIFY = kv;
+  it("送る途中で落ちても（CPU 時間の上限など）、次の Cron は同じ回を送り直さない", async () => {
+    const { run } = await cronEnv({ ...seen("week-1"), ...subscribed(APPLE, FCM) });
     const net = network(image("week-2"));
-    await run(net.fetchPush);
-    expect(net.pushes.map((push) => push.url).sort()).toEqual([APPLE, FCM].sort());
+    // 送っている途中で実行ごと止まるのを、Promise を返さずに投げて作る（返した Promise の失敗は、送れなかった宛先として扱われる）。
+    const crash = (url: string, init: RequestInit) => {
+      if (url.startsWith(MAXRES_URL)) return net.fetchPush(url, init);
+      throw new Error("落ちた");
+    };
+    await expect(run(crash)).rejects.toThrow("落ちた");
+    const next = network(image("week-2"));
+    await run(next.fetchPush);
+    expect(next.pushes).toEqual([]);
   });
+
+  it.each([
+    ["一覧", "list"],
+    ["状態の書き込み", "put"],
+  ] as const)(
+    "送る前に落ちたら（%s）、送らず、状態は前のままで、次の Cron が同じ回を最初から送り直す",
+    async (_, method) => {
+      const { env, store, run } = await cronEnv({ ...seen("week-1"), ...subscribed(APPLE, FCM) });
+      const kv = env.NOTIFY;
+      env.NOTIFY = { ...kv, [method]: () => Promise.reject(new Error("KV が落ちた")) };
+      const failed = network(image("week-2"));
+      await expect(run(failed.fetchPush)).rejects.toThrow("KV が落ちた");
+      expect(failed.pushes).toEqual([]);
+      expect(stateOf(store)).toEqual({ hash: sha256("week-1") });
+      env.NOTIFY = kv;
+      const net = network(image("week-2"));
+      await run(net.fetchPush);
+      expect(net.pushes.map((push) => push.url).sort()).toEqual([APPLE, FCM].sort());
+    },
+  );
 
   it("状態が読めなければ、初めて見たときと同じく、今のハッシュを覚えるだけで送らない", async () => {
     const { store, run } = await cronEnv({
