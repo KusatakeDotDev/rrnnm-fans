@@ -1,3 +1,5 @@
+import { runInNewContext } from "node:vm";
+
 import { describe, expect, it } from "vite-plus/test";
 
 import {
@@ -78,7 +80,8 @@ function install() {
     },
     clients: { openWindow: async (url: string) => void calls.push(["openWindow", url]) },
   };
-  new Function("self", SERVICE_WORKER_SOURCE)(self);
+  // ブラウザと同じく、ほかの名前の無いところで動かす。`self` のほかに頼っているものがあれば、ここで落ちる。
+  runInNewContext(SERVICE_WORKER_SOURCE, { self });
   const dispatch = async (type: string, extra: object = {}) => {
     const waits: Promise<unknown>[] = [];
     listeners.get(type)!({
