@@ -3,7 +3,7 @@
  * 差し替わったかを見て、購読しているブラウザへ中身の無い push を送る。
  */
 import { NOTIFY_PAGE, VAPID_PUBLIC_KEY, VAPID_SUBJECT } from "../src/data/notify";
-import { MAXRES_URL } from "../src/data/schedule";
+import { HQ_URL } from "../src/data/schedule";
 import {
   hex,
   isGone,
@@ -40,9 +40,10 @@ export type NotifyFetch = (url: string, init: RequestInit) => Promise<Response>;
 export const SUBSCRIPTION_PREFIX = "sub:";
 /**
  * Cron の状態（JSON の CronState）。1回の Cron で書くのは1回だけにする。KV は同じキーへの書き込みが1秒に1回までで、
- * 2回目が落ちるため。
+ * 2回目が落ちるため。名前に、ハッシュを取る画像を入れる。画像を替えたときに、前の画像のハッシュと比べて、差し替わって
+ * いないのに送らないよう、名前ごと替えて覚え直しから始めるため。
  */
-export const STATE_KEY = "state";
+export const STATE_KEY = "state:hqdefault";
 
 /** `hash` は前回見たサムネイルのハッシュ。`cursor` があれば送っている途中で、次に送る購読の一覧のカーソル（最初からなら空の文字列）。 */
 export interface CronState {
@@ -111,7 +112,7 @@ export async function handleSubscriptions(request: Request, env: NotifyEnv): Pro
 async function thumbnailHash(fetchPush: NotifyFetch, now: number): Promise<string | null> {
   // YouTube のエッジは、クエリ無しの URL に差し替える前の画像を返し続けうる（ADR-0004「サムネイルの URL にクエリを付ける」）。
   // ブラウザの5分ごとの番号とは重ならないミリ秒の時刻を付ける。取るたびに古い画像と新しい画像が入れ替わると、そのたびに全員へ送り直すため。
-  const url = `${MAXRES_URL}?t=${now}`;
+  const url = `${HQ_URL}?t=${now}`;
   // Cloudflare のエッジに覚えさせた古い画像（`cache-control: max-age=300`）を読まないため。
   const response = await fetchPush(url, { cache: "no-store" }).catch(() => null);
   if (!response?.ok) {

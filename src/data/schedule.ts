@@ -20,11 +20,14 @@ export const SCHEDULE_AUTHOR = "瑠璃野ねも";
  */
 export const WATCH_URL = `https://www.youtube.com/watch?v=${SCHEDULE_VIDEO_ID}`;
 
-/**
- * カードに敷く画像と、差し替わったかを Worker が見る画像（ADR-0035「「変わった」は、サムネイルの差し替えだけで見る」）。
- * 差し替えても URL は変わらない（ADR-0004）。
- */
+/** カードに敷く画像。差し替えても URL は変わらない（ADR-0004）。 */
 export const MAXRES_URL = `https://i.ytimg.com/vi/${SCHEDULE_VIDEO_ID}/maxresdefault.jpg`;
+
+/**
+ * 差し替わったかを Worker が見る画像（ADR-0035「「変わった」は、サムネイルの差し替えだけで見る」）。maxresdefault ではなく
+ * こちらを見るのは、maxresdefault は動画によっては無く、無いと黙って検知が止まるため。
+ */
+export const HQ_URL = `https://i.ytimg.com/vi/${SCHEDULE_VIDEO_ID}/hqdefault.jpg`;
 
 /**
  * サムネイルの URL のクエリ `t` が変わる間隔。番号は端末の時計から作るので、時計のずれた端末では外れうる
