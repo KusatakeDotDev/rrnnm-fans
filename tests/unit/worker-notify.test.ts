@@ -107,15 +107,17 @@ function network(
 ) {
   const pushes: { url: string; init: RequestInit }[] = [];
   const thumbnails: RequestInit[] = [];
+  const thumbnailUrls: string[] = [];
   const fetchPush = async (url: string, init: RequestInit) => {
-    if (url === MAXRES_URL) {
+    if (url.split("?")[0] === MAXRES_URL) {
       thumbnails.push(init);
+      thumbnailUrls.push(url);
       return thumbnail();
     }
     pushes.push({ url, init });
     return new Response(null, { status: pushStatus(url) });
   };
-  return { fetchPush, pushes, thumbnails };
+  return { fetchPush, pushes, thumbnails, thumbnailUrls };
 }
 
 const subscribe = (method: string, body: unknown, headers: Record<string, string> = {}) => {
@@ -269,11 +271,22 @@ describe("Cron", () => {
     expect(net.pushes).toEqual([]);
   });
 
-  it("サムネイルは、Cloudflare の端に覚えさせたものを読まない", async () => {
+  it("サムネイルは、Cloudflare のエッジに覚えさせたものを読まない", async () => {
     const { run } = await cronEnv();
     const net = network(image("week-1"));
     await run(net.fetchPush);
     expect(net.thumbnails).toEqual([{ cache: "no-store" }]);
+  });
+
+  it("サムネイルは、回ごとに違うクエリを付けて取り、YouTube のエッジに残った差し替える前の画像を読まない", async () => {
+    const { env, keys } = await cronEnv();
+    const net = network(image("week-1"));
+    await runCron(env, net.fetchPush, NOW, keys.publicKey);
+    await runCron(env, net.fetchPush, NOW + 5 * 60_000, keys.publicKey);
+    expect(net.thumbnailUrls).toEqual([
+      `${MAXRES_URL}?t=${NOW}`,
+      `${MAXRES_URL}?t=${NOW + 5 * 60_000}`,
+    ]);
   });
 
   it("前回と同じなら、何も書かず、送らない", async () => {
@@ -351,6 +364,32 @@ describe("Cron", () => {
     expect([...store.keys()].filter((key) => key.startsWith(SUBSCRIPTION_PREFIX)).sort()).toEqual(
       [subscriptionKey(endpoints[2]!), subscriptionKey(endpoints[3]!)].sort(),
     );
+  });
+
+  it("宛先を消せなくても（KV の削除の上限など）、ほかの宛先に送って状態を書き、次の Cron で同じ回を送り直さない", async () => {
+    const bad = "https://example.com/abc";
+    const { env, store, run } = await cronEnv({
+      ...seen("week-1"),
+      ...subscribed(APPLE, FCM),
+      [subscriptionKey(bad)]: { value: "", metadata: bad },
+    });
+    env.NOTIFY.delete = () => Promise.reject(new Error("KV の削除の上限"));
+    const errors: unknown[] = [];
+    const original = console.error;
+    console.error = (...args: unknown[]) => errors.push(args);
+    try {
+      const net = network(image("week-2"), (url) => (url === APPLE ? 410 : 201));
+      await run(net.fetchPush);
+      expect(net.pushes.map((push) => push.url).sort()).toEqual([APPLE, FCM].sort());
+    } finally {
+      console.error = original;
+    }
+    expect(errors).toHaveLength(2);
+    expect(stateOf(store)).toEqual({ hash: sha256("week-2") });
+    expect(store.has(subscriptionKey(APPLE))).toBe(true);
+    const net = network(image("week-2"));
+    await run(net.fetchPush);
+    expect(net.pushes).toEqual([]);
   });
 
   it("push のサービスに繋がらなくても、宛先を残して最後まで送る", async () => {
