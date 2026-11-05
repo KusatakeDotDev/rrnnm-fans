@@ -40,9 +40,10 @@ export type NotifyFetch = (url: string, init: RequestInit) => Promise<Response>;
 export const SUBSCRIPTION_PREFIX = "sub:";
 /**
  * Cron の状態（JSON の CronState）。1回の Cron で書くのは1回だけにする。KV は同じキーへの書き込みが1秒に1回までで、
- * 2回目が落ちるため。
+ * 2回目が落ちるため。名前に、ハッシュを取る画像を入れる。画像を替えたときに、前の画像のハッシュと比べて、差し替わって
+ * いないのに送らないよう、名前ごと替えて覚え直しから始めるため。
  */
-export const STATE_KEY = "state";
+export const STATE_KEY = "state:hqdefault";
 
 /** `hash` は前回見たサムネイルのハッシュ。`cursor` があれば送っている途中で、次に送る購読の一覧のカーソル（最初からなら空の文字列）。 */
 export interface CronState {
