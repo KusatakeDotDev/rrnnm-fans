@@ -2,11 +2,11 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import sharp from "sharp";
 
 import { OFFICIAL } from "../../src/data/official";
-import { UNLINKED_ROUTES } from "../../src/data/site-navigation";
+import { LIST_ROUTES } from "../../src/data/site-navigation";
 import { AXE_TAGS, THIRD_PARTY_EMBED } from "../helpers/axe";
 import { DIST, builtRoutes } from "../helpers/dist";
 import { X_EMBED_PAGES, X_EMBEDS, X_HOST } from "../helpers/x-embed";
@@ -36,6 +36,23 @@ const ACCOUNTS = [
 ] as const;
 
 const hasSkeb = builtRoutes().includes("/skeb/");
+
+/** 一覧のページの下の、1件ずつのページ（`/play/<slug>/` など）。 */
+const under = (list: string) =>
+  builtRoutes().filter((built) => built !== list && built.startsWith(list));
+const LISTED = LIST_ROUTES.flatMap(under);
+
+/** リンクのうち、このサイトの中のページを指すもののパス。 */
+const sitePaths = (links: Locator) =>
+  links.evaluateAll((anchors) =>
+    anchors
+      .map((anchor) => anchor.getAttribute("href") ?? "")
+      // `#` だけの href と空の href は、URL にすると今のページを指して数えられてしまうので、その前に外す。
+      .filter((href) => href !== "" && !href.includes("#"))
+      .map((href) => new URL(href, location.href))
+      .filter((url) => url.origin === location.origin)
+      .map((url) => decodeURI(url.pathname)),
+  );
 
 // og:* は property に、twitter:* は name に書く（OGP と X のカードの仕様の書き方）。属性を取り違えても気付けるよう、属性ごとに分けて読む。
 const readMetas = (page: Page) =>
@@ -462,31 +479,47 @@ for (const route of builtRoutes()) {
       });
     }
 
+    if (LIST_ROUTES.includes(route)) {
+      // 下のページはフッターに並べないので、一覧から漏れると、どこからも辿れない。
+      await test.step("一覧のページが、その下のビルドしたページへ過不足なくリンクする", async () => {
+        const paths = await sitePaths(page.locator("main a[href]"));
+        expect
+          .soft(
+            [
+              ...new Set(
+                paths.filter((pathname) => pathname !== route && pathname.startsWith(route)),
+              ),
+            ].sort(),
+          )
+          .toEqual(under(route).sort());
+      });
+    }
+
+    const list = LIST_ROUTES.find((candidate) => under(candidate).includes(route));
+    if (list) {
+      // SNS の共有などで1件ずつのページへ直接来た人が、一覧へ戻れるように。フッターにもあるので、本文（main）の中で数える。
+      await test.step("一覧の下のページが、本文から一覧のページへリンクする", async () => {
+        expect.soft(await sitePaths(page.locator("main a[href]"))).toContain(list);
+      });
+    }
+
     await checkLayout(page, WIDE.width);
 
     if (onContactPage) {
       // マウスで押したあとは、.focus() で当てたリンクに :focus-visible が当たらないので、フッターのキーボードの検査を先に回す。
       // 期待値を PAGE_LINKS（フッターに渡すリンクを作るもの）から作ると、そこに足し忘れても通る（RRNNM-63）。
-      await test.step("フッターのページへのリンクが、ビルドしたページ（UNLINKED_ROUTES を除く）と過不足なくそろう", async () => {
-        const paths = await page.locator("body > footer a[href]").evaluateAll((links) =>
-          links
-            .map((link) => link.getAttribute("href") ?? "")
-            // `#` だけの href と空の href は、URL にすると今のページを指して数えられてしまうので、その前に外す。
-            .filter((href) => href !== "" && !href.includes("#"))
-            .map((href) => new URL(href, location.href))
-            .filter((url) => url.origin === location.origin)
-            .map((url) => decodeURI(url.pathname)),
-        );
+      await test.step("フッターのページへのリンクが、ビルドしたページ（一覧の下の1件ずつのページを除く）と過不足なくそろう", async () => {
+        const paths = await sitePaths(page.locator("body > footer a[href]"));
         expect.soft(paths.sort()).toEqual(
           builtRoutes()
-            .filter((built) => !UNLINKED_ROUTES.includes(built))
+            .filter((built) => !LISTED.includes(built))
             .sort(),
         );
-        // 外す一覧に、もう無いページが残ると、同じパスでページを作り直したときにフッターの検査から黙って外れる。
+        // 一覧のページを消しても下のページが外れ続けると、下のページがどこからも辿れないまま通る。
         expect
           .soft(
-            UNLINKED_ROUTES.filter((unlinked) => !builtRoutes().includes(unlinked)),
-            "ビルドに無い、フッターから外すページ",
+            LIST_ROUTES.filter((list) => !builtRoutes().includes(list)),
+            "ビルドに無い一覧のページ",
           )
           .toEqual([]);
       });

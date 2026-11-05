@@ -1,7 +1,7 @@
 ---
 // 配信のウィンドウを閉じるミニゲーム。昔のパソコンで、広告のウィンドウが次々に開いて止まらなくなったときの見た目を借り、
 // ウィンドウに瑠璃野ねもさんの動画・配信のサムネイルを出す。制限時間のうちに閉じた数を数える。
-// フッターには出さない（src/data/site-navigation.ts の UNLINKED_ROUTES）。
+// フッターには出さず、一覧（src/pages/play/index.astro）から入る（src/data/site-navigation.ts の LIST_ROUTES）。
 // サムネイルは、その動画の視聴ページへのリンクの中にだけ出し、押すと視聴ページを別のウィンドウで開く（ADR-0033 の決定）。
 // 遊んでいるあいだに配信を押したら、その回はそこで終え、× 以外を押したら10枚の連鎖を起こす（RRNNM-116）。
 // スタートのボタンだけでは始め方が分かりにくかったので、昔のパソコンの手伝いのキャラクターのように、妖精が吹き出しで
@@ -9,6 +9,7 @@
 import { OFFICIAL } from '../../data/official';
 import Base from '../../layouts/Base.astro';
 import { BGM_LEVEL, BGM_LEVEL_MAX, ROUND_MS } from '../../lib/alt-f4';
+import IndexLink from './_IndexLink.astro';
 import fairy from './_alt-f4/fairy.webp';
 ---
 
@@ -60,6 +61,8 @@ import fairy from './_alt-f4/fairy.webp';
     {/* 魔王魂の利用規約が、著作表記を求めるため。 */}
     BGM：<a href="https://maou.audio/" target="_blank" rel="noopener noreferrer">魔王魂<span class="sr-only">（外部サイトを新しいタブで開く）</span></a>
   </p>
+
+  <IndexLink />
 
   <template data-altf4-popup-template>
     <div class="popup" data-altf4-popup>
