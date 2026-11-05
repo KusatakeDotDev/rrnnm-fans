@@ -38,7 +38,7 @@ export function serviceWorkerResponse(): Response {
   return new Response(SERVICE_WORKER_SOURCE, {
     headers: {
       "content-type": "text/javascript; charset=utf-8",
-      // ブラウザは Service Worker の本体を HTTP のキャッシュに関わらず取り直すが、途中の CDN にも覚えさせないため。
+      // 中身は Release で替わるので、古いものを覚えさせたままにしない。
       "cache-control": "no-cache",
     },
   });

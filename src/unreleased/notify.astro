@@ -106,13 +106,21 @@ import '../styles/subpage.css';
   // iPadOS の Safari は、パソコンの Mac と名乗るので、触れる画面かどうかで見分ける。
   const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
 
-  if (!supported) {
-    status.textContent = ios && !matchMedia('(display-mode: standalone)').matches ? MESSAGE.ios : MESSAGE.unsupported;
+  // iOS では、ホーム画面に追加したアプリでしか購読できない（Apple の資料「Sending web push notifications in web apps and
+  // browsers」）。Safari のタブに通知の API があっても購読を試させないよう、API があるかより先に分ける。
+  if (ios && !matchMedia('(display-mode: standalone)').matches) {
+    status.textContent = MESSAGE.ios;
+  } else if (!supported) {
+    status.textContent = MESSAGE.unsupported;
   } else {
     registration()
       .then((current) => current?.pushManager.getSubscription())
       .then(
-        (subscription) => show(Boolean(subscription), subscription ? MESSAGE.on : Notification.permission === 'denied' ? MESSAGE.denied : ''),
+        (subscription) => {
+          // 購読が残っていても、通知が許可されていなければ届かないので、「受け取る設定」とは言わない。
+          const on = Boolean(subscription) && Notification.permission === 'granted';
+          show(on, on ? MESSAGE.on : Notification.permission === 'denied' ? MESSAGE.denied : '');
+        },
         () => show(false),
       );
     button.addEventListener('click', () => {
