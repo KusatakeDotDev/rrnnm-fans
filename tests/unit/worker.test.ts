@@ -26,6 +26,13 @@ const xml = (...ids: string[]) =>
     )
     .join("")}</feed>`;
 
+/** 一覧のパスでは KV を使わない。使ったら落とす。 */
+const unusedKv: Env["NOTIFY"] = new Proxy({} as Env["NOTIFY"], {
+  get: (_, name) => () => {
+    throw new Error(`一覧のパスで KV の ${String(name)} を呼んだ`);
+  },
+});
+
 /** 静的なファイル。`pages` にあるパスは 200、ほかは 404。受けたリクエストの URL を記録する。 */
 function assets(pages: readonly string[]) {
   const requested: string[] = [];
@@ -39,6 +46,7 @@ function assets(pages: readonly string[]) {
           : new Response("not found", { status: 404 });
       },
     },
+    NOTIFY: unusedKv,
     YOUTUBE_FEED_URL: FEED,
   };
   return { env, requested };

@@ -1,18 +1,20 @@
 /**
- * サイトの Worker。ミニゲーム「配信をとじろ」の動画の一覧（VIDEOS_PATH）だけを返し、ほかは静的なファイル（dist）に回す
- * （ADR-0033 の決定）。一覧は、src/data/alt-f4-videos.ts の切り替え（登録者10万人の記念の特別仕様のあいだかどうか）で、
+ * サイトの Worker。ミニゲーム「配信をとじろ」の動画の一覧（VIDEOS_PATH。ADR-0033 の決定）と、配信スケジュールの更新の通知の
+ * 購読（SUBSCRIPTIONS_PATH）と Cron（ADR-0035 の決定。中身は worker/notify.ts）を受け持ち、ほかは静的なファイル（dist）に回す。
+ * 一覧は、src/data/alt-f4-videos.ts の切り替え（登録者10万人の記念の特別仕様のあいだかどうか）で、
  * リポジトリに置いた一覧か、チャンネルのフィードの最新を返す。
  * フィードは CORS を許さず、ブラウザから読めないので、同じオリジンで中継する。
  * ほかのサイトのページから読ませないよう、`Access-Control-Allow-Origin` は付けない（CORS が止めるのはブラウザだけで、
  * ブラウザの外からは読めるが、返すのはこのチャンネルの公開の動画の ID だけ）。
  */
 import { currentVideoSource, LISTED_VIDEO_IDS } from "../src/data/alt-f4-videos";
+import { SUBSCRIPTIONS_PATH } from "../src/data/notify";
 import { OFFICIAL } from "../src/data/official";
 import { maxAgeUntilCelebrationEnds, VIDEOS_PATH } from "../src/lib/alt-f4";
 import { channelFeedUrl, latestVideoIds } from "../src/lib/youtube-feed";
+import { handleSubscriptions, type NotifyEnv, runCron } from "./notify";
 
-export interface Env {
-  ASSETS: { fetch(input: Request | string): Promise<Response> };
+export interface Env extends NotifyEnv {
   /** 中継するフィード。空ならチャンネルのフィード。テストでは、外へ出ない先に替える（playwright.config.ts）。 */
   YOUTUBE_FEED_URL?: string;
 }
@@ -48,6 +50,7 @@ export async function handle(
   now: number = Date.now(),
 ): Promise<Response> {
   const url = new URL(request.url);
+  if (url.pathname === SUBSCRIPTIONS_PATH) return handleSubscriptions(request, env);
   // 静的なファイルが無いリクエストだけがここへ来る。Worker が無かったときと同じ 404 にするため、ASSETS に返させる。
   if (url.pathname !== VIDEOS_PATH) return env.ASSETS.fetch(request);
   const page = await env.ASSETS.fetch(new URL(GAME_PAGE, url).href);
@@ -69,4 +72,9 @@ export async function handle(
 
 export default {
   fetch: (request: Request, env: Env): Promise<Response> => handle(request, env),
+  scheduled: (
+    _controller: unknown,
+    env: Env,
+    context: { waitUntil(promise: Promise<unknown>): void },
+  ) => context.waitUntil(runCron(env)),
 };
