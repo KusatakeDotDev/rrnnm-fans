@@ -264,7 +264,10 @@ describe("Cron", () => {
     ops.filter((op) => op === `put ${STATE_KEY}` || op === `delete ${STATE_KEY}`);
 
   it("状態のキーの名前は、ハッシュを取る画像を表す（画像を替えたら、キーも替えて覚え直しから始める）", () => {
-    const image = new URL(HQ_URL).pathname.split("/").at(-1)!.replace(/\.jpg$/, "");
+    const image = new URL(HQ_URL).pathname
+      .split("/")
+      .at(-1)!
+      .replace(/\.jpg$/, "");
     expect(STATE_KEY).toBe(`state:${image}`);
   });
 
