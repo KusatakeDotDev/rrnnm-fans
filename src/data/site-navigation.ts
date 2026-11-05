@@ -5,7 +5,7 @@ export interface SiteLink {
 export const PAGE_LINKS: readonly SiteLink[] = [
   { href: "/skeb/", label: "Skeb" },
   { href: "/goods/", label: "グッズ" },
-  { href: "/play/", label: "あそぶ" },
+  { href: "/play/", label: "ミニゲーム" },
 ];
 
 /**
