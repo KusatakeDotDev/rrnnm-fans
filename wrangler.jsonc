@@ -16,8 +16,8 @@
   // （＝Release）だけで、`versions upload`（main・PR のプレビュー）は設定しない（wrangler 4.155.0 で確かめた）。
   "triggers": { "crons": ["*/5 * * * *"] },
   // 通知の購読と、前回のサムネイルのハッシュ（ADR-0035）。プレビューのバージョンも、この同じ namespace を使う。
-  // TODO(RRNNM-27): namespace を作ったら、その ID にする
-  "kv_namespaces": [{ "binding": "NOTIFY", "id": "00000000000000000000000000000000" }],
+  // namespace（rrnnm-fans-notify）は手で作った（→ docs/OPERATIONS.md「配信スケジュールの更新の通知 — KV と VAPID の鍵」）。
+  "kv_namespaces": [{ "binding": "NOTIFY", "id": "f0b9ececa7384e96added344658a6d83" }],
   // プレビューURL（`<エイリアスまたはバージョン>-<Worker名>.<subdomain>.workers.dev`）を有効にする。
   // main へのマージはここへ出る（→ docs/OPERATIONS.md §7）。書かないと wrangler は値を送らず、
   // Cloudflare 側の今の値（Worker を作り直したなら Cloudflare の既定）に任される。
