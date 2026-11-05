@@ -1,5 +1,5 @@
 ---
-// クソバカスロット。瑠璃野ねもさんの 2026-10-18 のポスト（下の POST）にちなんだもの。フッターには出さない（src/data/site-navigation.ts の UNLINKED_ROUTES）。
+// クソバカスロット。瑠璃野ねもさんの 2026-10-18 のポスト（下の POST）にちなんだもの。フッターには出さず、一覧（src/pages/play/index.astro）から入る（src/data/site-navigation.ts の LIST_ROUTES）。
 // 音は効果音ラボの素材。規約は、アプリの操作音として組み込むのを再配布に当たらないとし、直リンクを禁じているので、このサイトから配る。
 // ファイルは、非公開のリポジトリから重ねる（ADR-0029 の決定）。
 // ポストの「今日は」に合わせ、かならずそろうのはその日のうちだけ。日付は来た人が書き換えて延ばせる遊びにし、再読み込みで戻す。
@@ -8,6 +8,7 @@ import { OFFICIAL } from '../../data/official';
 import XPost from '../../components/XPost.astro';
 import Base from '../../layouts/Base.astro';
 import { DEFAULT_UNTIL, WORD } from '../../lib/kusobaka-slot';
+import IndexLink from './_IndexLink.astro';
 
 const POST = `${OFFICIAL.x}/status/2111763781324046562`;
 ---
@@ -61,6 +62,8 @@ const POST = `${OFFICIAL.x}/status/2111763781324046562`;
       <p><a href={POST} target="_blank" rel="noopener noreferrer">X でポストを見る（2026年10月18日の投稿）<span class="sr-only">（外部サイトを新しいタブで開く）</span></a></p>
     </XPost>
   </div>
+
+  <IndexLink />
 </Base>
 
 <script>
