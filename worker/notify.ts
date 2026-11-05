@@ -37,15 +37,22 @@ export type NotifyFetch = (url: string, init: RequestInit) => Promise<Response>;
 
 /** 購読のキーの頭。宛先の URL は、キーには長すぎうるので、ハッシュをキーにし、URL はメタデータに置く（一覧で読み出せる）。 */
 export const SUBSCRIPTION_PREFIX = "sub:";
-/** 前回見たサムネイルのハッシュ。 */
-export const THUMBNAIL_KEY = "thumbnail";
-/** 送っている途中なら、次に送る購読の一覧のカーソル（最初からなら空の文字列）。無ければ、送っていない。 */
-export const SENDING_KEY = "sending";
+/**
+ * Cron の状態（JSON の CronState）。1回の Cron で書くのは、最後の1回だけにする。KV は同じキーへの書き込みが1秒に1回までで、
+ * 2回目が落ちると、送り終えた回をもう一度送ってしまうため。
+ */
+export const STATE_KEY = "state";
+
+/** `hash` は前回見たサムネイルのハッシュ。`cursor` があれば送っている途中で、次に送る購読の一覧のカーソル（最初からなら空の文字列）。 */
+export interface CronState {
+  hash: string;
+  cursor?: string;
+}
 
 /**
  * 1回の Cron で送る数。無料プランのサブリクエスト（KV の操作も数える）は1回50件までで、送る分と、切れた宛先を消す分と、
- * ほかの7件（送っている途中かの読み取り・サムネイル・ハッシュの読み書き・途中かの書き込み・一覧・途中かの書き換え）が収まる数にする
- * （ADR-0035「無料プランの上限に合わせて、1回に送る数を区切る」）。
+ * ほかの4件（状態の読み取り・サムネイル・一覧・状態の書き込み）が収まる数にする（ADR-0035「無料プランの上限に合わせて、
+ * 1回に送る数を区切る」）。
  */
 export const BATCH = 20;
 /** 端末が繋がっていないとき、push のサービスに預けておく秒数。今週の予定の知らせなので、1日を越えて届けない。 */
@@ -76,24 +83,41 @@ export async function handleSubscriptions(request: Request, env: NotifyEnv): Pro
   const endpoint = readEndpoint(await request.json().catch(() => null));
   if (endpoint === null) return status(400);
   const key = SUBSCRIPTION_PREFIX + (await sha256(endpoint));
-  if (request.method === "POST") await env.NOTIFY.put(key, "", { metadata: endpoint });
-  else await env.NOTIFY.delete(key);
+  try {
+    if (request.method === "POST") await env.NOTIFY.put(key, "", { metadata: endpoint });
+    else await env.NOTIFY.delete(key);
+  } catch {
+    // 同じ宛先を1秒のうちに足して消すと、KV の同じキーへの書き込みの上限（1秒に1回）に当たる。ページに、少しおいて頼み直させる。
+    return status(503, { "retry-after": "1" });
+  }
   return status(204);
 }
 
-/** サムネイルが前回と変わったか。初めて見たときは、覚えるだけで、変わったとはしない。取れなければ、何も書き換えない。 */
-async function thumbnailChanged(env: NotifyEnv, fetchPush: NotifyFetch): Promise<boolean> {
+/** 今のサムネイルのハッシュ。取れなければ null。 */
+async function thumbnailHash(fetchPush: NotifyFetch): Promise<string | null> {
   // Cloudflare の端に覚えさせた古い画像（`cache-control: max-age=300`）を読まないため。
   const response = await fetchPush(MAXRES_URL, { cache: "no-store" }).catch(() => null);
   if (!response?.ok) {
     await response?.body?.cancel();
-    return false;
+    return null;
   }
-  const hash = await sha256(await response.arrayBuffer());
-  const last = await env.NOTIFY.get(THUMBNAIL_KEY);
-  if (last === hash) return false;
-  await env.NOTIFY.put(THUMBNAIL_KEY, hash);
-  return last !== null;
+  return sha256(await response.arrayBuffer());
+}
+
+function readState(value: string | null): CronState | null {
+  if (value === null) return null;
+  let state: unknown;
+  try {
+    state = JSON.parse(value);
+  } catch {
+    // 読めない状態は、初めて見たときと同じに扱い、今のハッシュを覚え直す。毎回の Cron で落ち続けないため。
+    return null;
+  }
+  return typeof state === "object" &&
+    state !== null &&
+    typeof (state as CronState).hash === "string"
+    ? (state as CronState)
+    : null;
 }
 
 /** push のサービスのオリジンごとに、JWT を1回だけ作る。 */
@@ -126,7 +150,9 @@ function vapidSigner(privateKey: string, publicKey: string, now: number) {
 
 /**
  * Cron で呼ぶ。送っている途中なら続きを、そうでなければサムネイルを見て、変わっていたら最初から送る。1回に送るのは BATCH 件まで。
+ * 初めて見たサムネイルは、覚えるだけで送らない。取れなければ、何も書き換えない。
  * 宛先が切れていたら（404・410）消す。ほかの失敗は消さずに残し、次に変わったときにまた送る。
+ * 状態は送り終えてから書くので、途中で落ちると、次の Cron が同じ回を送り直す。
  */
 export async function runCron(
   env: NotifyEnv,
@@ -140,17 +166,20 @@ export async function runCron(
     console.error("[notify] VAPID_PRIVATE_KEY が無いので、サムネイルを見ない");
     return;
   }
-  let cursor = await env.NOTIFY.get(SENDING_KEY);
-  if (cursor === null) {
-    if (!(await thumbnailChanged(env, fetchPush))) return;
-    // 送る途中で落ちても、次の Cron で最初から送り直せるよう、送る前に書く。
-    cursor = "";
-    await env.NOTIFY.put(SENDING_KEY, cursor);
+  const state = readState(await env.NOTIFY.get(STATE_KEY));
+  let sending: Required<CronState>;
+  if (state?.cursor !== undefined) {
+    sending = { hash: state.hash, cursor: state.cursor };
+  } else {
+    const hash = await thumbnailHash(fetchPush);
+    if (hash === null || hash === state?.hash) return;
+    if (state === null) return env.NOTIFY.put(STATE_KEY, JSON.stringify({ hash }));
+    sending = { hash, cursor: "" };
   }
   const page = await env.NOTIFY.list({
     prefix: SUBSCRIPTION_PREFIX,
     limit: BATCH,
-    ...(cursor ? { cursor } : {}),
+    ...(sending.cursor ? { cursor: sending.cursor } : {}),
   });
   const authorization = vapidSigner(privateKey, publicKey, now);
   await Promise.all(
@@ -170,6 +199,9 @@ export async function runCron(
       if (response && isGone(response.status)) await env.NOTIFY.delete(name);
     }),
   );
-  if (page.list_complete || !page.cursor) await env.NOTIFY.delete(SENDING_KEY);
-  else await env.NOTIFY.put(SENDING_KEY, page.cursor);
+  const done = page.list_complete || !page.cursor;
+  const next: CronState = done
+    ? { hash: sending.hash }
+    : { hash: sending.hash, cursor: page.cursor! };
+  await env.NOTIFY.put(STATE_KEY, JSON.stringify(next));
 }

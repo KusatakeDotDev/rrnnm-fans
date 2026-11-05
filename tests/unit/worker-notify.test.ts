@@ -11,9 +11,8 @@ import {
   type NotifyKv,
   PUSH_TTL_S,
   runCron,
-  SENDING_KEY,
   SUBSCRIPTION_PREFIX,
-  THUMBNAIL_KEY,
+  STATE_KEY,
 } from "../../worker/notify";
 
 /**
@@ -143,6 +142,17 @@ describe("購読の受け付け", () => {
     expect([...store]).toEqual([[subscriptionKey(APPLE), { value: "", metadata: APPLE }]]);
   });
 
+  it("KV に書けなければ（同じキーへの書き込みは1秒に1回まで）、503 にして、少しおいて頼み直させる", async () => {
+    const { env: e } = env();
+    e.NOTIFY.put = () => Promise.reject(new Error("429"));
+    e.NOTIFY.delete = () => Promise.reject(new Error("429"));
+    for (const method of ["POST", "DELETE"]) {
+      const response = await handle(subscribe(method, { endpoint: APPLE }), e);
+      expect(response.status).toBe(503);
+      expect(response.headers.get("retry-after")).toBe("1");
+    }
+  });
+
   it("消すと、同じキーを消して、204 を返す", async () => {
     const { env: e, store } = env();
     store.set(subscriptionKey(APPLE), { value: "", metadata: APPLE });
@@ -229,13 +239,20 @@ describe("Cron", () => {
     return { env, store, ops, keys, run };
   };
   const image = (text: string) => () => new Response(text, { status: 200 });
+  /** 前回見たサムネイルが `text` で、送っていない状態。 */
+  const seen = (text: string) => ({
+    [STATE_KEY]: { value: JSON.stringify({ hash: sha256(text) }) },
+  });
+  const stateOf = (store: Map<string, { value: string }>) =>
+    JSON.parse(store.get(STATE_KEY)!.value);
+  const stateWrites = (ops: readonly string[]) =>
+    ops.filter((op) => op === `put ${STATE_KEY}` || op === `delete ${STATE_KEY}`);
 
   it("初めて見たサムネイルは、ハッシュを覚えるだけで送らない", async () => {
     const { store, run } = await cronEnv(subscribed(APPLE));
     const net = network(image("week-1"));
     await run(net.fetchPush);
-    expect(store.get(THUMBNAIL_KEY)?.value).toBe(sha256("week-1"));
-    expect(store.has(SENDING_KEY)).toBe(false);
+    expect(stateOf(store)).toEqual({ hash: sha256("week-1") });
     expect(net.pushes).toEqual([]);
   });
 
@@ -248,12 +265,12 @@ describe("Cron", () => {
 
   it("前回と同じなら、何も書かず、送らない", async () => {
     const { ops, run } = await cronEnv({
-      [THUMBNAIL_KEY]: { value: sha256("week-1") },
+      ...seen("week-1"),
       ...subscribed(APPLE),
     });
     const net = network(image("week-1"));
     await run(net.fetchPush);
-    expect(ops).toEqual([`get ${SENDING_KEY}`, `get ${THUMBNAIL_KEY}`]);
+    expect(ops).toEqual([`get ${STATE_KEY}`]);
     expect(net.pushes).toEqual([]);
   });
 
@@ -262,24 +279,23 @@ describe("Cron", () => {
     ["繋がらなかった", () => Promise.reject(new TypeError("fetch failed"))],
   ])("サムネイルが取れなければ（%s）、ハッシュを書き換えず、送らない", async (_, thumbnail) => {
     const { ops, run } = await cronEnv({
-      [THUMBNAIL_KEY]: { value: sha256("week-1") },
+      ...seen("week-1"),
       ...subscribed(APPLE),
     });
     const net = network(thumbnail);
     await run(net.fetchPush);
-    expect(ops).toEqual([`get ${SENDING_KEY}`]);
+    expect(ops).toEqual([`get ${STATE_KEY}`]);
     expect(net.pushes).toEqual([]);
   });
 
   it("差し替わったら、ハッシュを書き換え、購読している全員に中身の無い push を送る", async () => {
     const { store, keys, run } = await cronEnv({
-      [THUMBNAIL_KEY]: { value: sha256("week-1") },
+      ...seen("week-1"),
       ...subscribed(APPLE, FCM),
     });
     const net = network(image("week-2"));
     await run(net.fetchPush);
-    expect(store.get(THUMBNAIL_KEY)?.value).toBe(sha256("week-2"));
-    expect(store.has(SENDING_KEY)).toBe(false);
+    expect(stateOf(store)).toEqual({ hash: sha256("week-2") });
     expect(net.pushes.map((push) => push.url).sort()).toEqual([APPLE, FCM].sort());
     for (const { url, init } of net.pushes) {
       expect(init.method).toBe("POST");
@@ -313,7 +329,7 @@ describe("Cron", () => {
     const endpoints = [0, 1, 2, 3].map((n) => `https://web.push.apple.com/${n}`);
     const codes = [404, 410, 500, 429];
     const { store, run } = await cronEnv({
-      [THUMBNAIL_KEY]: { value: sha256("week-1") },
+      ...seen("week-1"),
       ...subscribed(...endpoints),
     });
     const net = network(image("week-2"), (url) => codes[endpoints.indexOf(url)]!);
@@ -325,7 +341,7 @@ describe("Cron", () => {
 
   it("push のサービスに繋がらなくても、宛先を残して最後まで送る", async () => {
     const { store, run } = await cronEnv({
-      [THUMBNAIL_KEY]: { value: sha256("week-1") },
+      ...seen("week-1"),
       ...subscribed(APPLE, FCM),
     });
     const net = network(image("week-2"));
@@ -334,13 +350,13 @@ describe("Cron", () => {
     await run(fetchPush);
     expect(net.pushes.map((push) => push.url)).toEqual([FCM]);
     expect(store.has(subscriptionKey(APPLE))).toBe(true);
-    expect(store.has(SENDING_KEY)).toBe(false);
+    expect(stateOf(store)).toEqual({ hash: sha256("week-2") });
   });
 
   it("メタデータが受け付ける宛先でない購読は、送らずに消す", async () => {
     const bad = "https://example.com/abc";
     const { store, run } = await cronEnv({
-      [THUMBNAIL_KEY]: { value: sha256("week-1") },
+      ...seen("week-1"),
       [subscriptionKey(bad)]: { value: "", metadata: bad },
     });
     const net = network(image("week-2"));
@@ -354,17 +370,20 @@ describe("Cron", () => {
       { length: BATCH * 2 + 3 },
       (_, n) => `https://web.push.apple.com/${n}`,
     );
-    const { store, run } = await cronEnv({
-      [THUMBNAIL_KEY]: { value: sha256("week-1") },
+    const { store, ops, run } = await cronEnv({
+      ...seen("week-1"),
       ...subscribed(...endpoints),
     });
     const sent: string[][] = [];
     for (let round = 0; round < 3; round++) {
       const net = network(image("week-2"));
+      const before = ops.length;
       await run(net.fetchPush);
       sent.push(net.pushes.map((push) => push.url));
       expect(net.thumbnails).toHaveLength(round === 0 ? 1 : 0);
-      expect(store.has(SENDING_KEY)).toBe(round < 2);
+      expect(stateOf(store).hash).toBe(sha256("week-2"));
+      expect("cursor" in stateOf(store)).toBe(round < 2);
+      expect(stateWrites(ops.slice(before))).toEqual([`put ${STATE_KEY}`]);
     }
     expect(sent.map((urls) => urls.length)).toEqual([BATCH, BATCH, 3]);
     expect(new Set(sent.flat())).toEqual(new Set(endpoints));
@@ -373,15 +392,47 @@ describe("Cron", () => {
     expect(net.pushes).toEqual([]);
   });
 
-  it("送る前に、送っている途中であることを書く（途中で落ちても、次の Cron で送り直せる）", async () => {
-    const { ops, run } = await cronEnv({
-      [THUMBNAIL_KEY]: { value: sha256("week-1") },
+  it("状態は、送り終えてから1回だけ書く（KV は同じキーへの書き込みが1秒に1回まで）", async () => {
+    const { ops, run } = await cronEnv({ ...seen("week-1"), ...subscribed(APPLE, FCM) });
+    const net = network(image("week-2"));
+    await run(net.fetchPush);
+    expect(stateWrites(ops)).toEqual([`put ${STATE_KEY}`]);
+    expect(ops.at(-1)).toBe(`put ${STATE_KEY}`);
+  });
+
+  it("送る途中で落ちたら、状態は前のままで、次の Cron が同じ回を最初から送り直す", async () => {
+    const { env, store, run } = await cronEnv({ ...seen("week-1"), ...subscribed(APPLE, FCM) });
+    const kv = env.NOTIFY;
+    env.NOTIFY = { ...kv, list: () => Promise.reject(new Error("KV が落ちた")) };
+    await expect(run(network(image("week-2")).fetchPush)).rejects.toThrow("KV が落ちた");
+    expect(stateOf(store)).toEqual({ hash: sha256("week-1") });
+    env.NOTIFY = kv;
+    const net = network(image("week-2"));
+    await run(net.fetchPush);
+    expect(net.pushes.map((push) => push.url).sort()).toEqual([APPLE, FCM].sort());
+  });
+
+  it("状態が読めなければ、初めて見たときと同じく、今のハッシュを覚えるだけで送らない", async () => {
+    const { store, run } = await cronEnv({
+      [STATE_KEY]: { value: "not json" },
       ...subscribed(APPLE),
     });
     const net = network(image("week-2"));
     await run(net.fetchPush);
-    expect(ops.indexOf(`put ${SENDING_KEY}`)).toBeLessThan(ops.indexOf("list"));
+    expect(stateOf(store)).toEqual({ hash: sha256("week-2") });
+    expect(net.pushes).toEqual([]);
   });
+
+  it.each([["null"], ['{"cursor":""}'], ['{"hash":1}']])(
+    "状態の形が違っても（%s）、初めて見たときと同じに扱う",
+    async (value) => {
+      const { store, run } = await cronEnv({ [STATE_KEY]: { value }, ...subscribed(APPLE) });
+      const net = network(image("week-2"));
+      await run(net.fetchPush);
+      expect(stateOf(store)).toEqual({ hash: sha256("week-2") });
+      expect(net.pushes).toEqual([]);
+    },
+  );
 
   it("無料プランのサブリクエストの上限（50件）に、全部が切れた宛先のときも収まる", async () => {
     const endpoints = Array.from(
@@ -389,7 +440,7 @@ describe("Cron", () => {
       (_, n) => `https://web.push.apple.com/${n}`,
     );
     const { ops, run } = await cronEnv({
-      [THUMBNAIL_KEY]: { value: sha256("week-1") },
+      ...seen("week-1"),
       ...subscribed(...endpoints),
     });
     const net = network(image("week-2"), () => 410);
@@ -399,7 +450,7 @@ describe("Cron", () => {
 
   it("秘密鍵が無ければ、サムネイルも見ない", async () => {
     const { env, ops } = await cronEnv({
-      [THUMBNAIL_KEY]: { value: sha256("week-1") },
+      ...seen("week-1"),
       ...subscribed(APPLE),
     });
     const net = network(image("week-2"));
