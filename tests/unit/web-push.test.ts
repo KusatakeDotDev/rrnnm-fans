@@ -50,6 +50,7 @@ describe("宛先の URL", () => {
     ["http で来た", "http://fcm.googleapis.com/fcm/send/abc"],
     ["ポートを付けた", "https://fcm.googleapis.com:8443/fcm/send/abc"],
     ["ユーザー名を付けた", "https://user@fcm.googleapis.com/fcm/send/abc"],
+    ["パスワードだけを付けた", "https://:pass@fcm.googleapis.com/fcm/send/abc"],
     ["ほかのホスト", "https://example.com/fcm/send/abc"],
     ["許すホストを含むだけのホスト", "https://fcm.googleapis.com.example.com/abc"],
     ["許すホストの頭に足したホスト", "https://evilfcm.googleapis.com/abc"],
@@ -117,7 +118,7 @@ describe("購読のリクエストの本文", () => {
 });
 
 describe("base64url", () => {
-  it("+ と / を - と _ にし、埋め草の = を付けない", () => {
+  it("+ と / を - と _ にし、パディングの = を付けない", () => {
     expect(base64url(new Uint8Array([0xfb, 0xff]))).toBe("-_8");
     expect(base64url(new Uint8Array([0xfb, 0xef, 0xbe]))).toBe("----");
     expect(base64url(new Uint8Array([0xff, 0xff, 0xff]))).toBe("____");

@@ -31,7 +31,15 @@ export interface PushTarget {
 export function pushTarget(value: unknown): PushTarget | null {
   if (typeof value !== "string") return null;
   const url = URL.parse(value);
-  if (!url || url.protocol !== "https:" || url.port !== "" || url.username !== "") return null;
+  if (
+    !url ||
+    url.protocol !== "https:" ||
+    url.port !== "" ||
+    url.username !== "" ||
+    url.password !== ""
+  ) {
+    return null;
+  }
   // 整えた URL は ASCII だけになるので、JSON の文字列の長さがそのままバイト数になる（クエリとフラグメントに残る `\` は、エスケープで伸びる）。
   if (JSON.stringify(url.href).length > MAX_METADATA_BYTES) return null;
   const host = url.hostname;
@@ -53,7 +61,7 @@ export function base64url(bytes: Uint8Array): string {
   return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
 }
 
-/** `atob` は埋め草の `=` が無くても読む（HTML の forgiving-base64 decode）ので、足さない。 */
+/** `atob` はパディングの `=` が無くても読む（HTML の forgiving-base64 decode）ので、足さない。 */
 export function fromBase64url(text: string): Uint8Array<ArrayBuffer> {
   const binary = atob(text.replaceAll("-", "+").replaceAll("_", "/"));
   return Uint8Array.from(binary, (char) => char.charCodeAt(0));

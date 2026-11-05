@@ -11,6 +11,13 @@
  */
 import { webcrypto } from "node:crypto";
 
+if (process.stdout.isTTY) {
+  console.error(
+    "秘密鍵を画面に出さないよう、ファイルへ書き出す（node scripts/vapid-keys.mjs > <ファイル>）",
+  );
+  process.exit(1);
+}
+
 const { publicKey, privateKey } = await webcrypto.subtle.generateKey(
   { name: "ECDSA", namedCurve: "P-256" },
   true,

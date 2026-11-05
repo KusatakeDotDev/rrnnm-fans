@@ -108,9 +108,12 @@ export async function handleSubscriptions(request: Request, env: NotifyEnv): Pro
 }
 
 /** 今のサムネイルのハッシュ。取れなければ null。 */
-async function thumbnailHash(fetchPush: NotifyFetch): Promise<string | null> {
-  // Cloudflare の端に覚えさせた古い画像（`cache-control: max-age=300`）を読まないため。
-  const response = await fetchPush(MAXRES_URL, { cache: "no-store" }).catch(() => null);
+async function thumbnailHash(fetchPush: NotifyFetch, now: number): Promise<string | null> {
+  // YouTube のエッジは、クエリ無しの URL に差し替える前の画像を返し続けうる（ADR-0004「サムネイルの URL にクエリを付ける」）。
+  // ブラウザの5分ごとの番号とは重ならないミリ秒の時刻を付ける。取るたびに古い画像と新しい画像が入れ替わると、そのたびに全員へ送り直すため。
+  const url = `${MAXRES_URL}?t=${now}`;
+  // Cloudflare のエッジに覚えさせた古い画像（`cache-control: max-age=300`）を読まないため。
+  const response = await fetchPush(url, { cache: "no-store" }).catch(() => null);
   if (!response?.ok) {
     await response?.body?.cancel();
     return null;
@@ -136,22 +139,24 @@ function readState(value: string | null): CronState | null {
 
 /** push のサービスのオリジンごとに、JWT を1回だけ作る。 */
 function vapidSigner(privateKey: string, publicKey: string, now: number) {
-  const key = crypto.subtle.importKey(
-    "jwk",
-    vapidPrivateJwk(publicKey, privateKey),
-    { name: "ECDSA", namedCurve: "P-256" },
-    false,
-    ["sign"],
-  );
+  // 送る先が無い回に読み込まないため。読み込めなかったときに、誰も待たない Promise が落ちたままにならない。
+  let key: Promise<CryptoKey> | undefined;
   const tokens = new Map<string, Promise<string>>();
   return (audience: string): Promise<string> => {
     let token = tokens.get(audience);
     if (!token) {
+      const signingKey = (key ??= crypto.subtle.importKey(
+        "jwk",
+        vapidPrivateJwk(publicKey, privateKey),
+        { name: "ECDSA", namedCurve: "P-256" },
+        false,
+        ["sign"],
+      ));
       token = (async () => {
         const input = vapidSigningInput(audience, VAPID_SUBJECT, now);
         const signature = await crypto.subtle.sign(
           { name: "ECDSA", hash: "SHA-256" },
-          await key,
+          await signingKey,
           new TextEncoder().encode(input),
         );
         return vapidAuthorization(input, new Uint8Array(signature), publicKey);
@@ -185,7 +190,7 @@ export async function runCron(
   if (state?.cursor !== undefined) {
     sending = { hash: state.hash, cursor: state.cursor };
   } else {
-    const hash = await thumbnailHash(fetchPush);
+    const hash = await thumbnailHash(fetchPush, now);
     if (hash === null || hash === state?.hash) return;
     if (state === null) return env.NOTIFY.put(STATE_KEY, JSON.stringify({ hash }));
     sending = { hash, cursor: "" };
@@ -196,10 +201,15 @@ export async function runCron(
     ...(sending.cursor ? { cursor: sending.cursor } : {}),
   });
   const authorization = vapidSigner(privateKey, publicKey, now);
+  // 消せなくても（KV の削除の上限など）、この回は止めない。止めると状態を書けず、送り終えた宛先にも次の Cron で送り直すため。
+  const forget = (name: string) =>
+    env.NOTIFY.delete(name).catch((error: unknown) =>
+      console.error(`[notify] ${name} を消せなかった`, error),
+    );
   await Promise.all(
     page.keys.map(async ({ name, metadata }) => {
       const target = pushTarget(metadata);
-      if (target === null) return env.NOTIFY.delete(name);
+      if (target === null) return forget(name);
       const response = await fetchPush(target.endpoint, {
         method: "POST",
         // 転送先は宛先の検査を通っていないので、VAPID の署名を付けたまま追わない。3xx は、ほかの失敗と同じく残す。
@@ -212,7 +222,7 @@ export async function runCron(
         },
       }).catch(() => null);
       await response?.body?.cancel();
-      if (response && isGone(response.status)) await env.NOTIFY.delete(name);
+      if (response && isGone(response.status)) await forget(name);
     }),
   );
   const done = page.list_complete || !page.cursor;
