@@ -49,7 +49,7 @@ const ogImageUrl = new URL(OG_IMAGE.path, Astro.site);
    （docs/DESIGN.md §3「レイアウト方針」）。トップは渡さない（畑がその役）。 */
 const hasHead = Astro.slots.has('head');
 /* 単独のページと一覧のページへのリンクは、フッターにだけ渡す。ヘッダーのナビは大きな区画を並べる場所（docs/DESIGN.md「導線」）。
-   TODO(RRNNM-11): 区画（あそぶ）をナビにも並べる。 */
+   TODO(RRNNM-11): 区画（ミニゲーム）をナビにも並べる。 */
 const pageLinks = PAGE_LINKS.filter((link) => isRouteVisible(link.href));
 ---
 
