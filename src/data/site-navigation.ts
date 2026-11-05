@@ -5,7 +5,11 @@ export interface SiteLink {
 export const PAGE_LINKS: readonly SiteLink[] = [
   { href: "/skeb/", label: "Skeb" },
   { href: "/goods/", label: "グッズ" },
+  { href: "/play/", label: "あそぶ" },
 ];
 
-/** フッターから辿らせない、おふざけのページ（tests/conformance/routes.spec.ts がフッターの検査から外す）。サイトマップには載る。 */
-export const UNLINKED_ROUTES: readonly string[] = ["/play/kusobaka-slot/", "/play/alt-f4/"];
+/**
+ * 一覧のページ。その下の1件ずつのページ（`/play/<slug>/`）はフッターに並べず、一覧から入る（ADR-0015「フッターに一覧のページと単独のページを並べる」）。
+ * tests/conformance/routes.spec.ts が、下のページをフッターの検査から外し、一覧のページからリンクしているかを見る。
+ */
+export const LIST_ROUTES: readonly string[] = ["/play/"];
