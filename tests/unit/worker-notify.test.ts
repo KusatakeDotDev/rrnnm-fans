@@ -26,7 +26,11 @@ const NOW = Date.parse("2026-11-05T12:00:00Z");
 const APPLE = "https://web.push.apple.com/abc";
 const FCM = "https://fcm.googleapis.com/fcm/send/abc";
 
-/** Workers KV と同じく、キーの名前の順に並べ、`limit` 件ずつカーソルで続きを返す。操作の数も数える。 */
+/**
+ * Workers KV と同じく、キーの名前の順に並べ、`limit` 件ずつカーソルで続きを返す。操作の数も数える。
+ * カーソルは、最後に返したキーの名前で、その次から返す。KV では、消したキーも一覧の中で順番を保ったまま辿られ、返されない
+ * だけ（Cloudflare の KV の list のドキュメント）なので、ページの途中で消しても、続きは飛ばされない。
+ */
 function memoryKv(initial: Record<string, { value: string; metadata?: unknown }> = {}) {
   const store = new Map(Object.entries(initial));
   const ops: string[] = [];
@@ -45,14 +49,14 @@ function memoryKv(initial: Record<string, { value: string; metadata?: unknown }>
     },
     list: async ({ prefix, limit, cursor }) => {
       ops.push("list");
-      const names = [...store.keys()].filter((name) => name.startsWith(prefix)).sort();
-      const start = cursor ? Number(cursor) : 0;
+      const names = [...store.keys()]
+        .filter((name) => name.startsWith(prefix) && (!cursor || name > cursor))
+        .sort();
       const keys = names
-        .slice(start, start + limit)
+        .slice(0, limit)
         .map((name) => ({ name, metadata: store.get(name)!.metadata }));
-      const end = start + keys.length;
-      return end < names.length
-        ? { keys, list_complete: false, cursor: String(end) }
+      return names.length > limit
+        ? { keys, list_complete: false, cursor: keys.at(-1)!.name }
         : { keys, list_complete: true };
     },
   };
@@ -134,6 +138,15 @@ describe("購読の受け付け", () => {
     const { ASSETS, requested } = assets(pages);
     return { env: { ASSETS, NOTIFY: kv } as NotifyEnv, store, ops, requested };
   };
+
+  it("宛先の URL は整えてから置く（足すときと消すときで、同じキーになる）", async () => {
+    const { env: e, store } = env();
+    const raw = "https://WEB.push.apple.com:443/x/../abc";
+    expect((await handle(subscribe("POST", { endpoint: raw }), e)).status).toBe(204);
+    expect([...store]).toEqual([[subscriptionKey(APPLE), { value: "", metadata: APPLE }]]);
+    expect((await handle(subscribe("DELETE", { endpoint: raw }), e)).status).toBe(204);
+    expect(store.size).toBe(0);
+  });
 
   it("足すと、宛先のハッシュをキーにし、宛先をメタデータに置いて、204 を返す", async () => {
     const { env: e, store } = env();
@@ -299,6 +312,7 @@ describe("Cron", () => {
     expect(net.pushes.map((push) => push.url).sort()).toEqual([APPLE, FCM].sort());
     for (const { url, init } of net.pushes) {
       expect(init.method).toBe("POST");
+      expect(init.redirect).toBe("manual");
       expect(init.body).toBeUndefined();
       const headers = init.headers as Record<string, string>;
       expect(headers["ttl"]).toBe(String(PUSH_TTL_S));
@@ -423,16 +437,44 @@ describe("Cron", () => {
     expect(net.pushes).toEqual([]);
   });
 
-  it.each([["null"], ['{"cursor":""}'], ['{"hash":1}']])(
-    "状態の形が違っても（%s）、初めて見たときと同じに扱う",
-    async (value) => {
-      const { store, run } = await cronEnv({ [STATE_KEY]: { value }, ...subscribed(APPLE) });
-      const net = network(image("week-2"));
+  it.each([
+    ["null"],
+    ['{"cursor":""}'],
+    ['{"hash":1}'],
+    ['{"hash":"x","cursor":null}'],
+    ['{"hash":"x","cursor":1}'],
+  ])("状態の形が違っても（%s）、初めて見たときと同じに扱う", async (value) => {
+    const { store, run } = await cronEnv({ [STATE_KEY]: { value }, ...subscribed(APPLE) });
+    const net = network(image("week-2"));
+    await run(net.fetchPush);
+    expect(stateOf(store)).toEqual({ hash: sha256("week-2") });
+    expect(net.pushes).toEqual([]);
+  });
+
+  it("転送（3xx）を返した宛先は、ほかの失敗と同じく残す", async () => {
+    const { store, run } = await cronEnv({ ...seen("week-1"), ...subscribed(APPLE) });
+    const net = network(image("week-2"), () => 307);
+    await run(net.fetchPush);
+    expect(net.pushes).toHaveLength(1);
+    expect(store.has(subscriptionKey(APPLE))).toBe(true);
+  });
+
+  it("切れた宛先をページの途中で消しても、続きのページを飛ばさない", async () => {
+    const endpoints = Array.from(
+      { length: BATCH * 2 + 5 },
+      (_, n) => `https://web.push.apple.com/${n}`,
+    );
+    const { store, run } = await cronEnv({ ...seen("week-1"), ...subscribed(...endpoints) });
+    const sent: string[] = [];
+    for (let round = 0; round < 3; round++) {
+      const net = network(image("week-2"), () => 410);
       await run(net.fetchPush);
-      expect(stateOf(store)).toEqual({ hash: sha256("week-2") });
-      expect(net.pushes).toEqual([]);
-    },
-  );
+      sent.push(...net.pushes.map((push) => push.url));
+    }
+    expect(sent.sort()).toEqual([...endpoints].sort());
+    expect([...store.keys()]).toEqual([STATE_KEY]);
+    expect(stateOf(store)).toEqual({ hash: sha256("week-2") });
+  });
 
   it("無料プランのサブリクエストの上限（50件）に、全部が切れた宛先のときも収まる", async () => {
     const endpoints = Array.from(
