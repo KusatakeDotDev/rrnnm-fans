@@ -2,7 +2,7 @@ import { createHash, webcrypto } from "node:crypto";
 import { describe, expect, it } from "vite-plus/test";
 
 import { NOTIFY_PAGE, SUBSCRIPTIONS_PATH, VAPID_SUBJECT } from "../../src/data/notify";
-import { MAXRES_URL } from "../../src/data/schedule";
+import { HQ_URL } from "../../src/data/schedule";
 import { base64url, fromBase64url } from "../../src/lib/web-push";
 import { handle } from "../../worker/index";
 import {
@@ -109,7 +109,7 @@ function network(
   const thumbnails: RequestInit[] = [];
   const thumbnailUrls: string[] = [];
   const fetchPush = async (url: string, init: RequestInit) => {
-    if (url.split("?")[0] === MAXRES_URL) {
+    if (url.split("?")[0] === HQ_URL) {
       thumbnails.push(init);
       thumbnailUrls.push(url);
       return thumbnail();
@@ -283,10 +283,7 @@ describe("Cron", () => {
     const net = network(image("week-1"));
     await runCron(env, net.fetchPush, NOW, keys.publicKey);
     await runCron(env, net.fetchPush, NOW + 5 * 60_000, keys.publicKey);
-    expect(net.thumbnailUrls).toEqual([
-      `${MAXRES_URL}?t=${NOW}`,
-      `${MAXRES_URL}?t=${NOW + 5 * 60_000}`,
-    ]);
+    expect(net.thumbnailUrls).toEqual([`${HQ_URL}?t=${NOW}`, `${HQ_URL}?t=${NOW + 5 * 60_000}`]);
   });
 
   it("前回と同じなら、何も書かず、送らない", async () => {
@@ -450,7 +447,7 @@ describe("Cron", () => {
     const net = network(image("week-2"));
     const statesAtPush: unknown[] = [];
     await run(async (url, init) => {
-      if (!url.startsWith(MAXRES_URL)) statesAtPush.push(stateOf(store));
+      if (!url.startsWith(HQ_URL)) statesAtPush.push(stateOf(store));
       return net.fetchPush(url, init);
     });
     expect(stateWrites(ops)).toEqual([`put ${STATE_KEY}`]);
@@ -462,7 +459,7 @@ describe("Cron", () => {
     const net = network(image("week-2"));
     // 送っている途中で実行ごと止まるのを、Promise を返さずに投げて作る（返した Promise の失敗は、送れなかった宛先として扱われる）。
     const crash = (url: string, init: RequestInit) => {
-      if (url.startsWith(MAXRES_URL)) return net.fetchPush(url, init);
+      if (url.startsWith(HQ_URL)) return net.fetchPush(url, init);
       throw new Error("落ちた");
     };
     await expect(run(crash)).rejects.toThrow("落ちた");
