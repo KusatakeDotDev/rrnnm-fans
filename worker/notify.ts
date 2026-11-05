@@ -39,8 +39,8 @@ export type NotifyFetch = (url: string, init: RequestInit) => Promise<Response>;
 /** 購読のキーの頭。宛先の URL は、キーには長すぎうるので、ハッシュをキーにし、URL はメタデータに置く（一覧で読み出せる）。 */
 export const SUBSCRIPTION_PREFIX = "sub:";
 /**
- * Cron の状態（JSON の CronState）。1回の Cron で書くのは、最後の1回だけにする。KV は同じキーへの書き込みが1秒に1回までで、
- * 2回目が落ちると、送り終えた回をもう一度送ってしまうため。
+ * Cron の状態（JSON の CronState）。1回の Cron で書くのは1回だけにする。KV は同じキーへの書き込みが1秒に1回までで、
+ * 2回目が落ちるため。
  */
 export const STATE_KEY = "state";
 
@@ -171,7 +171,8 @@ function vapidSigner(privateKey: string, publicKey: string, now: number) {
  * Cron で呼ぶ。送っている途中なら続きを、そうでなければサムネイルを見て、変わっていたら最初から送る。1回に送るのは BATCH 件まで。
  * 初めて見たサムネイルは、覚えるだけで送らない。取れなければ、何も書き換えない。
  * 宛先が切れていたら（404・410）消す。ほかの失敗は消さずに残し、次に変わったときにまた送る。
- * 状態は送り終えてから書くので、途中で落ちると、次の Cron が同じ回を送り直す。
+ * 状態は送る前に書くので、送る途中で落ちても、同じ回を送り直さない（その回の残りには届かない。ADR-0035「払うもの」）。
+ * 書けなければ送らないので、次の Cron が同じ回を送り直す。
  */
 export async function runCron(
   env: NotifyEnv,
@@ -200,8 +201,14 @@ export async function runCron(
     limit: BATCH,
     ...(sending.cursor ? { cursor: sending.cursor } : {}),
   });
+  const done = page.list_complete || !page.cursor;
+  const next: CronState = done
+    ? { hash: sending.hash }
+    : { hash: sending.hash, cursor: page.cursor! };
+  // 送る前に、この回を送り終えたものとして書く。CPU 時間の上限などで送る途中に落ちるたびに、同じ人へ5分ごとに送り直さないため。
+  await env.NOTIFY.put(STATE_KEY, JSON.stringify(next));
   const authorization = vapidSigner(privateKey, publicKey, now);
-  // 消せなくても（KV の削除の上限など）、この回は止めない。止めると状態を書けず、送り終えた宛先にも次の Cron で送り直すため。
+  // 消せなくても（KV の削除の上限など）、ほかの宛先には送る。
   const forget = (name: string) =>
     env.NOTIFY.delete(name).catch((error: unknown) =>
       console.error(`[notify] ${name} を消せなかった`, error),
@@ -225,9 +232,4 @@ export async function runCron(
       if (response && isGone(response.status)) await forget(name);
     }),
   );
-  const done = page.list_complete || !page.cursor;
-  const next: CronState = done
-    ? { hash: sending.hash }
-    : { hash: sending.hash, cursor: page.cursor! };
-  await env.NOTIFY.put(STATE_KEY, JSON.stringify(next));
 }
