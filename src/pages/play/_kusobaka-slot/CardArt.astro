@@ -1,0 +1,82 @@
+---
+// 一覧（src/pages/play/index.astro）のカードの絵。4本のリールが「クソバカ」にそろったところを、ゲームのリールと同じ色で描く。
+import { WORD } from '../../../lib/kusobaka-slot';
+
+const REEL = { width: 56, height: 120, gap: 14, top: 40 };
+const left = (320 - (REEL.width * WORD.length + REEL.gap * (WORD.length - 1))) / 2;
+const reels = WORD.map((char, i) => ({
+  x: left + i * (REEL.width + REEL.gap),
+  char,
+  above: WORD[(i + WORD.length - 1) % WORD.length],
+  below: WORD[(i + 1) % WORD.length],
+}));
+const middle = REEL.top + REEL.height / 2;
+---
+
+<div class="art">
+  <svg viewBox="0 0 320 200" aria-hidden="true" focusable="false">
+    <defs>
+      {/* 上下の隣の字を、リールの枠の中で切る。id はページに1つだけ置く前提（一覧にこの絵は1枚）。 */}
+      <clipPath id="kusobaka-card-art-reel">
+        <rect width={REEL.width} height={REEL.height} rx="12" />
+      </clipPath>
+    </defs>
+    {
+      reels.map(({ x, char, above, below }) => (
+        <g transform={`translate(${x} ${REEL.top})`}>
+          <g clip-path="url(#kusobaka-card-art-reel)">
+            <rect class="face" width={REEL.width} height={REEL.height} />
+            <rect class="band" y={REEL.height / 4} width={REEL.width} height={REEL.height / 2} />
+            <text class="char ghost" x={REEL.width / 2} y="8" font-size="36">{above}</text>
+            <text class="char" x={REEL.width / 2} y={middle - REEL.top} font-size="40">{char}</text>
+            <text class="char ghost" x={REEL.width / 2} y={REEL.height - 8} font-size="36">{below}</text>
+          </g>
+          <rect class="frame" width={REEL.width} height={REEL.height} rx="12" />
+        </g>
+      ))
+    }
+  </svg>
+</div>
+
+<style>
+  @layer pages {
+    .art {
+      overflow: hidden;
+      border: var(--border-thumb) solid var(--color-outline);
+      border-radius: var(--radius-thumb);
+      background-color: var(--color-fill-lavender);
+    }
+
+    svg {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .face {
+      fill: var(--color-surface);
+    }
+
+    .band {
+      fill: var(--color-fill-pink-soft);
+    }
+
+    .frame {
+      fill: none;
+      stroke: var(--color-outline);
+      stroke-width: 3;
+    }
+
+    .char {
+      fill: var(--color-heading);
+      font-family: var(--font-display);
+      font-weight: 900;
+      dominant-baseline: central;
+      text-anchor: middle;
+    }
+
+    .ghost {
+      opacity: 0.2;
+    }
+  }
+</style>

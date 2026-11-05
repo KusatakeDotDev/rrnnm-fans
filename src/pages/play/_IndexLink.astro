@@ -1,0 +1,23 @@
+---
+// 1本ずつのゲームのページの下に置く、一覧へのリンク。SNS の共有などで1本のページへ直接来た人が、ほかのゲームを探せるように（docs/DESIGN.md「ミニゲームの導線」）。
+// 置いたかは tests/conformance/routes.spec.ts が見る。
+// TODO(RRNNM-38): このリンクの上に、ほかのミニゲームを並べる。
+---
+
+<p class="index-link"><a href="/play/">ミニゲームの一覧へ</a></p>
+
+<style>
+  @layer pages {
+    .index-link {
+      margin: var(--space-6) 0 0;
+      text-align: center;
+    }
+
+    a {
+      display: inline-flex;
+      align-items: center;
+      min-height: var(--tap-size);
+      font-weight: 700;
+    }
+  }
+</style>
