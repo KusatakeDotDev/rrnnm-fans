@@ -18,17 +18,11 @@ import '../styles/subpage.css';
   </Fragment>
 
   <div class="subpage-paper on-paper">
-    <section aria-labelledby="receive">
-      <h2 id="receive">通知を受け取る</h2>
-      <p>今週の配信スケジュールが更新されたら、この端末に通知でお知らせします。通知を押すと、トップの今週の配信予定が開きます。</p>
+    <section>
+      <p>今週の配信スケジュールが更新されたら、この端末に通知でお知らせします。やめるときも、このページでできます。</p>
       {/* 押せるかどうかはスクリプトが決めるので、決まるまでボタンは出さない。 */}
       <button type="button" class="toggle" data-notify-toggle hidden>通知を受け取る</button>
       <p class="status" role="status" data-notify-status></p>
-    </section>
-
-    <section aria-labelledby="stop">
-      <h2 id="stop">やめるとき</h2>
-      <p>このページで「通知をやめる」を押してください。ブラウザや端末の設定で、このサイトの通知を止めても届かなくなります。</p>
     </section>
   </div>
 </Base>
