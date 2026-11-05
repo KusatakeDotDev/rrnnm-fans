@@ -4,13 +4,20 @@
   // 前の名前の設定は引き継がれない。新しい Worker に Access を掛けてから変える。
   "name": "rrnnm-fans",
   "compatibility_date": "2026-09-06",
-  // Worker が返すのは、ミニゲーム「配信をとじろ」の動画の一覧だけ（ADR-0033 の決定）。静的なファイルがあるリクエストは
-  // Worker を通らずに配られ、無いリクエストは Worker が ASSETS に回して、Worker が無かったときと同じ 404 にする。
+  // Worker が受け持つのは、ミニゲーム「配信をとじろ」の動画の一覧（ADR-0033 の決定）と、配信スケジュールの更新の通知
+  // （ADR-0035 の決定）だけ。静的なファイルがあるリクエストは Worker を通らずに配られ、無いリクエストは Worker が ASSETS に
+  // 回して、Worker が無かったときと同じ 404 にする。
   "main": "worker/index.ts",
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
   },
+  // 配信スケジュールのサムネイルが差し替わったかを5分ごとに見る（ADR-0035）。Cron を設定するのは `wrangler deploy`
+  // （＝Release）だけで、`versions upload`（main・PR のプレビュー）は設定しない（wrangler 4.155.0 で確かめた）。
+  "triggers": { "crons": ["*/5 * * * *"] },
+  // 通知の購読と、前回のサムネイルのハッシュ（ADR-0035）。プレビューのバージョンも、この同じ namespace を使う。
+  // TODO(RRNNM-27): namespace を作ったら、その ID にする
+  "kv_namespaces": [{ "binding": "NOTIFY", "id": "00000000000000000000000000000000" }],
   // プレビューURL（`<エイリアスまたはバージョン>-<Worker名>.<subdomain>.workers.dev`）を有効にする。
   // main へのマージはここへ出る（→ docs/OPERATIONS.md §7）。書かないと wrangler は値を送らず、
   // Cloudflare 側の今の値（Worker を作り直したなら Cloudflare の既定）に任される。

@@ -11,13 +11,11 @@
  */
 import { fetchErrorReason, readMaxresHead, readScheduleOEmbed } from "../lib/schedule-oembed";
 import { oembedUrl } from "../lib/youtube";
-import { SCHEDULE_AUTHOR, SCHEDULE_VIDEO_ID, WATCH_URL } from "./schedule";
+import { MAXRES_URL, SCHEDULE_AUTHOR, WATCH_URL } from "./schedule";
 import type { ScheduleCardProps } from "../components/ScheduleCard.tsx";
 
 // YouTube 側の応答が詰まった場合に astro build がブロックされ続けないための上限。
 const FETCH_TIMEOUT_MS = 5_000;
-
-const MAXRES_URL = `https://i.ytimg.com/vi/${SCHEDULE_VIDEO_ID}/maxresdefault.jpg`;
 
 /** 取れたときの形。描く側（ScheduleCard.tsx の props）の型から作り、2か所に書かない。 */
 export type ScheduleData = NonNullable<ScheduleCardProps["schedule"]>;
