@@ -70,18 +70,23 @@ import '../styles/subpage.css';
 
   const subscribe = async () => {
     // iOS は、押した操作の中でしか許可を求めさせないので、ほかの処理より先に呼ぶ。
-    if ((await Notification.requestPermission()) !== 'granted') return show(false, MESSAGE.denied);
-    await navigator.serviceWorker.register(SERVICE_WORKER_PATH, { scope });
-    const ready = await navigator.serviceWorker.ready;
-    const subscription = await ready.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: fromBase64url(VAPID_PUBLIC_KEY),
-    });
+    const permission = await Notification.requestPermission();
+    // 聞く画面を閉じただけ（default）なら、もう一度押せば聞き直せるので、設定を変えるようには言わない。
+    if (permission !== 'granted') return show(false, permission === 'denied' ? MESSAGE.denied : '');
+    const registered = await navigator.serviceWorker.register(SERVICE_WORKER_PATH, { scope });
+    let subscription: PushSubscription | undefined;
     try {
+      const ready = await navigator.serviceWorker.ready;
+      subscription = await ready.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: fromBase64url(VAPID_PUBLIC_KEY),
+      });
       await send('POST', subscription.endpoint);
     } catch (error) {
-      // 宛先を覚えてもらえないまま購読を残すと、届かないのに「受け取る設定」に見えるため。
-      await subscription.unsubscribe();
+      // 宛先を覚えてもらえないまま、購読と Service Worker を残さない。届かないのに「受け取る設定」に見え、
+      // 押していないのと同じ人の端末に、Service Worker が残るため（ADR-0035「押した人にだけ登録し」）。
+      await subscription?.unsubscribe();
+      await registered.unregister();
       throw error;
     }
     show(true);
@@ -162,10 +167,6 @@ import '../styles/subpage.css';
       .toggle {
         transition: none;
       }
-    }
-
-    .status:empty {
-      display: none;
     }
   }
 </style>

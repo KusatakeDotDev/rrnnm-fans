@@ -12,9 +12,10 @@ import { NOTIFICATION_BODY, NOTIFICATION_TITLE, NOTIFICATION_URL } from "../src/
 /**
  * - push は中身が無いので、決まった文を出す。Safari は、push を受けて通知を出さないと、通知の許可を取り消すので、
  *   いつも出す（ADR-0035「push に中身を持たせない」）
- * - `tag` を同じにして、まだ見ていない通知があれば置き換える。週に1回の知らせを、溜めて並べないため
+ * - `tag` を同じにして、まだ見ていない通知があれば置き換える。週に1回の知らせを、溜めて並べないため。`renotify` を付けるのは、
+ *   付けないと置き換えが音も振動も無く行われ、同じ文なので、新しく更新されたことに気づけないため
  * - `fetch` は受けない。ページの配り方を変えないため
- * - 新しい版は、待たずに入れ替える（skipWaiting）。ページのリクエストを受けないので、入れ替えても開いているページは変わらない
+ * - 新しいバージョンは、待たずに入れ替える（skipWaiting）。ページのリクエストを受けないので、入れ替えても開いているページは変わらない
  */
 export const SERVICE_WORKER_SOURCE = `
 self.addEventListener('install', () => self.skipWaiting());
@@ -24,6 +25,7 @@ self.addEventListener('push', (event) => {
     icon: '/favicon-192.png',
     lang: 'ja',
     tag: 'schedule',
+    renotify: true,
   }));
 });
 self.addEventListener('notificationclick', (event) => {

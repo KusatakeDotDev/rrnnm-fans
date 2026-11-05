@@ -103,7 +103,7 @@ describe("Service Worker の中身", () => {
     ]);
   });
 
-  it("新しい版は、待たずに入れ替える", async () => {
+  it("新しいバージョンは、待たずに入れ替える", async () => {
     const { calls, dispatch } = install();
     await dispatch("install");
     expect(calls).toEqual([["skipWaiting"]]);
@@ -116,7 +116,13 @@ describe("Service Worker の中身", () => {
       [
         "showNotification",
         NOTIFICATION_TITLE,
-        { body: NOTIFICATION_BODY, icon: "/favicon-192.png", lang: "ja", tag: "schedule" },
+        {
+          body: NOTIFICATION_BODY,
+          icon: "/favicon-192.png",
+          lang: "ja",
+          tag: "schedule",
+          renotify: true,
+        },
       ],
     ]);
   });

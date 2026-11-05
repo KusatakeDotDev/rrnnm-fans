@@ -10,8 +10,8 @@ export const NOTIFY_PAGE = "/notify/";
 export const SUBSCRIPTIONS_PATH = "/notify/subscriptions";
 
 /**
- * Service Worker のパス。Worker が返す（worker/service-worker.ts）。場所で範囲（scope）が `/notify/` になるが、push と、
- * 通知を押したときは、範囲の外のページも開けるので、そのままにする。
+ * Service Worker のパス。Worker が返す（worker/service-worker.ts）。置いた場所でスコープが `/notify/` になるが、push と、
+ * 通知を押したときは、スコープの外のページも開けるので、そのままにする。
  */
 export const SERVICE_WORKER_PATH = "/notify/sw.js";
 
