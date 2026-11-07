@@ -14,6 +14,8 @@ import { NOTIFICATION_BODY, NOTIFICATION_TITLE, NOTIFICATION_URL } from "../src/
  *   いつも出す（ADR-0035「push に中身を持たせない」）
  * - `tag` を同じにして、まだ見ていない通知があれば置き換える。週に1回の知らせを、溜めて並べないため。`renotify` を付けるのは、
  *   付けないと置き換えが音も振動も無く行われ、同じ文なので、新しく更新されたことに気づけないため
+ * - `badge`（Android のステータスバーに出る）は、画像の形（アルファ）だけが使われ、1色で塗られる。favicon は背景の四角ごと
+ *   塗られて四角になるので、四角を抜き、花がほかの形とつながらないよう周りを空けたもの（public/badge.png）を渡す
  * - `fetch` は受けない。ページの配り方を変えないため
  * - 新しいバージョンは、待たずに入れ替える（skipWaiting）。ページのリクエストを受けないので、入れ替えても開いているページは変わらない
  */
@@ -23,6 +25,7 @@ self.addEventListener('push', (event) => {
   event.waitUntil(self.registration.showNotification(${JSON.stringify(NOTIFICATION_TITLE)}, {
     body: ${JSON.stringify(NOTIFICATION_BODY)},
     icon: '/favicon-192.png',
+    badge: '/badge.png',
     lang: 'ja',
     tag: 'schedule',
     renotify: true,
