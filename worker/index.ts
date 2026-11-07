@@ -1,6 +1,7 @@
 /**
  * サイトの Worker。ミニゲーム「配信をとじろ」の動画の一覧（VIDEOS_PATH。ADR-0033 の決定）と、配信スケジュールの更新の通知の
  * 購読（SUBSCRIPTIONS_PATH）と Service Worker（SERVICE_WORKER_PATH）と Cron（ADR-0035 の決定。中身は worker/notify.ts）を受け持ち、ほかは静的なファイル（dist）に回す。
+ * 送る処理の Workflow は worker/notify-workflow.ts で、エントリポイント（worker/main.ts）が一緒に export する。
  * 一覧は、src/data/alt-f4-videos.ts の切り替え（登録者10万人の記念の特別仕様のあいだかどうか）で、
  * リポジトリに置いた一覧か、チャンネルのフィードの最新を返す。
  * フィードは CORS を許さず、ブラウザから読めないので、同じオリジンで中継する。

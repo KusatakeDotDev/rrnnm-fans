@@ -33,6 +33,13 @@ const unusedKv: Env["NOTIFY"] = new Proxy({} as Env["NOTIFY"], {
   },
 });
 
+/** 一覧のパスでは Workflow を使わない。使ったら落とす。 */
+const unusedWorkflow: Env["NOTIFY_WORKFLOW"] = new Proxy({} as Env["NOTIFY_WORKFLOW"], {
+  get: (_, name) => () => {
+    throw new Error(`一覧のパスで Workflow の ${String(name)} を呼んだ`);
+  },
+});
+
 /** 静的なファイル。`pages` にあるパスは 200、ほかは 404。受けたリクエストの URL を記録する。 */
 function assets(pages: readonly string[]) {
   const requested: string[] = [];
@@ -47,6 +54,7 @@ function assets(pages: readonly string[]) {
       },
     },
     NOTIFY: unusedKv,
+    NOTIFY_WORKFLOW: unusedWorkflow,
     YOUTUBE_FEED_URL: FEED,
   };
   return { env, requested };
