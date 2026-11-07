@@ -36,6 +36,11 @@ function env(pages: readonly string[]): NotifyEnv {
         throw new Error("Service Worker を返すのに KV を使った");
       },
     }),
+    NOTIFY_WORKFLOW: new Proxy({} as NotifyEnv["NOTIFY_WORKFLOW"], {
+      get: () => () => {
+        throw new Error("Service Worker を返すのに Workflow を使った");
+      },
+    }),
   };
 }
 

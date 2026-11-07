@@ -1,24 +1,31 @@
+import type { WorkflowStep, WorkflowStepConfig } from "cloudflare:workers";
 import { createHash, webcrypto } from "node:crypto";
-import { describe, expect, it } from "vite-plus/test";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { NOTIFY_PAGE, SUBSCRIPTIONS_PATH, VAPID_SUBJECT } from "../../src/data/notify";
 import { HQ_URL } from "../../src/data/schedule";
 import { base64url, fromBase64url } from "../../src/lib/web-push";
 import { handle } from "../../worker/index";
 import {
-  BATCH,
+  DELIVERY_RETENTION,
+  deliver,
+  deliveryId,
+  type DeliveryWorkflow,
   type NotifyEnv,
   type NotifyKv,
+  PAGE_SIZE,
   PUSH_TTL_S,
   runCron,
+  SEND_STEP,
   SUBSCRIPTION_PREFIX,
   STATE_KEY,
 } from "../../worker/notify";
 
 /**
- * worker/notify.ts — 配信スケジュールの更新の通知の、購読の受け付けと Cron（docs/adr/0035-schedule-push-notifications.md）。
- * 壊れると「設定のページを出す前に購読を受け付ける」「ほかのサイトから購読を足される」「差し替わっても送らない／差し替わって
- * いないのに送る」「無料プランの上限を越えて落ちる」「やめた人に送り続ける」「push のサービスが署名を受け付けない」の形で出る。
+ * worker/notify.ts — 配信スケジュールの更新の通知の、購読の受け付けと、Cron と、送る処理の Workflow の中身
+ * （docs/adr/0035-schedule-push-notifications.md）。壊れると「設定のページを出す前に購読を受け付ける」「ほかのサイトから購読を
+ * 足される」「差し替わっても送らない／差し替わっていないのに送る」「同じ画像に戻ったときに送り直す」「1人の失敗で、ほかの人に
+ * 届かない」「同じ人に二重に送る」「やめた人に送り続ける」「push のサービスが署名を受け付けない」の形で出る。
  */
 
 const ORIGIN = "https://rrnnm.fans";
@@ -38,6 +45,11 @@ function memoryKv(initial: Record<string, { value: string; metadata?: unknown }>
     get: async (key) => {
       ops.push(`get ${key}`);
       return store.get(key)?.value ?? null;
+    },
+    getWithMetadata: async (key) => {
+      ops.push(`get ${key}`);
+      const entry = store.get(key);
+      return { value: entry?.value ?? null, metadata: entry?.metadata ?? null };
     },
     put: async (key, value, options) => {
       ops.push(`put ${key}`);
@@ -244,24 +256,56 @@ describe("購読の受け付け", () => {
   });
 });
 
-describe("Cron", () => {
-  const cronEnv = async (initial: Parameters<typeof memoryKv>[0] = {}) => {
-    const keys = await keyPair();
-    const { kv, store, ops } = memoryKv(initial);
-    const env: NotifyEnv = { ...assets([]), NOTIFY: kv, VAPID_PRIVATE_KEY: keys.privateKey };
-    const run = (fetchPush: Parameters<typeof runCron>[1]) =>
-      runCron(env, fetchPush, NOW, keys.publicKey);
-    return { env, store, ops, keys, run };
+const image = (text: string) => () => new Response(text, { status: 200 });
+
+/** Workflows のバインディングの代わり。`existing` と作ったインスタンスだけが残っていて、`get` はそれだけを返す。 */
+function memoryWorkflow(log: string[], existing: readonly string[] = []) {
+  const ids = new Set(existing);
+  const created: Parameters<DeliveryWorkflow["create"]>[0][] = [];
+  const workflow: DeliveryWorkflow = {
+    get: async (id) => {
+      if (!ids.has(id)) throw new Error("instance not found");
+      return {};
+    },
+    create: async (options) => {
+      if (ids.has(options.id)) throw new Error("instance already exists");
+      log.push(`create ${options.id}`);
+      ids.add(options.id);
+      created.push(options);
+      return {};
+    },
   };
-  const image = (text: string) => () => new Response(text, { status: 200 });
-  /** 前回見たサムネイルが `text` で、送っていない状態。 */
+  return { workflow, created };
+}
+
+/** console.error を拾う。送れなかった宛先は、ログに残して先へ進むため。 */
+function captureErrors() {
+  const calls: unknown[][] = [];
+  const original = console.error;
+  console.error = (...args: unknown[]) => calls.push(args);
+  return { calls, restore: () => (console.error = original) };
+}
+
+describe("Cron", () => {
+  const cronEnv = (initial: Parameters<typeof memoryKv>[0] = {}, existing: string[] = []) => {
+    const { kv, store, ops } = memoryKv(initial);
+    const { workflow, created } = memoryWorkflow(ops, existing);
+    const env: NotifyEnv = {
+      ...assets([]),
+      NOTIFY: kv,
+      NOTIFY_WORKFLOW: workflow,
+      VAPID_PRIVATE_KEY: "key",
+    };
+    const run = (fetchThumbnail: Parameters<typeof runCron>[1], now = NOW) =>
+      runCron(env, fetchThumbnail, now);
+    return { env, store, ops, created, run };
+  };
+  /** 前回見たサムネイルが `text`。 */
   const seen = (text: string) => ({
     [STATE_KEY]: { value: JSON.stringify({ hash: sha256(text) }) },
   });
   const stateOf = (store: Map<string, { value: string }>) =>
     JSON.parse(store.get(STATE_KEY)!.value);
-  const stateWrites = (ops: readonly string[]) =>
-    ops.filter((op) => op === `put ${STATE_KEY}` || op === `delete ${STATE_KEY}`);
 
   it("状態のキーの名前は、ハッシュを取る画像を表す（画像を替えたら、キーも替えて覚え直しから始める）", () => {
     const image = new URL(HQ_URL).pathname
@@ -271,67 +315,204 @@ describe("Cron", () => {
     expect(STATE_KEY).toBe(`state:${image}`);
   });
 
-  it("初めて見たサムネイルは、ハッシュを覚えるだけで送らない", async () => {
-    const { store, run } = await cronEnv(subscribed(APPLE));
-    const net = network(image("week-1"));
-    await run(net.fetchPush);
+  it("初めて見たサムネイルは、ハッシュを覚えるだけで、送る処理を始めない", async () => {
+    const { store, created, run } = cronEnv(subscribed(APPLE));
+    await run(network(image("week-1")).fetchPush);
     expect(stateOf(store)).toEqual({ hash: sha256("week-1") });
-    expect(net.pushes).toEqual([]);
+    expect(created).toEqual([]);
   });
 
   it("サムネイルは、Cloudflare のエッジに覚えさせたものを読まない", async () => {
-    const { run } = await cronEnv();
+    const { run } = cronEnv();
     const net = network(image("week-1"));
     await run(net.fetchPush);
     expect(net.thumbnails).toEqual([{ cache: "no-store" }]);
   });
 
   it("サムネイルは、回ごとに違うクエリを付けて取り、YouTube のエッジに残った差し替える前の画像を読まない", async () => {
-    const { env, keys } = await cronEnv();
+    const { run } = cronEnv();
     const net = network(image("week-1"));
-    await runCron(env, net.fetchPush, NOW, keys.publicKey);
-    await runCron(env, net.fetchPush, NOW + 5 * 60_000, keys.publicKey);
+    await run(net.fetchPush, NOW);
+    await run(net.fetchPush, NOW + 5 * 60_000);
     expect(net.thumbnailUrls).toEqual([`${HQ_URL}?t=${NOW}`, `${HQ_URL}?t=${NOW + 5 * 60_000}`]);
   });
 
-  it("前回と同じなら、何も書かず、送らない", async () => {
-    const { ops, run } = await cronEnv({
-      ...seen("week-1"),
-      ...subscribed(APPLE),
-    });
-    const net = network(image("week-1"));
-    await run(net.fetchPush);
+  it("前回と同じなら、何も書かず、送る処理を始めない", async () => {
+    const { ops, created, run } = cronEnv(seen("week-1"));
+    await run(network(image("week-1")).fetchPush);
     expect(ops).toEqual([`get ${STATE_KEY}`]);
-    expect(net.pushes).toEqual([]);
+    expect(created).toEqual([]);
   });
 
   it.each([
     ["エラーを返した", () => new Response("", { status: 404 })],
     ["繋がらなかった", () => Promise.reject(new TypeError("fetch failed"))],
-  ])("サムネイルが取れなければ（%s）、ハッシュを書き換えず、送らない", async (_, thumbnail) => {
-    const { ops, run } = await cronEnv({
-      ...seen("week-1"),
-      ...subscribed(APPLE),
-    });
-    const net = network(thumbnail);
+  ])(
+    "サムネイルが取れなければ（%s）、ハッシュを書き換えず、送る処理を始めない",
+    async (_, thumbnail) => {
+      const { ops, created, run } = cronEnv(seen("week-1"));
+      await run(network(thumbnail).fetchPush);
+      expect(ops).toEqual([`get ${STATE_KEY}`]);
+      expect(created).toEqual([]);
+    },
+  );
+
+  it("差し替わったら、その画像の送る処理を始めてから、ハッシュを書き換える。Cron は push を送らない", async () => {
+    const { store, ops, created, run } = cronEnv({ ...seen("week-1"), ...subscribed(APPLE) });
+    const net = network(image("week-2"));
     await run(net.fetchPush);
-    expect(ops).toEqual([`get ${STATE_KEY}`]);
+    const hash = sha256("week-2");
+    expect(created).toEqual([
+      {
+        id: deliveryId(hash),
+        params: { hash },
+        retention: { successRetention: DELIVERY_RETENTION, errorRetention: DELIVERY_RETENTION },
+      },
+    ]);
+    expect(ops.slice(-2)).toEqual([`create ${deliveryId(hash)}`, `put ${STATE_KEY}`]);
+    expect(stateOf(store)).toEqual({ hash });
     expect(net.pushes).toEqual([]);
   });
 
-  it("差し替わったら、ハッシュを書き換え、購読している全員に中身の無い push を送る", async () => {
-    const { store, keys, run } = await cronEnv({
-      ...seen("week-1"),
-      ...subscribed(APPLE, FCM),
-    });
-    const net = network(image("week-2"));
-    await run(net.fetchPush);
+  it("インスタンスの ID は、Workflows が受け付ける形（100 文字まで、英数字・`-`・`_`）にする", () => {
+    const id = deliveryId(sha256("week-2"));
+    expect(id.length).toBeLessThanOrEqual(100);
+    expect(id).toMatch(/^[a-zA-Z0-9_][a-zA-Z0-9-_]*$/);
+  });
+
+  it("同じ画像のインスタンスが残っていれば（その画像に戻ったとき）、始めずに、ハッシュだけ書き換える", async () => {
+    const { store, created, run } = cronEnv(seen("week-2"), [deliveryId(sha256("week-1"))]);
+    await run(network(image("week-1")).fetchPush);
+    expect(created).toEqual([]);
+    expect(stateOf(store)).toEqual({ hash: sha256("week-1") });
+  });
+
+  it("送る処理を始められなければ、ハッシュを書き換えず、次の Cron がもう一度始める", async () => {
+    const { env, store, created, run } = cronEnv(seen("week-1"));
+    const workflow = env.NOTIFY_WORKFLOW;
+    env.NOTIFY_WORKFLOW = { ...workflow, create: () => Promise.reject(new Error("落ちた")) };
+    await expect(run(network(image("week-2")).fetchPush)).rejects.toThrow("落ちた");
+    expect(stateOf(store)).toEqual({ hash: sha256("week-1") });
+    env.NOTIFY_WORKFLOW = workflow;
+    await run(network(image("week-2")).fetchPush);
+    expect(created.map(({ id }) => id)).toEqual([deliveryId(sha256("week-2"))]);
     expect(stateOf(store)).toEqual({ hash: sha256("week-2") });
+  });
+
+  it("始めたあとにハッシュを書けなくても、次の Cron は同じ画像の送る処理を二重に始めない", async () => {
+    const { env, store, created, run } = cronEnv(seen("week-1"));
+    const kv = env.NOTIFY;
+    env.NOTIFY = { ...kv, put: () => Promise.reject(new Error("KV が落ちた")) };
+    await expect(run(network(image("week-2")).fetchPush)).rejects.toThrow("KV が落ちた");
+    env.NOTIFY = kv;
+    await run(network(image("week-2")).fetchPush);
+    expect(created).toHaveLength(1);
+    expect(stateOf(store)).toEqual({ hash: sha256("week-2") });
+  });
+
+  it("インスタンスがあるかを一時的に確かめられなくても、二重に始めず、次の Cron でハッシュを書き換える", async () => {
+    const { env, store, created, run } = cronEnv(seen("week-1"), [deliveryId(sha256("week-2"))]);
+    const workflow = env.NOTIFY_WORKFLOW;
+    env.NOTIFY_WORKFLOW = { ...workflow, get: () => Promise.reject(new Error("一時的に落ちた")) };
+    await expect(run(network(image("week-2")).fetchPush)).rejects.toThrow("already exists");
+    expect(stateOf(store)).toEqual({ hash: sha256("week-1") });
+    env.NOTIFY_WORKFLOW = workflow;
+    await run(network(image("week-2")).fetchPush);
+    expect(created).toEqual([]);
+    expect(stateOf(store)).toEqual({ hash: sha256("week-2") });
+  });
+
+  it.each([["not json"], ["null"], ['{"cursor":""}'], ['{"hash":1}']])(
+    "状態が読めなければ（%s）、初めて見たときと同じく、今のハッシュを覚えるだけで始めない",
+    async (value) => {
+      const { store, created, run } = cronEnv({ [STATE_KEY]: { value } });
+      await run(network(image("week-2")).fetchPush);
+      expect(stateOf(store)).toEqual({ hash: sha256("week-2") });
+      expect(created).toEqual([]);
+    },
+  );
+
+  it("秘密鍵が無ければ、サムネイルも見ない", async () => {
+    const { env, ops } = cronEnv(seen("week-1"));
+    const net = network(image("week-2"));
+    const errors = captureErrors();
+    try {
+      await runCron({ ...env, VAPID_PRIVATE_KEY: "" }, net.fetchPush, NOW);
+    } finally {
+      errors.restore();
+    }
+    expect(ops).toEqual([]);
+    expect(net.thumbnails).toEqual([]);
+    expect(errors.calls).toHaveLength(1);
+  });
+});
+
+/**
+ * Workflows のステップの代わり。呼ばれた順に名前と設定を覚え、結果を JSON にして返す（ステップの結果は保存されるので、
+ * 保存できる形かも確かめる）。`failing` の名前のステップは、中身を動かさずに落とし、`after` は各ステップのあとに呼ぶ。
+ */
+function fakeStep(
+  options: { failing?: readonly string[]; after?: (name: string) => void | Promise<void> } = {},
+) {
+  const calls: { name: string; config?: WorkflowStepConfig; result?: unknown }[] = [];
+  const step = {
+    do: async (name: string, ...args: unknown[]) => {
+      const callback = args.at(-1) as () => Promise<unknown>;
+      const call: (typeof calls)[number] = { name };
+      if (args.length === 2) call.config = args[0] as WorkflowStepConfig;
+      calls.push(call);
+      if (options.failing?.includes(name)) throw new Error(`${name} が落ちた`);
+      call.result = JSON.parse(JSON.stringify(await callback()));
+      await options.after?.(name);
+      return call.result;
+    },
+  } as WorkflowStep;
+  return { step, calls };
+}
+
+describe("送る処理（Workflow）", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(NOW);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const deliveryEnv = async (initial: Parameters<typeof memoryKv>[0] = {}) => {
+    const keys = await keyPair();
+    const { kv, store, ops } = memoryKv(initial);
+    const env: NotifyEnv = {
+      ...assets([]),
+      NOTIFY: kv,
+      NOTIFY_WORKFLOW: memoryWorkflow([]).workflow,
+      VAPID_PRIVATE_KEY: keys.privateKey,
+    };
+    const run = (fetchPush: Parameters<typeof deliver>[2], step = fakeStep().step) =>
+      deliver(step, env, fetchPush, keys.publicKey);
+    return { env, store, ops, keys, run };
+  };
+  const endpoints = (count: number) =>
+    Array.from({ length: count }, (_, n) => `https://web.push.apple.com/${n}`);
+  const subscriptions = (store: Map<string, unknown>) =>
+    [...store.keys()].filter((key) => key.startsWith(SUBSCRIPTION_PREFIX)).sort();
+  /** KV のキーの順（一覧が返す順）に並べた宛先。 */
+  const inKeyOrder = (urls: readonly string[]) =>
+    [...urls].sort((a, b) => (subscriptionKey(a) < subscriptionKey(b) ? -1 : 1));
+  const noThumbnail = () => {
+    throw new Error("送る処理はサムネイルを取らない");
+  };
+
+  it("購読している全員に、中身の無い push を送る", async () => {
+    const { keys, run } = await deliveryEnv(subscribed(APPLE, FCM));
+    const net = network(noThumbnail);
+    await run(net.fetchPush);
     expect(net.pushes.map((push) => push.url).sort()).toEqual([APPLE, FCM].sort());
     for (const { url, init } of net.pushes) {
       expect(init.method).toBe("POST");
       expect(init.redirect).toBe("manual");
       expect(init.body).toBeUndefined();
+      expect(init.signal).toBeInstanceOf(AbortSignal);
       const headers = init.headers as Record<string, string>;
       expect(headers["ttl"]).toBe(String(PUSH_TTL_S));
       expect(headers["urgency"]).toBe("normal");
@@ -357,225 +538,208 @@ describe("Cron", () => {
     }
   });
 
-  it("切れた宛先（404・410）は消し、ほかの失敗は残す", async () => {
-    const endpoints = [0, 1, 2, 3].map((n) => `https://web.push.apple.com/${n}`);
-    const codes = [404, 410, 500, 429];
-    const { store, run } = await cronEnv({
-      ...seen("week-1"),
-      ...subscribed(...endpoints),
-    });
-    const net = network(image("week-2"), (url) => codes[endpoints.indexOf(url)]!);
-    await run(net.fetchPush);
-    expect([...store.keys()].filter((key) => key.startsWith(SUBSCRIPTION_PREFIX)).sort()).toEqual(
-      [subscriptionKey(endpoints[2]!), subscriptionKey(endpoints[3]!)].sort(),
+  it(`${PAGE_SIZE} 件ずつのページにし、ページごとに一覧を読むステップと送るステップを分けて、全員に1回ずつ送る`, async () => {
+    const all = endpoints(PAGE_SIZE * 2 + 3);
+    const { run } = await deliveryEnv(subscribed(...all));
+    const { step, calls } = fakeStep();
+    const net = network(noThumbnail);
+    await run(net.fetchPush, step);
+    expect(calls.map(({ name }) => name)).toEqual([
+      "list 0",
+      "send 0",
+      "list 1",
+      "send 1",
+      "list 2",
+      "send 2",
+    ]);
+    expect(calls.filter(({ name }) => name.startsWith("send")).map(({ result }) => result)).toEqual(
+      [
+        { sent: PAGE_SIZE, gone: 0, failed: 0 },
+        { sent: PAGE_SIZE, gone: 0, failed: 0 },
+        { sent: 3, gone: 0, failed: 0 },
+      ],
     );
+    expect(net.pushes.map((push) => push.url).sort()).toEqual([...all].sort());
   });
 
-  it("宛先を消せなくても（KV の削除の上限など）、ほかの宛先に送って状態を書き、次の Cron で同じ回を送り直さない", async () => {
-    const bad = "https://example.com/abc";
-    const { env, store, run } = await cronEnv({
-      ...seen("week-1"),
-      ...subscribed(APPLE, FCM),
-      [subscriptionKey(bad)]: { value: "", metadata: bad },
-    });
-    env.NOTIFY.delete = () => Promise.reject(new Error("KV の削除の上限"));
-    const errors: unknown[] = [];
-    const original = console.error;
-    console.error = (...args: unknown[]) => errors.push(args);
+  it("送るステップはやり直さず、一覧を読むステップは Workflows の既定のやり直しに任せる", async () => {
+    const { run } = await deliveryEnv(subscribed(APPLE));
+    const { step, calls } = fakeStep();
+    await run(network(noThumbnail).fetchPush, step);
+    expect(SEND_STEP.retries?.limit).toBe(0);
+    expect(calls.map(({ name, config }) => [name, config])).toEqual([
+      ["list 0", undefined],
+      ["send 0", SEND_STEP],
+    ]);
+  });
+
+  it("送るステップが落ちても、次のページから続けて送る", async () => {
+    const all = endpoints(PAGE_SIZE + 3);
+    const { run } = await deliveryEnv(subscribed(...all));
+    const { step } = fakeStep({ failing: ["send 0"] });
+    const net = network(noThumbnail);
+    const errors = captureErrors();
     try {
-      const net = network(image("week-2"), (url) => (url === APPLE ? 410 : 201));
-      await run(net.fetchPush);
-      expect(net.pushes.map((push) => push.url).sort()).toEqual([APPLE, FCM].sort());
+      await run(net.fetchPush, step);
     } finally {
-      console.error = original;
+      errors.restore();
     }
-    expect(errors).toHaveLength(2);
-    expect(stateOf(store)).toEqual({ hash: sha256("week-2") });
-    expect(store.has(subscriptionKey(APPLE))).toBe(true);
-    const net = network(image("week-2"));
-    await run(net.fetchPush);
-    expect(net.pushes).toEqual([]);
+    expect(net.pushes.map((push) => push.url).sort()).toEqual(
+      inKeyOrder(all).slice(PAGE_SIZE).sort(),
+    );
+    expect(errors.calls).toHaveLength(1);
   });
 
-  it("push のサービスに繋がらなくても、宛先を残して最後まで送る", async () => {
-    const { store, run } = await cronEnv({
-      ...seen("week-1"),
-      ...subscribed(APPLE, FCM),
-    });
-    const net = network(image("week-2"));
-    const fetchPush = async (url: string, init: RequestInit) =>
-      url === APPLE ? Promise.reject(new TypeError("fetch failed")) : net.fetchPush(url, init);
-    await run(fetchPush);
-    expect(net.pushes.map((push) => push.url)).toEqual([FCM]);
+  it("ステップの結果に、宛先の URL を残さない（インスタンスの状態に残るため）", async () => {
+    const { run } = await deliveryEnv(subscribed(APPLE, FCM));
+    const { step, calls } = fakeStep();
+    await run(network(noThumbnail).fetchPush, step);
+    const saved = JSON.stringify(calls.map(({ result }) => result));
+    expect(saved).not.toContain(APPLE);
+    expect(saved).not.toContain(FCM);
+  });
+
+  it("切れた宛先（404・410）は消し、ほかの失敗は残す", async () => {
+    const all = endpoints(4);
+    const codes = [404, 410, 500, 429];
+    const { store, run } = await deliveryEnv(subscribed(...all));
+    const { step, calls } = fakeStep();
+    await run(network(noThumbnail, (url) => codes[all.indexOf(url)]!).fetchPush, step);
+    expect(subscriptions(store)).toEqual(
+      [subscriptionKey(all[2]!), subscriptionKey(all[3]!)].sort(),
+    );
+    expect(calls.at(-1)!.result).toEqual({ sent: 0, gone: 2, failed: 2 });
+  });
+
+  it.each([
+    [
+      "push のサービスに繋がらない",
+      (net: ReturnType<typeof network>) => (url: string, init: RequestInit) =>
+        url === APPLE ? Promise.reject(new TypeError("fetch failed")) : net.fetchPush(url, init),
+      (env: NotifyEnv) => env,
+    ],
+    [
+      "宛先を KV から読めない",
+      (net: ReturnType<typeof network>) => net.fetchPush,
+      (env: NotifyEnv): NotifyEnv => ({
+        ...env,
+        NOTIFY: {
+          ...env.NOTIFY,
+          getWithMetadata: (key) =>
+            key === subscriptionKey(APPLE)
+              ? Promise.reject(new Error("KV が落ちた"))
+              : env.NOTIFY.getWithMetadata(key),
+        },
+      }),
+    ],
+  ])(
+    "1つの宛先の失敗（%s）は、その宛先だけにとどめ、宛先を残して、ほかの宛先に送る",
+    async (_, fetchFor, envFor) => {
+      const { env, store, keys } = await deliveryEnv(subscribed(APPLE, FCM));
+      const net = network(noThumbnail);
+      const { step, calls } = fakeStep();
+      const errors = captureErrors();
+      try {
+        await deliver(step, envFor(env), fetchFor(net), keys.publicKey);
+      } finally {
+        errors.restore();
+      }
+      expect(net.pushes.map((push) => push.url)).toEqual([FCM]);
+      expect(store.has(subscriptionKey(APPLE))).toBe(true);
+      expect(calls.at(-1)!.result).toEqual({ sent: 1, gone: 0, failed: 1 });
+      expect(errors.calls).toHaveLength(1);
+    },
+  );
+
+  it("署名の鍵が読めなくても、ステップを落とさず、宛先も消さない", async () => {
+    const { env, store, keys } = await deliveryEnv(subscribed(APPLE, FCM));
+    const net = network(noThumbnail);
+    const { step, calls } = fakeStep();
+    const errors = captureErrors();
+    try {
+      await deliver(step, { ...env, VAPID_PRIVATE_KEY: "AAAA" }, net.fetchPush, keys.publicKey);
+    } finally {
+      errors.restore();
+    }
+    expect(net.pushes).toEqual([]);
+    expect(subscriptions(store)).toHaveLength(2);
+    expect(calls.at(-1)!.result).toEqual({ sent: 0, gone: 0, failed: 2 });
+  });
+
+  it("宛先を消せなくても（KV が落ちたときなど）、ほかの宛先に送る", async () => {
+    const { env, store, run } = await deliveryEnv(subscribed(APPLE, FCM));
+    env.NOTIFY.delete = () => Promise.reject(new Error("KV が落ちた"));
+    const net = network(noThumbnail, (url) => (url === APPLE ? 410 : 201));
+    const errors = captureErrors();
+    try {
+      await run(net.fetchPush);
+    } finally {
+      errors.restore();
+    }
+    expect(net.pushes.map((push) => push.url).sort()).toEqual([APPLE, FCM].sort());
     expect(store.has(subscriptionKey(APPLE))).toBe(true);
-    expect(stateOf(store)).toEqual({ hash: sha256("week-2") });
+    expect(errors.calls).toHaveLength(1);
   });
 
   it("メタデータが受け付ける宛先でない購読は、送らずに消す", async () => {
     const bad = "https://example.com/abc";
-    const { store, run } = await cronEnv({
-      ...seen("week-1"),
+    const { store, run } = await deliveryEnv({
       [subscriptionKey(bad)]: { value: "", metadata: bad },
     });
-    const net = network(image("week-2"));
+    const net = network(noThumbnail);
     await run(net.fetchPush);
     expect(net.pushes).toEqual([]);
     expect(store.has(subscriptionKey(bad))).toBe(false);
   });
 
-  it(`1回に送るのは ${BATCH} 件までで、残りは次の Cron で続きから送り、そのあいだはサムネイルを見ない`, async () => {
-    const endpoints = Array.from(
-      { length: BATCH * 2 + 3 },
-      (_, n) => `https://web.push.apple.com/${n}`,
-    );
-    const { store, ops, run } = await cronEnv({
-      ...seen("week-1"),
-      ...subscribed(...endpoints),
-    });
-    const sent: string[][] = [];
-    for (let round = 0; round < 3; round++) {
-      const net = network(image("week-2"));
-      const before = ops.length;
-      await run(net.fetchPush);
-      sent.push(net.pushes.map((push) => push.url));
-      expect(net.thumbnails).toHaveLength(round === 0 ? 1 : 0);
-      expect(stateOf(store).hash).toBe(sha256("week-2"));
-      expect("cursor" in stateOf(store)).toBe(round < 2);
-      expect(stateWrites(ops.slice(before))).toEqual([`put ${STATE_KEY}`]);
-    }
-    expect(sent.map((urls) => urls.length)).toEqual([BATCH, BATCH, 3]);
-    expect(new Set(sent.flat())).toEqual(new Set(endpoints));
-    const net = network(image("week-2"));
-    await run(net.fetchPush);
-    expect(net.pushes).toEqual([]);
-  });
-
-  it("状態は、送る前に1回だけ書く（KV は同じキーへの書き込みが1秒に1回まで）", async () => {
-    const { store, ops, run } = await cronEnv({ ...seen("week-1"), ...subscribed(APPLE, FCM) });
-    const net = network(image("week-2"));
-    const statesAtPush: unknown[] = [];
-    await run(async (url, init) => {
-      if (!url.startsWith(HQ_URL)) statesAtPush.push(stateOf(store));
-      return net.fetchPush(url, init);
-    });
-    expect(stateWrites(ops)).toEqual([`put ${STATE_KEY}`]);
-    expect(statesAtPush).toEqual([{ hash: sha256("week-2") }, { hash: sha256("week-2") }]);
-  });
-
-  it("送る途中で落ちても（CPU 時間の上限など）、次の Cron は同じ回を送り直さない", async () => {
-    const { run } = await cronEnv({ ...seen("week-1"), ...subscribed(APPLE, FCM) });
-    const net = network(image("week-2"));
-    // 送っている途中で実行ごと止まるのを、Promise を返さずに投げて作る（返した Promise の失敗は、送れなかった宛先として扱われる）。
-    const crash = (url: string, init: RequestInit) => {
-      if (url.startsWith(HQ_URL)) return net.fetchPush(url, init);
-      throw new Error("落ちた");
-    };
-    await expect(run(crash)).rejects.toThrow("落ちた");
-    const next = network(image("week-2"));
-    await run(next.fetchPush);
-    expect(next.pushes).toEqual([]);
-  });
-
-  it.each([
-    ["一覧", "list"],
-    ["状態の書き込み", "put"],
-  ] as const)(
-    "送る前に落ちたら（%s）、送らず、状態は前のままで、次の Cron が同じ回を最初から送り直す",
-    async (_, method) => {
-      const { env, store, run } = await cronEnv({ ...seen("week-1"), ...subscribed(APPLE, FCM) });
-      const kv = env.NOTIFY;
-      env.NOTIFY = { ...kv, [method]: () => Promise.reject(new Error("KV が落ちた")) };
-      const failed = network(image("week-2"));
-      await expect(run(failed.fetchPush)).rejects.toThrow("KV が落ちた");
-      expect(failed.pushes).toEqual([]);
-      expect(stateOf(store)).toEqual({ hash: sha256("week-1") });
-      env.NOTIFY = kv;
-      const net = network(image("week-2"));
-      await run(net.fetchPush);
-      expect(net.pushes.map((push) => push.url).sort()).toEqual([APPLE, FCM].sort());
-    },
-  );
-
-  it("状態が読めなければ、初めて見たときと同じく、今のハッシュを覚えるだけで送らない", async () => {
-    const { store, run } = await cronEnv({
-      [STATE_KEY]: { value: "not json" },
-      ...subscribed(APPLE),
-    });
-    const net = network(image("week-2"));
-    await run(net.fetchPush);
-    expect(stateOf(store)).toEqual({ hash: sha256("week-2") });
-    expect(net.pushes).toEqual([]);
-  });
-
-  it.each([
-    ["null"],
-    ['{"cursor":""}'],
-    ['{"hash":1}'],
-    ['{"hash":"x","cursor":null}'],
-    ['{"hash":"x","cursor":1}'],
-  ])("状態の形が違っても（%s）、初めて見たときと同じに扱う", async (value) => {
-    const { store, run } = await cronEnv({ [STATE_KEY]: { value }, ...subscribed(APPLE) });
-    const net = network(image("week-2"));
-    await run(net.fetchPush);
-    expect(stateOf(store)).toEqual({ hash: sha256("week-2") });
-    expect(net.pushes).toEqual([]);
-  });
-
   it("転送（3xx）を返した宛先は、ほかの失敗と同じく残す", async () => {
-    const { store, run } = await cronEnv({ ...seen("week-1"), ...subscribed(APPLE) });
-    const net = network(image("week-2"), () => 307);
+    const { store, run } = await deliveryEnv(subscribed(APPLE));
+    const net = network(noThumbnail, () => 307);
     await run(net.fetchPush);
     expect(net.pushes).toHaveLength(1);
     expect(store.has(subscriptionKey(APPLE))).toBe(true);
   });
 
+  it("一覧を読んだあとにやめた人には、送らない", async () => {
+    const { store, run } = await deliveryEnv(subscribed(APPLE, FCM));
+    const { step, calls } = fakeStep({
+      after: (name) => {
+        if (name === "list 0") store.delete(subscriptionKey(APPLE));
+      },
+    });
+    const net = network(noThumbnail);
+    await run(net.fetchPush, step);
+    expect(net.pushes.map((push) => push.url)).toEqual([FCM]);
+    expect(calls.at(-1)!.result).toEqual({ sent: 1, gone: 0, failed: 0 });
+  });
+
   it("切れた宛先をページの途中で消しても、続きのページを飛ばさない", async () => {
-    const endpoints = Array.from(
-      { length: BATCH * 2 + 5 },
-      (_, n) => `https://web.push.apple.com/${n}`,
-    );
-    const { store, run } = await cronEnv({ ...seen("week-1"), ...subscribed(...endpoints) });
-    const sent: string[] = [];
-    for (let round = 0; round < 3; round++) {
-      const net = network(image("week-2"), () => 410);
-      await run(net.fetchPush);
-      sent.push(...net.pushes.map((push) => push.url));
-    }
-    expect(sent.sort()).toEqual([...endpoints].sort());
-    expect([...store.keys()]).toEqual([STATE_KEY]);
-    expect(stateOf(store)).toEqual({ hash: sha256("week-2") });
-  });
-
-  it("無料プランのサブリクエストの上限（50件）に、全部が切れた宛先のときも収まる", async () => {
-    const endpoints = Array.from(
-      { length: BATCH + 5 },
-      (_, n) => `https://web.push.apple.com/${n}`,
-    );
-    const { ops, run } = await cronEnv({
-      ...seen("week-1"),
-      ...subscribed(...endpoints),
-    });
-    const net = network(image("week-2"), () => 410);
+    const all = endpoints(PAGE_SIZE * 2 + 5);
+    const { store, run } = await deliveryEnv(subscribed(...all));
+    const net = network(noThumbnail, () => 410);
     await run(net.fetchPush);
-    expect(ops.length + net.pushes.length + net.thumbnails.length).toBeLessThanOrEqual(50);
+    expect(net.pushes.map((push) => push.url).sort()).toEqual([...all].sort());
+    expect(subscriptions(store)).toEqual([]);
   });
 
-  it("秘密鍵が無ければ、サムネイルも見ない", async () => {
-    const { env, ops } = await cronEnv({
-      ...seen("week-1"),
-      ...subscribed(APPLE),
-    });
-    const net = network(image("week-2"));
-    const errors: unknown[] = [];
-    const original = console.error;
-    console.error = (...args: unknown[]) => errors.push(args);
-    try {
-      await runCron({ ...env, VAPID_PRIVATE_KEY: "" }, net.fetchPush, NOW);
-    } finally {
-      console.error = original;
-    }
-    expect(ops).toEqual([]);
-    expect(net.thumbnails).toEqual([]);
-    expect(errors).toHaveLength(1);
+  it("購読が無ければ、送らない", async () => {
+    const { run } = await deliveryEnv();
+    const net = network(noThumbnail);
+    await run(net.fetchPush);
+    expect(net.pushes).toEqual([]);
+  });
+
+  it("秘密鍵が無ければ、ステップを始めずにインスタンスを失敗にする（画面で見えるように）", async () => {
+    const { env, keys } = await deliveryEnv(subscribed(APPLE));
+    const { step, calls } = fakeStep();
+    await expect(
+      deliver(
+        step,
+        { ...env, VAPID_PRIVATE_KEY: "" },
+        network(noThumbnail).fetchPush,
+        keys.publicKey,
+      ),
+    ).rejects.toThrow("VAPID_PRIVATE_KEY");
+    expect(calls).toEqual([]);
   });
 });
