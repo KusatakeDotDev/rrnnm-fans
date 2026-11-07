@@ -19,7 +19,7 @@ import { SERVICE_WORKER_SOURCE } from "../../worker/service-worker";
 /**
  * worker/service-worker.ts — 配信スケジュールの更新の通知を受ける Service Worker（docs/adr/0035-schedule-push-notifications.md）。
  * 壊れると「設定のページを出す前に Service Worker を配る」「push を受けても通知を出さない（Safari が許可を取り消す）」
- * 「通知を押しても今週の配信予定が開かない」「ページのリクエストを横取りする」の形で出る。
+ * 「通知を押しても今週の配信予定が開かない」「ページのリクエストを横取りする」「設定のページの外から購読を切り替えられない」の形で出る。
  */
 
 const ORIGIN = "https://rrnnm.fans";
@@ -57,6 +57,10 @@ describe("Service Worker を返す", () => {
     expect(response.headers.get("content-type")).toBe("text/javascript; charset=utf-8");
     expect(response.headers.get("cache-control")).toBe("no-cache");
     expect(await response.text()).toBe(SERVICE_WORKER_SOURCE);
+  });
+
+  it("ルートに置き、既定のスコープをサイト全体にする（ほかのページでは `ready` が終わらないため）", () => {
+    expect(new URL("./", `${ORIGIN}${SERVICE_WORKER_PATH}`).pathname).toBe("/");
   });
 
   it("設定のページが無いビルドでは返さず、静的なファイルの 404 にする", async () => {

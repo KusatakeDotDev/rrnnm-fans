@@ -10,10 +10,10 @@ export const NOTIFY_PAGE = "/notify/";
 export const SUBSCRIPTIONS_PATH = "/notify/subscriptions";
 
 /**
- * Service Worker のパス。Worker が返す（worker/service-worker.ts）。置いた場所でスコープが `/notify/` になるが、push と、
- * 通知を押したときは、スコープの外のページも開けるので、そのままにする。
+ * Service Worker のパス。Worker が返す（worker/service-worker.ts）。ルートに置いてスコープをサイト全体にし、どのページからも
+ * `navigator.serviceWorker.ready` で購読を切り替えられるようにする（ADR-0035「Service Worker は、押した人にだけ登録し、push だけを受け持つ」）。
  */
-export const SERVICE_WORKER_PATH = "/notify/sw.js";
+export const SERVICE_WORKER_PATH = "/sw.js";
 
 /**
  * 通知の文（主の判断）。本文は、ご本人のスケジュールのお知らせの決まり文句に、妖精（🧚）が応える形にする。ご本人の口調にはしない

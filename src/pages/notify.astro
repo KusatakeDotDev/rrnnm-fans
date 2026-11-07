@@ -34,7 +34,6 @@ import '../styles/subpage.css';
 
   const button = document.querySelector<HTMLButtonElement>('[data-notify-toggle]')!;
   const status = document.querySelector<HTMLElement>('[data-notify-status]')!;
-  const scope = new URL('./', new URL(SERVICE_WORKER_PATH, location.href)).pathname;
 
   const MESSAGE = {
     on: 'この端末は、通知を受け取る設定になっています。',
@@ -61,14 +60,14 @@ import '../styles/subpage.css';
     if (!response.ok) throw new Error(`${method} ${response.status}`);
   };
 
-  const registration = () => navigator.serviceWorker.getRegistration(scope);
+  const registration = () => navigator.serviceWorker.getRegistration();
 
   const subscribe = async () => {
     // iOS は、押した操作の中でしか許可を求めさせないので、ほかの処理より先に呼ぶ。
     const permission = await Notification.requestPermission();
     // 聞く画面を閉じただけ（default）なら、もう一度押せば聞き直せるので、設定を変えるようには言わない。
     if (permission !== 'granted') return show(false, permission === 'denied' ? MESSAGE.denied : '');
-    const registered = await navigator.serviceWorker.register(SERVICE_WORKER_PATH, { scope });
+    const registered = await navigator.serviceWorker.register(SERVICE_WORKER_PATH);
     let subscription: PushSubscription | undefined;
     try {
       const ready = await navigator.serviceWorker.ready;
