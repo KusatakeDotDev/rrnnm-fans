@@ -4,11 +4,13 @@ import { fileURLToPath } from "node:url";
 
 import { expect, test } from "@playwright/test";
 
+import { UNLINKED_ROUTES } from "../../src/data/site-navigation";
 import { unreleasedRoute } from "../../src/lib/unreleased";
 import { builtPages, DIST, distTextFiles } from "../helpers/dist";
 
 /**
- * 配る dist に、src/unreleased/ のページが、ビルドの記録どおりに入っている・入っていないこと。
+ * 配る dist に、src/unreleased/ のページが、ビルドの記録どおりに入っている・入っていないこと。リンクしないページ
+ * （src/data/site-navigation.ts の UNLINKED_ROUTES）が、入っていて、ほかのページからリンクされていないこと。
  * pnpm test:release で本番の dist（オフ）にも掛かり、配る前に止める。
  */
 const UNRELEASED = fileURLToPath(new URL("../../src/unreleased/", import.meta.url));
@@ -48,8 +50,17 @@ const sitePath = (url: string, from = "/") => {
 };
 
 /** ルートは末尾に / を付けずに作り、ビルドしたページの URL は / で終わるので、末尾の / は比べない。 */
+const withoutSlash = (pathname: string) => pathname.replace(/(.)\/$/, "$1");
 const sameRoute = (route: string, sitePathname: string | null) =>
-  sitePathname !== null && sitePathname.replace(/(.)\/$/, "$1") === route;
+  sitePathname !== null && withoutSlash(sitePathname) === route;
+
+const hrefsIn = (pages: { route: string; file: string }[]) =>
+  pages.flatMap(({ route, file }) =>
+    [...readFileSync(file, "utf8").matchAll(/\shref=(["'])(.*?)\1/g)].map((m) => ({
+      route,
+      href: unescape(m[2]!),
+    })),
+  );
 
 const showUnreleased = (): boolean => {
   const receipt = JSON.parse(readFileSync(`${DIST}.receipt.json`, "utf8")) as {
@@ -68,12 +79,7 @@ test.describe("ADR-0018「本番に漏らしていないことを、配る前に
       .flatMap(({ text }) =>
         [...text.matchAll(/<loc>([^<]*)<\/loc>/g)].map((m) => unescape(m[1]!.trim())),
       );
-    const hrefs = pages.flatMap(({ route, file }) =>
-      [...readFileSync(file, "utf8").matchAll(/\shref=(["'])(.*?)\1/g)].map((m) => ({
-        route,
-        href: unescape(m[2]!),
-      })),
-    );
+    const hrefs = hrefsIn(pages);
     for (const route of routes) {
       const hit = (url: string, from?: string) => sameRoute(route, sitePath(url, from));
       expect(
@@ -99,6 +105,26 @@ test.describe("ADR-0018「本番に漏らしていないことを、配る前に
         built.some((b) => sameRoute(route, b)),
         `${route} のページ`,
       ).toBe(true);
+    }
+  });
+});
+
+// サイトマップに載らないことは、tests/artifact/sitemap.spec.ts が見る。
+test.describe("ADR-0035「公開の前に、本物の push で確かめる」", () => {
+  test("リンクしないページは dist にあり、ほかのページからリンクされていない", () => {
+    const pages = builtPages();
+    const hrefs = hrefsIn(pages);
+    for (const unlinked of UNLINKED_ROUTES) {
+      const hit = (url: string, from?: string) =>
+        sameRoute(withoutSlash(unlinked), sitePath(url, from));
+      expect(
+        pages.some((page) => hit(page.route)),
+        `${unlinked} のページ`,
+      ).toBe(true);
+      expect(
+        hrefs.filter(({ route: from, href }) => !hit(from) && hit(href, from)),
+        `${unlinked} へのリンク`,
+      ).toEqual([]);
     }
   });
 });

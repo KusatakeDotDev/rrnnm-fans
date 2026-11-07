@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import type { AstroIntegration, ViteUserConfig } from "astro";
 
+import { UNLINKED_ROUTES } from "../data/site-navigation.ts";
 import { isInside, parseShowUnreleased, unreleasedRoute } from "../lib/unreleased.ts";
 
 type VitePlugin = Extract<NonNullable<ViteUserConfig["plugins"]>[number], { name: string }>;
@@ -48,6 +49,11 @@ export default function unreleased(): AstroIntegration {
           return pattern === null ? [] : [{ pattern, entrypoint: path.join(dir, file) }];
         });
         // 同じ判定とルート一覧をAstro側のリンク選択へ渡す。Reactは選択済みpropsだけを受け取る。
+        // リンクしないページも、オンでもオフでも同じ判定で外す。隠すルートは unreleasedRoute が返す形（末尾の / なし）にそろえる。
+        const hidden = [
+          ...(show ? [] : pages.map((page) => page.pattern)),
+          ...UNLINKED_ROUTES.map((route) => route.replace(/(.)\/$/, "$1")),
+        ];
         const moduleId = "virtual:site-routes";
         updateConfig({
           vite: {
@@ -60,7 +66,7 @@ export default function unreleased(): AstroIntegration {
                 load(id) {
                   if (id !== `\0${moduleId}`) return null;
                   return `import { isRouteVisible as visible } from ${JSON.stringify(LIB)};
-              const hidden = ${JSON.stringify(show ? [] : pages.map((page) => page.pattern))};
+              const hidden = ${JSON.stringify(hidden)};
               export function isRouteVisible(href) { return visible(href, hidden); }`;
                 },
               },
