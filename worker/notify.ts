@@ -79,6 +79,11 @@ export const PAGE_SIZE = 100;
 export const SEND_STEP: WorkflowStepConfig = { retries: { limit: 0, delay: 0 } };
 /** push のサービスが答えない宛先を待つ上限（ミリ秒）。1つの宛先のために、同じページのほかの宛先を待たせ続けないため。 */
 export const PUSH_TIMEOUT_MS = 10_000;
+/**
+ * 同時に扱う宛先の数。Workers は、1回の実行で応答を待てる接続が fetch と KV を合わせて6つまでで、超えた分は待たされる。
+ * 待たされているあいだに PUSH_TIMEOUT_MS が進み、答えの遅い宛先のせいでほかの宛先が失敗にならないよう、6つずつ扱う。
+ */
+export const PUSH_CONCURRENCY = 6;
 /** 端末が繋がっていないとき、push のサービスに預けておく秒数。今週の予定の知らせなので、1日を越えて届けない。 */
 export const PUSH_TTL_S = 24 * 60 * 60;
 /** 購読の本文の上限（バイト）。ブラウザの外から大きな本文を送り込まれても、読まないため。 */
@@ -256,6 +261,24 @@ async function readPage(kv: NotifyKv, cursor: string): Promise<DeliveryPage> {
   };
 }
 
+/** `items` を、同時に `limit` 件までにして `task` に渡す。結果は `items` の順に並べる。 */
+async function mapLimited<T, R>(
+  items: readonly T[],
+  limit: number,
+  task: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = [];
+  let next = 0;
+  const run = async () => {
+    while (next < items.length) {
+      const index = next++;
+      results[index] = await task(items[index]!);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, run));
+  return results;
+}
+
 /** 1ページの購読に送る。宛先ごとの失敗は、その宛先の中で受け止め、ほかの宛先に広げない。 */
 async function sendPage(
   env: NotifyEnv,
@@ -270,8 +293,10 @@ async function sendPage(
     env.NOTIFY.delete(name).catch((error: unknown) =>
       console.error(`[notify] ${name} を消せなかった`, error),
     );
-  const outcomes = await Promise.all(
-    keys.map(async (name): Promise<keyof PageResult | null> => {
+  const outcomes = await mapLimited(
+    keys,
+    PUSH_CONCURRENCY,
+    async (name): Promise<keyof PageResult | null> => {
       try {
         const { value, metadata } = await env.NOTIFY.getWithMetadata(name);
         // 一覧を読んだあとに、やめた人。
@@ -303,7 +328,7 @@ async function sendPage(
         console.error(`[notify] ${name} に送れなかった`, error);
         return "failed";
       }
-    }),
+    },
   );
   const result: PageResult = { sent: 0, gone: 0, failed: 0 };
   for (const outcome of outcomes) if (outcome) result[outcome]++;

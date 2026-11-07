@@ -14,6 +14,7 @@ import {
   type NotifyEnv,
   type NotifyKv,
   PAGE_SIZE,
+  PUSH_CONCURRENCY,
   PUSH_TTL_S,
   runCron,
   SEND_STEP,
@@ -720,6 +721,37 @@ describe("送る処理（Workflow）", () => {
     await run(net.fetchPush);
     expect(net.pushes.map((push) => push.url).sort()).toEqual([...all].sort());
     expect(subscriptions(store)).toEqual([]);
+  });
+
+  it(`KV の読み出しと送信は、合わせて同時に ${PUSH_CONCURRENCY} 件まで（Workers が応答を待てる接続の数）にして、全員に送る`, async () => {
+    const all = endpoints(PAGE_SIZE);
+    const { env, keys } = await deliveryEnv(subscribed(...all));
+    let inFlight = 0;
+    let peak = 0;
+    const waiting = async <T>(work: () => Promise<T>): Promise<T> => {
+      peak = Math.max(peak, ++inFlight);
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 1));
+        return await work();
+      } finally {
+        inFlight--;
+      }
+    };
+    const kv = env.NOTIFY;
+    const slowEnv: NotifyEnv = {
+      ...env,
+      NOTIFY: { ...kv, getWithMetadata: (key) => waiting(() => kv.getWithMetadata(key)) },
+    };
+    const net = network(noThumbnail);
+    const { step, calls } = fakeStep();
+    await deliver(
+      step,
+      slowEnv,
+      (url, init) => waiting(() => net.fetchPush(url, init)),
+      keys.publicKey,
+    );
+    expect(peak).toBe(PUSH_CONCURRENCY);
+    expect(calls.at(-1)!.result).toEqual({ sent: PAGE_SIZE, gone: 0, failed: 0 });
   });
 
   it("購読が無ければ、送らない", async () => {
