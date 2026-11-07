@@ -448,6 +448,7 @@ describe("Cron", () => {
   });
 });
 
+// TODO(RRNNM-121): @cloudflare/vitest-pool-workers が Vitest 5 に対応したら、本物の Workflows で確かめる。
 /**
  * Workflows のステップの代わり。呼ばれた順に名前と設定を覚え、結果を JSON にして返す（ステップの結果は保存されるので、
  * 保存できる形かも確かめる）。`failing` の名前のステップは、中身を動かさずに落とし、`after` は各ステップのあとに呼ぶ。
