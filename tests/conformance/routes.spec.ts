@@ -6,7 +6,7 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 import sharp from "sharp";
 
 import { OFFICIAL } from "../../src/data/official";
-import { LIST_ROUTES } from "../../src/data/site-navigation";
+import { LIST_ROUTES, UNLINKED_ROUTES } from "../../src/data/site-navigation";
 import { AXE_TAGS, THIRD_PARTY_EMBED } from "../helpers/axe";
 import { DIST, builtRoutes } from "../helpers/dist";
 import { X_EMBED_PAGES, X_EMBEDS, X_HOST } from "../helpers/x-embed";
@@ -508,11 +508,11 @@ for (const route of builtRoutes()) {
     if (onContactPage) {
       // マウスで押したあとは、.focus() で当てたリンクに :focus-visible が当たらないので、フッターのキーボードの検査を先に回す。
       // 期待値を PAGE_LINKS（フッターに渡すリンクを作るもの）から作ると、そこに足し忘れても通る（RRNNM-63）。
-      await test.step("フッターのページへのリンクが、ビルドしたページ（一覧の下の1件ずつのページを除く）と過不足なくそろう", async () => {
+      await test.step("フッターのページへのリンクが、ビルドしたページ（一覧の下の1件ずつのページと、リンクしないページを除く）と過不足なくそろう", async () => {
         const paths = await sitePaths(page.locator("body > footer a[href]"));
         expect.soft(paths.sort()).toEqual(
           builtRoutes()
-            .filter((built) => !LISTED.includes(built))
+            .filter((built) => !LISTED.includes(built) && !UNLINKED_ROUTES.includes(built))
             .sort(),
         );
         // 一覧のページを消しても下のページが外れ続けると、下のページがどこからも辿れないまま通る。

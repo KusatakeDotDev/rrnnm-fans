@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { expect, test } from "@playwright/test";
 
+import { UNLINKED_ROUTES } from "../../src/data/site-navigation";
 import { builtRoutes, DIST } from "../helpers/dist";
 
 /**
@@ -12,7 +13,7 @@ import { builtRoutes, DIST } from "../helpers/dist";
  *   - robots.txt の `Sitemap:` が、dist に実在するファイルを指している。インテグレーションのバージョンアップで
  *     出力の名前が変わると、robots.txt と Search Console に出した URL だけが古くなる
  *   - サイトマップの URL が、ビルドしたページと過不足なく一致する。後から足したページの
- *     載せ忘れも、`filter` などで消したページも拾う
+ *     載せ忘れも、`filter` などで消したページ（わざと消す、リンクしないページを除く）も拾う
  *   - どの URL も、robots.txt の `Sitemap:` と同じオリジン。astro.config.mjs の `site` と public/robots.txt の
  *     片方だけを変えたときに落ちる
  *
@@ -69,8 +70,9 @@ test("robots.txt の Sitemap が指すサイトマップに、ビルドしたペ
     return locs(read(urlsetFile));
   });
 
+  // リンクしないページは、astro.config.mjs の filter で外す。
   const expected = builtRoutes()
-    .filter((route) => !STATUS_CODE_ROUTE.test(route))
+    .filter((route) => !STATUS_CODE_ROUTE.test(route) && !UNLINKED_ROUTES.includes(route))
     .map((route) => new URL(route, origin).href);
   expect(listed.sort()).toEqual(expected.sort());
 });

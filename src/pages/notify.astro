@@ -1,5 +1,6 @@
 ---
 // 配信スケジュールの更新の通知を受け取る設定のページ（ADR-0035 の決定）。入口はトップの今週の配信予定のカードと、フッター。
+// 通知を公開するまでは、どちらも出さない（src/data/site-navigation.ts の UNLINKED_ROUTES）。
 // Service Worker は「通知を受け取る」を押したときだけ登録し、やめたら外す（ADR-0035「Service Worker は、押した人にだけ登録し、
 // push だけを受け持つ」）。購読の API と Service Worker は Worker が返すので、`pnpm dev` では設定できない（`wrangler dev` で見る）。
 //
