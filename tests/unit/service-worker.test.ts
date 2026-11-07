@@ -1,5 +1,8 @@
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { runInNewContext } from "node:vm";
 
+import sharp from "sharp";
 import { describe, expect, it } from "vite-plus/test";
 
 import {
@@ -124,6 +127,7 @@ describe("Service Worker の中身", () => {
         {
           body: NOTIFICATION_BODY,
           icon: "/favicon-192.png",
+          badge: "/badge.png",
           lang: "ja",
           tag: "schedule",
           renotify: true,
@@ -132,8 +136,29 @@ describe("Service Worker の中身", () => {
     ]);
   });
 
-  it("通知の本文で、非公式のサイトからの知らせだと分かる", () => {
-    expect(NOTIFICATION_BODY).toContain("非公式");
+  // 画像が無くても通知は出て、既定のアイコンに替わるだけなので、パスの書き違いに気づけない。
+  it("通知のアイコンとバッジの画像が public/ にあり、バッジは形の外が透けている", async () => {
+    const { calls, dispatch } = install();
+    await dispatch("push", { data: null });
+    const { icon, badge } = calls[0]![2] as { icon: string; badge: string };
+    for (const image of [icon, badge]) {
+      expect(existsSync(new URL(`../../public${image}`, import.meta.url)), image).toBe(true);
+    }
+    const { data } = await sharp(fileURLToPath(new URL(`../../public${badge}`, import.meta.url)))
+      .ensureAlpha()
+      .extractChannel("alpha")
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    // favicon（背景の四角が不透明で、透けているのは角だけ）を渡すと、4% ほどしか透けていない。
+    const transparent = data.filter((alpha) => alpha === 0).length / data.length;
+    expect(transparent, "透明な画素が半分に満たない").toBeGreaterThan(0.5);
+    expect(data.includes(255), "不透明な画素が無い").toBe(true);
+  });
+
+  // 🧚 に ZWJ と ♀ を続けると、ご本人が使う女性の妖精（🧚‍♀️）になり、ご本人が喋っているように読める（src/data/notify.ts）。
+  it("通知の本文の妖精は、ご本人が使う女性の妖精にしない", () => {
+    expect(NOTIFICATION_BODY).toContain("\u{1F9DA}");
+    expect(NOTIFICATION_BODY).not.toContain("\u{1F9DA}‍♀");
   });
 
   it("通知を押したら、通知を閉じ、トップの今週の配信予定を開く", async () => {
