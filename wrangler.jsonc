@@ -24,6 +24,14 @@
   "workflows": [
     { "name": "rrnnm-fans-notify", "binding": "NOTIFY_WORKFLOW", "class_name": "NotifyWorkflow" },
   ],
+  // ダッシュボードで有効にしても、このキーが無いと `wrangler deploy`（＝Release）が切る。このリポジトリの経路で送るのは
+  // `wrangler deploy` だけで、`versions upload`（main・PR のプレビュー）は送らない（wrangler 4.155.0 で確かめた）。
+  "observability": {
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true,
+    },
+  },
   // プレビューURL（`<エイリアスまたはバージョン>-<Worker名>.<subdomain>.workers.dev`）を有効にする。
   // main へのマージはここへ出る（→ docs/OPERATIONS.md §7）。書かないと wrangler は値を送らず、
   // Cloudflare 側の今の値（Worker を作り直したなら Cloudflare の既定）に任される。
