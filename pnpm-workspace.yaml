@@ -41,7 +41,7 @@ catalog:
   # RemoveWhen: コンポーネントのテストを、Vitest のブラウザーモードで回さなくなったとき
   "@vitest/browser-playwright": 5.0.5
 
-  astro: ^7.4.4
+  astro: ^7.4.7
   fast-check: ^4.10.2
 
   # Why: CI のイメージのタグ（ci.yml の container:）と同じバージョンにする（ADR-0013 の決定）
