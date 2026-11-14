@@ -6,7 +6,7 @@ import { expect, test } from "@playwright/test";
 
 import { UNLINKED_ROUTES } from "../../src/data/site-navigation";
 import { unreleasedRoute } from "../../src/lib/unreleased";
-import { builtPages, DIST, distTextFiles } from "../helpers/dist";
+import { builtPages, distTextFiles, showUnreleased } from "../helpers/dist";
 
 /**
  * 配る dist に、src/unreleased/ のページが、ビルドの記録どおりに入っている・入っていないこと。リンクしないページ
@@ -61,14 +61,6 @@ const hrefsIn = (pages: { route: string; file: string }[]) =>
       href: unescape(m[2]!),
     })),
   );
-
-const showUnreleased = (): boolean => {
-  const receipt = JSON.parse(readFileSync(`${DIST}.receipt.json`, "utf8")) as {
-    showUnreleased?: unknown;
-  };
-  expect(typeof receipt.showUnreleased, "ビルドの記録に showUnreleased が無い").toBe("boolean");
-  return receipt.showUnreleased as boolean;
-};
 
 test.describe("ADR-0018「本番に漏らしていないことを、配る前に確かめる」", () => {
   test("オフの dist には、未公開のページも、sitemap の項目も、そこへのリンクも無い", () => {

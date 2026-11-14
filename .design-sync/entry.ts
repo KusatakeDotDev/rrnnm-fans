@@ -30,4 +30,5 @@ export { default as Twitter } from "../src/components/Twitter.tsx";
 export { default as UnknownChip } from "../src/components/UnknownChip.tsx";
 export { default as XPost } from "../src/components/XPost.tsx";
 export { default as YouTubeThumbnail } from "../src/components/YouTubeThumbnail.tsx";
+export { default as ScheduleNotify } from "../src/unreleased/_parts/ScheduleNotify.tsx";
 export { default as SkebWorks } from "../src/unreleased/_parts/SkebWorks.tsx";
