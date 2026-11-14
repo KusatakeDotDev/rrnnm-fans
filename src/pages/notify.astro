@@ -1,8 +1,8 @@
 ---
-// 配信スケジュールの更新の通知を受け取る設定のページ（ADR-0035 の決定）。入口はトップの今週の配信予定のカードと、フッター。
-// 通知を公開するまでは、どちらも出さない（src/data/site-navigation.ts の UNLINKED_ROUTES）。
-// Service Worker は「通知を受け取る」を押したときだけ登録し、やめたら外す（ADR-0035「Service Worker は、押した人にだけ登録し、
-// push だけを受け持つ」）。購読の API と Service Worker は Worker が返すので、`pnpm dev` では設定できない（`wrangler dev` で見る）。
+// 配信スケジュールの更新の通知を受け取る設定のページ（ADR-0035 の決定）。トップの今週の配信予定のカードのスイッチ
+// （src/unreleased/_parts/ScheduleNotify.astro）からも切り替えられ、そこから案内のリンクを張る。フッターにも並べる。
+// 通知を公開するまでは、どちらのリンクも出さない（src/data/site-navigation.ts の UNLINKED_ROUTES）。
+// 購読の確かめ方・始め方・やめ方は、トップのスイッチと同じもの（src/components/notify-subscription.ts）を使う。
 //
 // 文は1行に書く。文字と文字の間で改行すると、日本語の間に空白が1つ入る（about.astro と同じ）。
 import Base from '../layouts/Base.astro';
@@ -29,8 +29,7 @@ import '../styles/subpage.css';
 </Base>
 
 <script>
-  import { SERVICE_WORKER_PATH, SUBSCRIPTIONS_PATH, VAPID_PUBLIC_KEY } from '../data/notify';
-  import { fromBase64url } from '../lib/web-push';
+  import { availability, readStatus, subscribe, unsubscribe, type NotifyStatus } from '../components/notify-subscription';
 
   const button = document.querySelector<HTMLButtonElement>('[data-notify-toggle]')!;
   const status = document.querySelector<HTMLElement>('[data-notify-status]')!;
@@ -44,83 +43,23 @@ import '../styles/subpage.css';
   };
 
   let subscribed = false;
-  const show = (on: boolean, message = on ? MESSAGE.on : '') => {
-    subscribed = on;
-    button.textContent = on ? '通知をやめる' : '通知を受け取る';
+  const show = (next: NotifyStatus) => {
+    subscribed = next === 'on';
+    button.textContent = subscribed ? '通知をやめる' : '通知を受け取る';
     button.hidden = false;
-    status.textContent = message;
+    // 聞く画面を閉じただけ（off）なら、もう一度押せば聞き直せるので、設定を変えるようには言わない。
+    status.textContent = next === 'on' ? MESSAGE.on : next === 'denied' ? MESSAGE.denied : '';
   };
 
-  const send = async (method: 'POST' | 'DELETE', endpoint: string) => {
-    const response = await fetch(SUBSCRIPTIONS_PATH, {
-      method,
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ endpoint }),
-    });
-    if (!response.ok) throw new Error(`${method} ${response.status}`);
-  };
-
-  const registration = () => navigator.serviceWorker.getRegistration();
-
-  const subscribe = async () => {
-    // iOS は、押した操作の中でしか許可を求めさせないので、ほかの処理より先に呼ぶ。
-    const permission = await Notification.requestPermission();
-    // 聞く画面を閉じただけ（default）なら、もう一度押せば聞き直せるので、設定を変えるようには言わない。
-    if (permission !== 'granted') return show(false, permission === 'denied' ? MESSAGE.denied : '');
-    const registered = await navigator.serviceWorker.register(SERVICE_WORKER_PATH);
-    let subscription: PushSubscription | undefined;
-    try {
-      const ready = await navigator.serviceWorker.ready;
-      subscription = await ready.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: fromBase64url(VAPID_PUBLIC_KEY),
-      });
-      await send('POST', subscription.endpoint);
-    } catch (error) {
-      // 宛先を覚えてもらえないまま、購読と Service Worker を残さない。届かないのに「受け取る設定」に見え、
-      // 押していないのと同じ人の端末に、Service Worker が残るため（ADR-0035「押した人にだけ登録し」）。
-      await subscription?.unsubscribe();
-      await registered.unregister();
-      throw error;
-    }
-    show(true);
-  };
-
-  const unsubscribe = async () => {
-    const current = await registration();
-    const subscription = await current?.pushManager.getSubscription();
-    // 先に Worker から消す。消せなかったら購読を残し、届き続けるのに「やめた」に見えないようにする。
-    if (subscription) await send('DELETE', subscription.endpoint);
-    await subscription?.unsubscribe();
-    await current?.unregister();
-    show(false);
-  };
-
-  const supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
-  // iPadOS の Safari は、パソコンの Mac と名乗るので、触れる画面かどうかで見分ける。
-  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
-
-  // iOS では、ホーム画面に追加したアプリでしか購読できない（Apple の資料「Sending web push notifications in web apps and
-  // browsers」）。Safari のタブに通知の API があっても購読を試させないよう、API があるかより先に分ける。
-  if (ios && !matchMedia('(display-mode: standalone)').matches) {
-    status.textContent = MESSAGE.ios;
-  } else if (!supported) {
-    status.textContent = MESSAGE.unsupported;
+  const available = availability();
+  if (available !== 'available') {
+    status.textContent = MESSAGE[available];
   } else {
-    registration()
-      .then((current) => current?.pushManager.getSubscription())
-      .then(
-        (subscription) => {
-          // 購読が残っていても、通知が許可されていなければ届かないので、「受け取る設定」とは言わない。
-          const on = Boolean(subscription) && Notification.permission === 'granted';
-          show(on, on ? MESSAGE.on : Notification.permission === 'denied' ? MESSAGE.denied : '');
-        },
-        () => show(false),
-      );
+    readStatus().then(show, () => show('off'));
     button.addEventListener('click', () => {
       button.disabled = true;
       (subscribed ? unsubscribe() : subscribe())
-        .catch(() => (status.textContent = MESSAGE.failed))
+        .then(show, () => (status.textContent = MESSAGE.failed))
         .finally(() => (button.disabled = false));
     });
   }
