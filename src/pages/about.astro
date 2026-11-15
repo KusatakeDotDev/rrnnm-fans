@@ -9,6 +9,8 @@
 //     **3Dモデルのクレジットと同じ節にしない。** ご本人の画像を、買った素材と同じ「借りている素材」に見せない。
 //     「ご本人の画像・映像・音声は転載しない」は書かない。サイトの上で約束しなくても、やらないことは
 //     CONCEPT §5 が決めている。
+//     **「収益化していない」も書かない。** 収益なしで続けられるかは活動の形によるので、ほかのファン活動を測る
+//     物差しに見せない（CONCEPT §1「サイトの立ち位置」）。
 //     アクセス解析の文は ADR-0001「アクセス解析 — Cloudflare Web Analytics」が根拠。Web Analytics は Cloudflare の
 //     ダッシュボードで入れるもので、リポジトリにもビルドの出力にも現れない。設定と文が合っているかは、公開前
 //     （CONCEPT §7）と公開後の定期確認（docs/OPERATIONS.md §6）で人が見る。止めたらこの文も消す。
@@ -77,11 +79,10 @@ import '../styles/subpage.css';
   <div class="subpage-paper on-paper">
     <section aria-labelledby="policy">
       <h2 id="policy">運営方針</h2>
-      <p>瑠璃野ねもさんを知るきっかけや、ご本人の活動への橋渡しになることを目指して、個人で運営しております。</p>
+      <p>瑠璃野ねもさんを知るきっかけと、ご本人の活動への橋渡しを目指して、個人で運営しております。</p>
       <ul>
-        <li>動画・再生リストへのリンクカードと、ミニゲーム「配信をとじろ！」の配信のウィンドウに限り、YouTube が oEmbed で提供しているサムネイル画像を、一部は高画質版に替えて表示しております。画像は当サイトに置かず、YouTube から直接読み込んでおります。</li>
+        <li>動画・再生リストへのリンクカードと、ミニゲーム「配信をとじろ！」の配信のウィンドウに限り、YouTube が oEmbed で提供しているサムネイル画像を、当サイトに置かず YouTube から直接読み込み、一部は高画質版に替えて表示しております。</li>
         <BoothImagePolicy />
-        <li>広告やアフィリエイト等の収益化は一切行っておりません。</li>
         <li>アクセス解析には、Cookie を使わない Cloudflare Web Analytics を利用しております。</li>
       </ul>
     </section>
@@ -99,7 +100,7 @@ import '../styles/subpage.css';
 
     <section aria-labelledby="ideas">
       <h2 id="ideas">ご提案</h2>
-      <p>こんなページがほしい、ここが見づらい、といったことは、<a href={IDEAS} target="_blank" rel="noopener noreferrer">GitHub の提案窓口<span class="sr-only">（外部サイトを新しいタブで開く）</span></a>にお寄せください。投稿は誰でも見られます。削除・訂正のご依頼は、下の<a href="#contact">お問い合わせ</a>へお願いいたします。</p>
+      <p>「こんなページがほしい」「ここが見づらい」といったご提案は、<a href={IDEAS} target="_blank" rel="noopener noreferrer">GitHub の提案窓口<span class="sr-only">（外部サイトを新しいタブで開く）</span></a>へお寄せください。投稿は誰でも見られます。削除・訂正のご依頼は、下の<a href="#contact">お問い合わせ</a>へお願いいたします。</p>
     </section>
 
     <section aria-labelledby="contact">
