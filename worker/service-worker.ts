@@ -15,7 +15,7 @@ import { NOTIFICATION_BODY, NOTIFICATION_TITLE, NOTIFICATION_URL } from "../src/
  *   付けないと置き換えが音も振動も無く行われ、同じ文なので、新しく更新されたことに気づけないため
  * - `badge`（Android のステータスバーに出る）は、画像の形（アルファ）だけが使われ、1色で塗られる。favicon は背景の四角ごと
  *   塗られて四角になるので、四角を抜き、花がほかの形とつながらないよう周りを空けたもの（public/badge.png）を渡す
- * - `fetch` は受けない。ページの配り方を変えないため。スコープはサイト全体（SERVICE_WORKER_PATH）なので、足すと全ページに効く
+ * - `fetch` は受けない。ページの配り方を変えないため（スコープにはページを置かない。SERVICE_WORKER_SCOPE）
  * - 新しいバージョンは、待たずに入れ替える（skipWaiting）。ページのリクエストを受けないので、入れ替えても開いているページは変わらない
  */
 export const SERVICE_WORKER_SOURCE = `

@@ -6,7 +6,12 @@
  * Service Worker は購読を始めたときだけ登録し、やめたら外す（ADR-0035「Service Worker は、押した人にだけ登録し、
  * push だけを受け持つ」）。開いただけでは `getRegistration()` で確かめるだけにする。
  */
-import { SERVICE_WORKER_PATH, SUBSCRIPTIONS_PATH, VAPID_PUBLIC_KEY } from "../data/notify";
+import {
+  SERVICE_WORKER_PATH,
+  SERVICE_WORKER_SCOPE,
+  SUBSCRIPTIONS_PATH,
+  VAPID_PUBLIC_KEY,
+} from "../data/notify";
 import { isAppleMobile, notifyAvailability, subscriptionStatus } from "../lib/notify-status";
 import { fromBase64url } from "../lib/web-push";
 
@@ -23,7 +28,7 @@ export function availability(): ReturnType<typeof notifyAvailability> {
 }
 
 export async function readStatus(): Promise<NotifyStatus> {
-  const registration = await navigator.serviceWorker.getRegistration();
+  const registration = await navigator.serviceWorker.getRegistration(SERVICE_WORKER_SCOPE);
   const subscription = await registration?.pushManager.getSubscription();
   return subscriptionStatus(Boolean(subscription), Notification.permission);
 }
@@ -56,7 +61,9 @@ export async function subscribe(): Promise<NotifyStatus> {
   // iOS は、押した操作の中でしか許可を求めさせないので、ほかの処理より先に呼ぶ。
   const permission = await Notification.requestPermission();
   if (permission !== "granted") return subscriptionStatus(false, permission);
-  const registered = await navigator.serviceWorker.register(SERVICE_WORKER_PATH);
+  const registered = await navigator.serviceWorker.register(SERVICE_WORKER_PATH, {
+    scope: SERVICE_WORKER_SCOPE,
+  });
   let subscription: PushSubscription | undefined;
   try {
     const active = await activated(registered);
@@ -76,7 +83,7 @@ export async function subscribe(): Promise<NotifyStatus> {
 }
 
 export async function unsubscribe(): Promise<NotifyStatus> {
-  const registration = await navigator.serviceWorker.getRegistration();
+  const registration = await navigator.serviceWorker.getRegistration(SERVICE_WORKER_SCOPE);
   const subscription = await registration?.pushManager.getSubscription();
   // 先に Worker から消す。消せなかったら購読を残し、届き続けるのに「やめた」に見えないようにする。
   if (subscription) await send("DELETE", subscription.endpoint);

@@ -10,6 +10,7 @@ import {
   NOTIFICATION_TITLE,
   NOTIFICATION_URL,
   SERVICE_WORKER_PATH,
+  SERVICE_WORKER_SCOPE,
 } from "../../src/data/notify";
 import { type Env, handle } from "../../worker/index";
 import { SERVICE_WORKER_SOURCE } from "../../worker/service-worker";
@@ -17,7 +18,7 @@ import { SERVICE_WORKER_SOURCE } from "../../worker/service-worker";
 /**
  * worker/service-worker.ts — 配信スケジュールの更新の通知を受ける Service Worker（docs/adr/0035-schedule-push-notifications.md）。
  * 壊れると「push を受けても通知を出さない（Safari が許可を取り消す）」「通知を押しても今週の配信予定が開かない」
- * 「ページのリクエストを横取りする」「受け取っているのに、トップのスイッチが OFF に見える」の形で出る。
+ * 「ページのリクエストを横取りする」「受け取っている人がページを開くたびに、Service Worker を取り直させる」の形で出る。
  */
 
 const ORIGIN = "https://rrnnm.fans";
@@ -51,8 +52,12 @@ describe("Service Worker を返す", () => {
     expect(await response.text()).toBe(SERVICE_WORKER_SOURCE);
   });
 
-  it("ルートに置き、既定のスコープをサイト全体にする（トップのページから、引数の無い getRegistration() で引くため）", () => {
-    expect(new URL("./", `${ORIGIN}${SERVICE_WORKER_PATH}`).pathname).toBe("/");
+  it("置いたディレクトリが、そのままスコープになる（登録で渡すスコープと、既定のスコープが同じ）", () => {
+    expect(new URL("./", `${ORIGIN}${SERVICE_WORKER_PATH}`).pathname).toBe(SERVICE_WORKER_SCOPE);
+  });
+
+  it("スコープはサイト全体にしない（スコープの中のページを開くたびに、ブラウザが取り直すため）", () => {
+    expect(SERVICE_WORKER_SCOPE).not.toBe("/");
   });
 
   it("GET・HEAD 以外は 405", async () => {
