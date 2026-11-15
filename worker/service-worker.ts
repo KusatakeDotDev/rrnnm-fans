@@ -1,10 +1,9 @@
 /**
  * 配信スケジュールの更新の通知を受ける Service Worker（ADR-0035「Service Worker は、押した人にだけ登録し、push だけを受け持つ」）。
- * 設定のページ（`/notify/`）で「通知を受け取る」を押したときだけ登録される。
+ * トップの今週の配信予定のカードのスイッチで、通知を受け取るにしたときだけ登録される。
  *
  * **Worker が、決まったパス（SERVICE_WORKER_PATH）で返す。** ビルドが名前にフィンガープリントを付けると、Release のたびに
- * パスが変わり、ブラウザが登録したパスを取り直すと 404 になる。静的なファイル（`public/`）に置くと、設定のページが
- * 無いビルドでも配られる（ADR-0018）。中身を文字列で持つのは、ScheduleCard.tsx の LOAD_THUMBNAIL と同じく、ブラウザで
+ * パスが変わり、ブラウザが登録したパスを取り直すと 404 になる。中身を文字列で持つのは、ScheduleCard.tsx の LOAD_THUMBNAIL と同じく、ブラウザで
  * そのまま動かすため（Worker のバンドルは、関数の中に名前を残すための呼び出しを差し込む）。
  */
 import { NOTIFICATION_BODY, NOTIFICATION_TITLE, NOTIFICATION_URL } from "../src/data/notify";

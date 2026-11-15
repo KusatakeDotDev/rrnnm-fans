@@ -2,10 +2,10 @@ import type { WorkflowStep, WorkflowStepConfig } from "cloudflare:workers";
 import { createHash, webcrypto } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
-import { NOTIFY_PAGE, SUBSCRIPTIONS_PATH, VAPID_SUBJECT } from "../../src/data/notify";
+import { SUBSCRIPTIONS_PATH, VAPID_SUBJECT } from "../../src/data/notify";
 import { HQ_URL } from "../../src/data/schedule";
 import { base64url, fromBase64url } from "../../src/lib/web-push";
-import { handle } from "../../worker/index";
+import { type Env, handle } from "../../worker/index";
 import {
   DELIVERY_RETENTION,
   deliver,
@@ -24,8 +24,7 @@ import {
 
 /**
  * worker/notify.ts — 配信スケジュールの更新の通知の、購読の受け付けと、Cron と、送る処理の Workflow の中身
- * （docs/adr/0035-schedule-push-notifications.md）。壊れると「設定のページを出す前に購読を受け付ける」「ほかのサイトから購読を
- * 足される」「差し替わっても送らない／差し替わっていないのに送る」「同じ画像に戻ったときに送り直す」「1人の失敗で、ほかの人に
+ * （docs/adr/0035-schedule-push-notifications.md）。壊れると「ほかのサイトから購読を足される」「差し替わっても送らない／差し替わっていないのに送る」「同じ画像に戻ったときに送り直す」「1人の失敗で、ほかの人に
  * 届かない」「同じ人に二重に送る」「やめた人に送り続ける」「push のサービスが署名を受け付けない」の形で出る。
  */
 
@@ -85,17 +84,15 @@ const subscribed = (...endpoints: string[]) =>
 const sha256 = (text: string) => createHash("sha256").update(text).digest("hex");
 
 /** 静的なファイル。`pages` にあるパスは 200、ほかは 404。 */
-function assets(pages: readonly string[]) {
+/** 静的なファイルの代わり。どのパスも 404 にし、読んだパスを残す。 */
+function assets() {
   const requested: string[] = [];
   return {
     requested,
     ASSETS: {
       fetch: async (input: Request | string) => {
-        const url = new URL(typeof input === "string" ? input : input.url);
-        requested.push(url.pathname);
-        return pages.includes(url.pathname)
-          ? new Response("page", { status: 200 })
-          : new Response("not found", { status: 404 });
+        requested.push(new URL(typeof input === "string" ? input : input.url).pathname);
+        return new Response("not found", { status: 404 });
       },
     },
   };
@@ -148,10 +145,10 @@ const subscribe = (method: string, body: unknown, headers: Record<string, string
 };
 
 describe("購読の受け付け", () => {
-  const env = (pages: readonly string[] = [NOTIFY_PAGE]) => {
+  const env = () => {
     const { kv, store, ops } = memoryKv();
-    const { ASSETS, requested } = assets(pages);
-    return { env: { ASSETS, NOTIFY: kv } as NotifyEnv, store, ops, requested };
+    const { ASSETS, requested } = assets();
+    return { env: { ASSETS, NOTIFY: kv } as Env, store, ops, requested };
   };
 
   it("宛先の URL は整えてから置く（足すときと消すときで、同じキーになる）", async () => {
@@ -190,12 +187,10 @@ describe("購読の受け付け", () => {
     expect([...store.keys()]).toEqual([subscriptionKey(FCM)]);
   });
 
-  it("設定のページが無いビルド（未公開のあいだの本番）では受け付けず、静的なファイルの応答にする", async () => {
-    const { env: e, ops, requested } = env([]);
-    const response = await handle(subscribe("POST", { endpoint: APPLE }), e);
-    expect(response.status).toBe(404);
-    expect(requested).toEqual([NOTIFY_PAGE, SUBSCRIPTIONS_PATH]);
-    expect(ops).toEqual([]);
+  it("どのビルドでも受け付け、静的なファイルを見ない", async () => {
+    const { env: e, requested } = env();
+    expect((await handle(subscribe("POST", { endpoint: APPLE }), e)).status).toBe(204);
+    expect(requested).toEqual([]);
   });
 
   it("ほかのオリジンからのリクエストは、403 にして書かない", async () => {
@@ -292,7 +287,6 @@ describe("Cron", () => {
     const { kv, store, ops } = memoryKv(initial);
     const { workflow, created } = memoryWorkflow(ops, existing);
     const env: NotifyEnv = {
-      ...assets([]),
       NOTIFY: kv,
       NOTIFY_WORKFLOW: workflow,
       VAPID_PRIVATE_KEY: "key",
@@ -485,7 +479,6 @@ describe("送る処理（Workflow）", () => {
     const keys = await keyPair();
     const { kv, store, ops } = memoryKv(initial);
     const env: NotifyEnv = {
-      ...assets([]),
       NOTIFY: kv,
       NOTIFY_WORKFLOW: memoryWorkflow([]).workflow,
       VAPID_PRIVATE_KEY: keys.privateKey,

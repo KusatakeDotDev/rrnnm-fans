@@ -1,19 +1,18 @@
 ---
 /**
  * ScheduleNotify.tsx のラッパー。**見た目は .tsx、振る舞いはここ**（docs/adr/0011-react-components-for-design-sync.md「スクリプトの扱い」）。
- * 購読の確かめ方・始め方・やめ方は、設定のページ（src/pages/notify.astro）と同じもの（src/components/notify-subscription.ts）を使う。
+ * 購読の確かめ方・始め方・やめ方は、src/components/notify-subscription.ts にある。
  */
 import ScheduleNotify from './ScheduleNotify.tsx';
 
 interface Props {
   className?: string;
-  helpHref?: string;
 }
 
-const { className, helpHref } = Astro.props;
+const { className } = Astro.props;
 ---
 
-<ScheduleNotify className={className} helpHref={helpHref} />
+<ScheduleNotify className={className} />
 
 <script>
   import { availability, readStatus, subscribe, unsubscribe } from '../../components/notify-subscription';
@@ -40,7 +39,7 @@ const { className, helpHref } = Astro.props;
     }
     const sync = () => readStatus().then(show, () => show('off'));
     sync();
-    // 設定のページで切り替えてから戻ったとき、bfcache から出たスイッチが前の位置のままにならないように。
+    // ほかのタブで切り替えてから戻ったとき、bfcache から出たスイッチが前の位置のままにならないように。
     addEventListener('pageshow', (event) => event.persisted && sync());
 
     toggle.addEventListener('click', () => {

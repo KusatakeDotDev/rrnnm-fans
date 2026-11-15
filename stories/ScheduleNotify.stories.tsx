@@ -50,15 +50,15 @@ export const Failed: Story = {
   ),
 };
 
-// 押せないとき。公開したあとは、案内を設定のページへのリンクにする（helpHref）。
+// 押せないとき。理由をスイッチの下に1行で出す。
 export const Unavailable: Story = {
   render: () => (
     <div className="on-ground" style={{ ...frame, display: "grid", gap: "1.5rem" }}>
       <Card>
-        <ScheduleNotify state="denied" helpHref="#" />
+        <ScheduleNotify state="denied" />
       </Card>
       <Card>
-        <ScheduleNotify state="ios" helpHref="#" />
+        <ScheduleNotify state="ios" />
       </Card>
       <Card>
         <ScheduleNotify state="unsupported" />

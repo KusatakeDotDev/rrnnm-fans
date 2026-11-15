@@ -25,8 +25,6 @@ interface ScheduleNotifyProps extends Omit<
   state?: "loading" | "off" | "pending" | "on" | "denied" | "ios" | "unsupported";
   /** 切り替えられなかったことを、スイッチの下に出す。スイッチは、そのときの本当の位置で描く。 */
   failed?: boolean;
-  /** 解除のしかたと、ホーム画面への追加のしかたを書いたページ。渡さなければ、リンクにせず文だけを出す。 */
-  helpHref?: string;
 }
 
 const UNAVAILABLE = new Set(["denied", "ios", "unsupported"]);
@@ -34,7 +32,6 @@ const UNAVAILABLE = new Set(["denied", "ios", "unsupported"]);
 export default function ScheduleNotify({
   state = "loading",
   failed = false,
-  helpHref,
   className,
   ...rest
 }: ScheduleNotifyProps) {
@@ -92,21 +89,10 @@ export default function ScheduleNotify({
           <span className={styles.phrase}>もう一度お試しください</span>
         </span>
         <span data-when="denied">
-          <span className={styles.phrase}>通知がブロックされています。</span>
-          {/* 手引きが無いときは出さない。文だけでは、どこにも書いていない手順を指してしまう。 */}
-          {helpHref && (
-            <a className={styles.phrase} href={helpHref}>
-              解除のしかた
-            </a>
-          )}
+          <span className={styles.phrase}>ブラウザの設定で</span>
+          <span className={styles.phrase}>通知がブロックされています</span>
         </span>
-        <span data-when="ios">
-          {helpHref ? (
-            <a href={helpHref}>ホーム画面に追加すると通知できます</a>
-          ) : (
-            "ホーム画面に追加すると通知できます"
-          )}
-        </span>
+        <span data-when="ios">ホーム画面に追加すると通知できます</span>
         <span data-when="unsupported">このブラウザでは通知を受け取れません</span>
       </p>
     </div>

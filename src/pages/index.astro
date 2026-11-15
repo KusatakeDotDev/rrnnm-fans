@@ -12,12 +12,10 @@ import NemophilaField from '../components/NemophilaField.astro';
 import PlaylistGrid from '../components/PlaylistGrid.astro';
 import ScheduleCard from '../components/ScheduleCard.astro';
 import { preloadThumbnailScript } from '../components/ScheduleCard.tsx';
-import { NOTIFY_PAGE } from '../data/notify';
 import { getSchedule } from '../data/schedule-oembed';
 import StickerHeading from '../components/StickerHeading.tsx';
 import Base from '../layouts/Base.astro';
 import ScheduleNotify from '../unreleased/_parts/ScheduleNotify.astro';
-import { isRouteVisible } from 'virtual:site-routes';
 
 // 予定のカード（ScheduleCard.astro）と同じ取得。ビルドの中で1回しか取りに行かない（schedule-oembed.ts）。
 const schedule = await getSchedule();
@@ -55,11 +53,8 @@ const schedule = await getSchedule();
     <span class="tape" aria-hidden="true"></span>
     <Card headingOverlap className="schedule-sticker">
       <ScheduleCard />
-      {/* 更新の通知の切り替え（ADR-0035）。手引きのページは、リンクしないあいだは文だけにする（UNLINKED_ROUTES）。 */}
-      <ScheduleNotify
-        className="schedule-notify"
-        helpHref={isRouteVisible(NOTIFY_PAGE) ? NOTIFY_PAGE : undefined}
-      />
+      {/* 更新の通知の切り替え（ADR-0035）。 */}
+      <ScheduleNotify className="schedule-notify" />
     </Card>
   </section>
 

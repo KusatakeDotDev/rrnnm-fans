@@ -1,7 +1,6 @@
 /**
  * 配信スケジュールの更新の通知の購読を、確かめる・始める・やめる（ADR-0035 の決定）。トップのスイッチ
- * （src/unreleased/_parts/ScheduleNotify.astro）と、設定のページ（src/pages/notify.astro）のスクリプトが使う。
- * ブラウザの API と fetch に触るので、src/lib には置かない。
+ * （src/unreleased/_parts/ScheduleNotify.astro）のスクリプトが使う。ブラウザの API と fetch に触るので、src/lib には置かない。
  *
  * 購読の API と Service Worker は Worker が返すので、`pnpm dev` では設定できない（`wrangler dev` で見る）。
  * Service Worker は購読を始めたときだけ登録し、やめたら外す（ADR-0035「Service Worker は、押した人にだけ登録し、

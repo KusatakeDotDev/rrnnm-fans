@@ -3,15 +3,12 @@
  * 同じ値を読むもの。
  */
 
-/** 通知を受け取る設定をするページ。Worker は、このページがあるビルドでだけ購読を受け付ける（ADR-0035 の決定）。 */
-export const NOTIFY_PAGE = "/notify/";
-
 /** 購読を足す（POST）・消す（DELETE）パス。本文は `{ "endpoint": "<宛先の URL>" }`。 */
-export const SUBSCRIPTIONS_PATH = "/notify/subscriptions";
+export const SUBSCRIPTIONS_PATH = "/push/subscriptions";
 
 /**
- * Service Worker のパス。Worker が返す（worker/service-worker.ts）。ルートに置いてスコープをサイト全体にし、どのページからも
- * `navigator.serviceWorker.ready` で購読を切り替えられるようにする（ADR-0035「Service Worker は、押した人にだけ登録し、push だけを受け持つ」）。
+ * Service Worker のパス。Worker が返す（worker/service-worker.ts）。ルートに置き、スコープをサイト全体にする
+ * （ADR-0035「Service Worker は、押した人にだけ登録し、push だけを受け持つ」）。
  */
 export const SERVICE_WORKER_PATH = "/sw.js";
 

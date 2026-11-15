@@ -1,7 +1,6 @@
 /**
  * 配信スケジュールの更新の通知を、この端末で受け取れるか・受け取っているかの判断（ADR-0035 の決定）。
- * ブラウザから読んだ値を受け取るだけにし、トップのスイッチと設定のページ（src/components/notify-subscription.ts を
- * 通して）が同じ判断を使う。
+ * ブラウザから読んだ値を受け取るだけにし、src/components/notify-subscription.ts が使う。
  */
 
 /** `Notification.permission` の値。DOM の型に頼らず、ここで書く。 */
