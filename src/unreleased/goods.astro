@@ -115,7 +115,7 @@ const eager = new Set(groups.flatMap((group) => group.items).slice(0, 2));
 
     /* カードの並び。広い画面では紙の中に3つ、390px のスマートフォンでは2つ入る幅。
        行頭の点は消す。list-style: none の ul は Safari と VoiceOver でリストとして読まれなくなるので、
-       role="list" で戻す（about.astro の ul は文の箇条なので、点を残している）。 */
+       role="list" で戻す。 */
     .goods {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
