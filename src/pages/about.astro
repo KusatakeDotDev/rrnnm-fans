@@ -2,19 +2,23 @@
 // このサイトについて（docs/DESIGN.md のサイト構成の /about）。入口は全ページのフッター（SiteFooter.tsx）。
 // 見た目は下層ページの形（docs/DESIGN.md §3「レイアウト方針」）。
 //
-// 並びは、何のサイトか → 借りている素材 → 提案 → 連絡先。
+// 並びは、何のサイトか → 借りている素材 → 関連サイト → 提案 → 連絡先。
 //   - 運営方針。**方針は docs/CONCEPT.md、技術の決定は docs/adr/ に書いてあることだけを書く**（足すなら先にそちらに書く）。
-//     最初の文と、ご本人の収益に触れないことは CONCEPT §1「サイトの立ち位置」。サムネイル画像の扱いは CONCEPT §3 が
-//     ここに書くよう求めている。
-//     **3Dモデルのクレジットと同じ節にしない。** ご本人の画像を、買った素材と同じ「借りている素材」に見せない。
+//     最初の文と、ご本人の収益に触れないことは CONCEPT §1「サイトの立ち位置」。
+//     **サムネイルと BOOTH の商品の画像の出どころは書かない。** 画像を出している場所のレイアウトと出典の行が
+//     伝えている（CONCEPT §3）。
 //     「ご本人の画像・映像・音声は転載しない」は書かない。サイトの上で約束しなくても、やらないことは
 //     CONCEPT §5 が決めている。
+//     **「収益化していない」も書かない。** 収益なしで続けられるかは活動の形によるので、ほかのファン活動を測る
+//     物差しに見せない（CONCEPT §1「サイトの立ち位置」）。
 //     アクセス解析の文は ADR-0001「アクセス解析 — Cloudflare Web Analytics」が根拠。Web Analytics は Cloudflare の
 //     ダッシュボードで入れるもので、リポジトリにもビルドの出力にも現れない。設定と文が合っているかは、公開前
 //     （CONCEPT §7）と公開後の定期確認（docs/OPERATIONS.md §6）で人が見る。止めたらこの文も消す。
 //     **Cookie は「解析には使わない」とだけ書き、「当サイトは Cookie を使わない」とは書かない。** Cloudflare の
 //     ボット対策などはダッシュボードの設定で Cookie を付けることがあり、リポジトリからは確かめられない
 //   - クレジットの条件は CONCEPT §3 と ADR-0009「花の3Dモデル」を参照。
+//   - 関連サイト。載せるものと書き方は CONCEPT §4「関連サイト」。**クレジットと同じ節にしない。** 借りている素材ではないため。
+//     相手のサイトの紹介文は書き写さず、何ができるかを当サイトの文で1文にする
 //   - ご提案。削除・訂正の窓口と節を分ける（CONCEPT §2）。フッターの「お問い合わせ」から飛んできた人が最初に読む文は、
 //     削除・訂正の窓口のままにする。
 //     節の中には、投稿が誰でも見られることと、削除・訂正はお問い合わせへ、の2文を置く。削除の依頼が、誰でも見られる
@@ -33,35 +37,10 @@
 // docs/CONCEPT.md §2 と同じ。h1 とリンクの「このサイトについて」はページの名前なのでそのまま）。
 // 「〜ています」は「〜ております」にする。
 //
-// サムネイルの文の言い回しには理由がある。
-//   - **「公式チャンネルの画像」とは書かない。** 再生リストの表紙は先頭の動画のもので、コラボの再生リストなら
-//     ほかのチャンネルの動画のこともある（ADR-0008「サムネイル表示の可否」の「表紙を選べないこと」）
-//   - **「規約で認められている」「適切に」とは書かない。** YouTube 利用規約（日本語版。2026-10-06 に読んだ）の
-//     「他のユーザーへのライセンス付与」が認めているのは「（動画の再生や埋め込みなど）本サービスの機能によってのみ
-//     可能な方法で」の利用で、サムネイルを外で出すことを明示した文は無い。ADR-0004・0008 は、この使い方を
-//     条件付きの例外にしている（CONCEPT §3）。書くのは事実だけ — YouTube が
-//     提供している画像を、リンクカードに限り、置かずに読み込んでいる
-//   - **oEmbed は言い換えない。** 足すなら、何に使う仕組みかは言わない。「リンク表示用」「埋め込み表示用」は、
-//     上の「規約で認められている」に近づく
-//   - **「oEmbed で提供している」と書けるのは、どちらも oEmbed の thumbnail_url から始まるから。** 再生リストの表紙は
-//     thumbnail_url そのもの（PlaylistGrid.astro）。予定のカードは thumbnail_url を受けたうえで、同じ動画の
-//     maxresdefault.jpg があればそちらに替える（schedule-oembed.ts。oEmbed が取れなければ画像は出さない）。
-//     ふつうは maxresdefault.jpg が出るので「一部は高画質版に替えて」とまで言う。これを消すと、予定のカードについては言い過ぎになる
-//   - 「リンクカード」「配信のウィンドウに限り」は、画像を出すのがリンクの中だけだから（ADR-0004「サムネイル表示の可否についての判断」の2、
-//     ADR-0008「例外の縛り方 — 成果物ではなく、スクリプトと純関数で」）
-//   - **ミニゲームだけは名前で書く。** 配信のウィンドウ（src/pages/play/alt-f4.astro）は、ウィンドウの中のリンクに画像を出し、
-//     カードの形ではないため。CONCEPT §3 は、サムネイルの3つの例外を、どれもここにまとめて書くよう求めている
-//   - **「トップの」と場所を書かない。** 今サムネイルがあるのはトップだけだが、ほかのページでも使うことが
-//     ありうる。場所の代わりに条件を書き、条件を守る限り正しいままにする。**サムネイルを出す場所を増やすときは、
-//     上の3点（oEmbed の thumbnail_url から始める・リンクの中だけ・置かずに読み込む）を満たすか確かめる。**
-//     満たさないなら、この文を直す。どのみち例外を広げる判断（CONCEPT §5。ADR-0008 のように ADR を書く）が先に要り、
-//     そこで CONCEPT §3 がここを指す
-//
 // 文は1行に書く。文字と文字の間で改行すると、日本語の間に空白が1つ入る（タグの直前・直後の改行は消える。
 // ビルドの出力で確かめた）。
 import { CONTACT, CONTACT_HANDLE, IDEAS } from '../data/contact';
 import Base from '../layouts/Base.astro';
-import BoothImagePolicy from '../unreleased/_parts/BoothImagePolicy.astro';
 import '../styles/subpage.css';
 ---
 
@@ -77,13 +56,8 @@ import '../styles/subpage.css';
   <div class="subpage-paper on-paper">
     <section aria-labelledby="policy">
       <h2 id="policy">運営方針</h2>
-      <p>瑠璃野ねもさんを知るきっかけや、ご本人の活動への橋渡しになることを目指して、個人で運営しております。</p>
-      <ul>
-        <li>動画・再生リストへのリンクカードと、ミニゲーム「配信をとじろ！」の配信のウィンドウに限り、YouTube が oEmbed で提供しているサムネイル画像を、一部は高画質版に替えて表示しております。画像は当サイトに置かず、YouTube から直接読み込んでおります。</li>
-        <BoothImagePolicy />
-        <li>広告やアフィリエイト等の収益化は一切行っておりません。</li>
-        <li>アクセス解析には、Cookie を使わない Cloudflare Web Analytics を利用しております。</li>
-      </ul>
+      <p>瑠璃野ねもさんを知るきっかけと、ご本人の活動への橋渡しを目指して、個人で運営しております。</p>
+      <p>アクセス解析には、Cookie を使わない Cloudflare Web Analytics を利用しております。</p>
     </section>
 
     <section aria-labelledby="credits">
@@ -97,9 +71,20 @@ import '../styles/subpage.css';
       </dl>
     </section>
 
+    <section aria-labelledby="related">
+      <h2 id="related">関連サイト</h2>
+      <dl class="related-list">
+        <div>
+          <dt><a href="https://rrnnm-search.pages.dev/" target="_blank" rel="noopener noreferrer">あのねもっかい！<span class="sr-only">（外部サイトを新しいタブで開く）</span></a></dt>
+          <dd>配信のチャットのコメントから、配信内の話題を探せる検索サービスです。</dd>
+          <dd><a href="https://x.com/kumoridai" target="_blank" rel="noopener noreferrer">日和見くもり<span class="sr-only">（X。外部サイトを新しいタブで開く）</span></a>さんが制作されたサイトです。</dd>
+        </div>
+      </dl>
+    </section>
+
     <section aria-labelledby="ideas">
       <h2 id="ideas">ご提案</h2>
-      <p>こんなページがほしい、ここが見づらい、といったことは、<a href={IDEAS} target="_blank" rel="noopener noreferrer">GitHub の提案窓口<span class="sr-only">（外部サイトを新しいタブで開く）</span></a>にお寄せください。投稿は誰でも見られます。削除・訂正のご依頼は、下の<a href="#contact">お問い合わせ</a>へお願いいたします。</p>
+      <p>「こんなページがほしい」「ここが見づらい」といったご提案は、<a href={IDEAS} target="_blank" rel="noopener noreferrer">GitHub の提案窓口<span class="sr-only">（外部サイトを新しいタブで開く）</span></a>へお寄せください。投稿は誰でも見られます。削除・訂正のご依頼は、下の<a href="#contact">お問い合わせ</a>へお願いいたします。</p>
     </section>
 
     <section aria-labelledby="contact">
@@ -129,24 +114,15 @@ import '../styles/subpage.css';
       scroll-margin-top: var(--anchor-offset);
     }
 
-    /* 行頭の点は消さない。list-style: none の ul は、Safari と VoiceOver ではリストとして読まれなくなる。 */
-    ul {
-      margin: 0;
-      padding-inline-start: 1.25em;
-    }
-    /* 未公開の区画（BoothImagePolicy.astro）が描く li にも、このページのスコープが付く（class で受け取る）。 */
-    ul > li + li {
-      margin-top: var(--space-2);
-    }
-
-    /* クレジットの1件は「場所と物」「作者・販売元」「注記」の3行。件と件の間は行の間より広く空ける。 */
-    .credit-list {
+    .credit-list,
+    .related-list {
       display: flex;
       flex-direction: column;
       gap: var(--space-5);
       margin: 0;
     }
-    .credit-list > div {
+    .credit-list > div,
+    .related-list > div {
       display: flex;
       flex-direction: column;
       gap: var(--space-1);
