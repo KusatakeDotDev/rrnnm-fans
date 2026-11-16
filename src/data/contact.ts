@@ -1,5 +1,5 @@
 /**
- * 当サイトの窓口（docs/CONCEPT.md §2）。提案の窓口と、削除・訂正の窓口（制作者の X への DM）。
+ * 当サイトの窓口（docs/CONCEPT.md §2）。提案の窓口（制作者のマシュマロ）と、削除・訂正の窓口（制作者の X への DM）。
  *
  * 制作者の X。公式ではないので official.ts には置かない。
  * official.ts の YouTube と違って、リンク先を ID の形にしない。ID にしても画面に出すハンドルは古いまま残るし、
@@ -9,5 +9,5 @@
 export const CONTACT_HANDLE = "ekatas93";
 export const CONTACT = `https://x.com/${CONTACT_HANDLE}`;
 
-/** 提案の窓口。別のリポジトリの Discussions で受ける。リンクは README へ向ける（理由は about.astro）。 */
-export const IDEAS = "https://github.com/KusatakeDotDev/rrnnm-fans-ideas";
+/** 提案の窓口。制作者個人のマシュマロ（ご本人のものは official.ts の `OFFICIAL.marshmallow`）。 */
+export const IDEAS = "https://marshmallow-qa.com/dynamo_4693";

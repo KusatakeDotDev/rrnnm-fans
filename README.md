@@ -28,10 +28,10 @@
 | 内容 | 窓口 |
 | --- | --- |
 | 表示の崩れ・リンク切れなど、サイトの不具合 | このリポジトリの [Issues](../../issues/new/choose) |
-| 「こんなページがほしい」「ここが見づらい」などのご提案 | [提案の窓口（rrnnm-fans-ideas）](https://github.com/KusatakeDotDev/rrnnm-fans-ideas) |
+| 「こんなページがほしい」「ここが見づらい」などのご提案 | [制作者のマシュマロ](https://marshmallow-qa.com/dynamo_4693)（匿名で送れます） |
 | 掲載内容の削除・訂正のご依頼 | 「[このサイトについて](https://rrnnm.fans/about/#contact)」のお問い合わせ先 |
 
-Issues と提案の窓口への投稿は、誰でも見られます。削除・訂正のご依頼は、お問い合わせ先へお願いします。
+Issues への投稿は、誰でも見られます。削除・訂正のご依頼は、お問い合わせ先へお願いします。
 
 Pull Request は、今のところお受けしていません。
 
