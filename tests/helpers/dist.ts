@@ -51,6 +51,17 @@ export function fixtureBuild(): boolean {
   return JSON.parse(readFileSync(`${DIST}.receipt.json`, "utf8")).kind === "success";
 }
 
+/** 未公開のページとコンポーネントを出したビルドか（ADR-0018 のスイッチ。ビルドの記録の showUnreleased）。 */
+export function showUnreleased(): boolean {
+  const receipt = JSON.parse(readFileSync(`${DIST}.receipt.json`, "utf8")) as {
+    showUnreleased?: unknown;
+  };
+  if (typeof receipt.showUnreleased !== "boolean") {
+    throw new Error("ビルドの記録に showUnreleased が無い");
+  }
+  return receipt.showUnreleased;
+}
+
 /** dist に出た HTML を URL パスに直したもの。例: dist/songs/index.html → /songs/ */
 export function builtRoutes(): string[] {
   return builtPages().map(({ route }) => route);

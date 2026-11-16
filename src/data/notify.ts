@@ -3,17 +3,16 @@
  * 同じ値を読むもの。
  */
 
-/** 通知を受け取る設定をするページ。Worker は、このページがあるビルドでだけ購読を受け付ける（ADR-0035 の決定）。 */
-export const NOTIFY_PAGE = "/notify/";
-
 /** 購読を足す（POST）・消す（DELETE）パス。本文は `{ "endpoint": "<宛先の URL>" }`。 */
-export const SUBSCRIPTIONS_PATH = "/notify/subscriptions";
+export const SUBSCRIPTIONS_PATH = "/push/subscriptions";
 
 /**
- * Service Worker のパス。Worker が返す（worker/service-worker.ts）。置いた場所でスコープが `/notify/` になるが、push と、
- * 通知を押したときは、スコープの外のページも開けるので、そのままにする。
+ * Service Worker のパスとスコープ。Worker が返す（worker/service-worker.ts）。スコープにはページを置かない。スコープの中の
+ * ページを開くたびに、ブラウザが新しいバージョンを確かめに取り直すため（ADR-0035「Service Worker は、押した人にだけ登録し、
+ * push だけを受け持つ」）。ページはスコープの外なので、登録を引くときはスコープを渡す。
  */
-export const SERVICE_WORKER_PATH = "/notify/sw.js";
+export const SERVICE_WORKER_PATH = "/push/sw.js";
+export const SERVICE_WORKER_SCOPE = "/push/";
 
 /**
  * 通知の文（主の判断）。本文は、ご本人のスケジュールのお知らせの決まり文句に、妖精（🧚）が応える形にする。ご本人の口調にはしない

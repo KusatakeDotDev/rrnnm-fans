@@ -1,0 +1,61 @@
+---
+/**
+ * ScheduleNotify.tsx のラッパー。**見た目は .tsx、振る舞いはここ**（docs/adr/0011-react-components-for-design-sync.md「スクリプトの扱い」）。
+ * 購読の確かめ方・始め方・やめ方は、src/components/notify-subscription.ts にある。
+ */
+import ScheduleNotify from './ScheduleNotify.tsx';
+
+interface Props {
+  className?: string;
+}
+
+const { className } = Astro.props;
+---
+
+<ScheduleNotify className={className} />
+
+<script>
+  import { availability, readStatus, subscribe, unsubscribe } from '../../components/notify-subscription';
+
+  type State = 'off' | 'pending' | 'on' | 'denied' | 'ios' | 'unsupported';
+
+  for (const root of document.querySelectorAll<HTMLElement>('[data-schedule-notify]')) {
+    const toggle = root.querySelector<HTMLButtonElement>('[data-schedule-notify-toggle]');
+    if (!toggle) continue;
+
+    const show = (state: State, failed = false) => {
+      root.dataset['state'] = state;
+      root.toggleAttribute('data-failed', failed);
+      // 切り替えているあいだは、押す前の位置のまま読ませる（終わる前に「オフ」と言わない）。
+      if (state !== 'pending') toggle.setAttribute('aria-checked', String(state === 'on'));
+      if (state === 'on' || state === 'off') toggle.removeAttribute('aria-disabled');
+      else toggle.setAttribute('aria-disabled', 'true');
+    };
+
+    const available = availability();
+    if (available !== 'available') {
+      show(available);
+      continue;
+    }
+    const sync = () => readStatus().then(show, () => show('off'));
+    sync();
+    // ほかのタブで切り替えてから戻ったとき、bfcache から出たスイッチが前の位置のままにならないように。
+    addEventListener('pageshow', (event) => event.persisted && sync());
+
+    toggle.addEventListener('click', () => {
+      const before = root.dataset['state'];
+      if (before !== 'on' && before !== 'off') return;
+      show('pending');
+      // subscribe() は、押した操作の中で許可を求める。ここで await を挟まない。
+      (before === 'on' ? unsubscribe() : subscribe()).then(
+        (next) => show(next),
+        // うまくいかなかったら、本当の位置を読み直して、その位置に理由を添える。
+        () =>
+          readStatus().then(
+            (now) => show(now, true),
+            () => show(before, true),
+          ),
+      );
+    });
+  }
+</script>

@@ -16,6 +16,7 @@ import { channelFeedUrl, latestVideoIds } from "../src/lib/youtube-feed";
 import { handleServiceWorker, handleSubscriptions, type NotifyEnv, runCron } from "./notify";
 
 export interface Env extends NotifyEnv {
+  ASSETS: { fetch(input: Request | string): Promise<Response> };
   /** 中継するフィード。空ならチャンネルのフィード。テストでは、外へ出ない先に替える（playwright.config.ts）。 */
   YOUTUBE_FEED_URL?: string;
 }
@@ -52,7 +53,7 @@ export async function handle(
 ): Promise<Response> {
   const url = new URL(request.url);
   if (url.pathname === SUBSCRIPTIONS_PATH) return handleSubscriptions(request, env);
-  if (url.pathname === SERVICE_WORKER_PATH) return handleServiceWorker(request, env);
+  if (url.pathname === SERVICE_WORKER_PATH) return handleServiceWorker(request);
   // 静的なファイルが無いリクエストだけがここへ来る。Worker が無かったときと同じ 404 にするため、ASSETS に返させる。
   if (url.pathname !== VIDEOS_PATH) return env.ASSETS.fetch(request);
   const page = await env.ASSETS.fetch(new URL(GAME_PAGE, url).href);

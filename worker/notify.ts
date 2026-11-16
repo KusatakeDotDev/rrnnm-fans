@@ -4,7 +4,7 @@
  */
 import type { WorkflowStep, WorkflowStepConfig } from "cloudflare:workers";
 
-import { NOTIFY_PAGE, VAPID_PUBLIC_KEY, VAPID_SUBJECT } from "../src/data/notify";
+import { VAPID_PUBLIC_KEY, VAPID_SUBJECT } from "../src/data/notify";
 import { HQ_URL } from "../src/data/schedule";
 import {
   hex,
@@ -47,7 +47,6 @@ export interface DeliveryWorkflow {
 }
 
 export interface NotifyEnv {
-  ASSETS: { fetch(input: Request | string): Promise<Response> };
   NOTIFY: NotifyKv;
   NOTIFY_WORKFLOW: DeliveryWorkflow;
   /** VAPID の秘密鍵（`d` を base64url にしたもの）。Worker のシークレットに置く。 */
@@ -97,24 +96,15 @@ async function sha256(data: ArrayBuffer | string): Promise<string> {
   return hex(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)));
 }
 
-/** 設定のページがあるビルドか。無いビルド（未公開のあいだの本番）では、通知の API も Service Worker も返さない（ADR-0035 の決定）。 */
-async function hasNotifyPage(request: Request, env: NotifyEnv): Promise<boolean> {
-  const page = await env.ASSETS.fetch(new URL(NOTIFY_PAGE, request.url).href);
-  await page.body?.cancel();
-  return page.ok;
-}
-
-/** Service Worker（worker/service-worker.ts）。設定のページが無いビルドでは、Worker が無かったときと同じ応答にする。 */
-export async function handleServiceWorker(request: Request, env: NotifyEnv): Promise<Response> {
-  if (!(await hasNotifyPage(request, env))) return env.ASSETS.fetch(request);
+/** Service Worker（worker/service-worker.ts）。 */
+export function handleServiceWorker(request: Request): Response {
   if (request.method !== "GET" && request.method !== "HEAD")
     return status(405, { allow: "GET, HEAD" });
   return serviceWorkerResponse();
 }
 
-/** 購読を足す（POST）・消す（DELETE）。設定のページが無いビルドでは、Worker が無かったときと同じ応答にする。 */
+/** 購読を足す（POST）・消す（DELETE）。 */
 export async function handleSubscriptions(request: Request, env: NotifyEnv): Promise<Response> {
-  if (!(await hasNotifyPage(request, env))) return env.ASSETS.fetch(request);
   if (request.method !== "POST" && request.method !== "DELETE") {
     return status(405, { allow: "POST, DELETE" });
   }

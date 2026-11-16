@@ -1,10 +1,9 @@
 /**
  * 配信スケジュールの更新の通知を受ける Service Worker（ADR-0035「Service Worker は、押した人にだけ登録し、push だけを受け持つ」）。
- * 設定のページ（`/notify/`）で「通知を受け取る」を押したときだけ登録される。
+ * トップの今週の配信予定のカードのスイッチで、通知を受け取るにしたときだけ登録される。
  *
  * **Worker が、決まったパス（SERVICE_WORKER_PATH）で返す。** ビルドが名前にフィンガープリントを付けると、Release のたびに
- * パスが変わり、ブラウザが登録したパスを取り直すと 404 になる。静的なファイル（`public/`）に置くと、設定のページが
- * 無いビルドでも配られる（ADR-0018）。中身を文字列で持つのは、ScheduleCard.tsx の LOAD_THUMBNAIL と同じく、ブラウザで
+ * パスが変わり、ブラウザが登録したパスを取り直すと 404 になる。中身を文字列で持つのは、ScheduleCard.tsx の LOAD_THUMBNAIL と同じく、ブラウザで
  * そのまま動かすため（Worker のバンドルは、関数の中に名前を残すための呼び出しを差し込む）。
  */
 import { NOTIFICATION_BODY, NOTIFICATION_TITLE, NOTIFICATION_URL } from "../src/data/notify";
@@ -16,7 +15,7 @@ import { NOTIFICATION_BODY, NOTIFICATION_TITLE, NOTIFICATION_URL } from "../src/
  *   付けないと置き換えが音も振動も無く行われ、同じ文なので、新しく更新されたことに気づけないため
  * - `badge`（Android のステータスバーに出る）は、画像の形（アルファ）だけが使われ、1色で塗られる。favicon は背景の四角ごと
  *   塗られて四角になるので、四角を抜き、花がほかの形とつながらないよう周りを空けたもの（public/badge.png）を渡す
- * - `fetch` は受けない。ページの配り方を変えないため
+ * - `fetch` は受けない。ページの配り方を変えないため（スコープにはページを置かない。SERVICE_WORKER_SCOPE）
  * - 新しいバージョンは、待たずに入れ替える（skipWaiting）。ページのリクエストを受けないので、入れ替えても開いているページは変わらない
  */
 export const SERVICE_WORKER_SOURCE = `
