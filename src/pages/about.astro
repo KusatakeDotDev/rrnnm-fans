@@ -2,7 +2,7 @@
 // このサイトについて（docs/DESIGN.md のサイト構成の /about）。入口は全ページのフッター（SiteFooter.tsx）。
 // 見た目は下層ページの形（docs/DESIGN.md §3「レイアウト方針」）。
 //
-// 並びは、何のサイトか → 借りている素材 → 提案 → 連絡先。
+// 並びは、何のサイトか → 借りている素材 → 関連サイト → 提案 → 連絡先。
 //   - 運営方針。**方針は docs/CONCEPT.md、技術の決定は docs/adr/ に書いてあることだけを書く**（足すなら先にそちらに書く）。
 //     最初の文と、ご本人の収益に触れないことは CONCEPT §1「サイトの立ち位置」。
 //     **サムネイルと BOOTH の商品の画像の出どころは書かない。** 画像を出している場所のレイアウトと出典の行が
@@ -17,6 +17,8 @@
 //     **Cookie は「解析には使わない」とだけ書き、「当サイトは Cookie を使わない」とは書かない。** Cloudflare の
 //     ボット対策などはダッシュボードの設定で Cookie を付けることがあり、リポジトリからは確かめられない
 //   - クレジットの条件は CONCEPT §3 と ADR-0009「花の3Dモデル」を参照。
+//   - 関連サイト。載せるものと書き方は CONCEPT §4「関連サイト」。**クレジットと同じ節にしない。** 借りている素材ではないため。
+//     相手のサイトの紹介文は書き写さず、何ができるかを当サイトの文で1文にする
 //   - ご提案。削除・訂正の窓口と節を分ける（CONCEPT §2）。フッターの「お問い合わせ」から飛んできた人が最初に読む文は、
 //     削除・訂正の窓口のままにする。
 //     節の中には、投稿が誰でも見られることと、削除・訂正はお問い合わせへ、の2文を置く。削除の依頼が、誰でも見られる
@@ -69,6 +71,17 @@ import '../styles/subpage.css';
       </dl>
     </section>
 
+    <section aria-labelledby="related">
+      <h2 id="related">関連サイト</h2>
+      <dl class="related-list">
+        <div>
+          <dt><a href="https://rrnnm-search.pages.dev/" target="_blank" rel="noopener noreferrer">あのねもっかい！<span class="sr-only">（外部サイトを新しいタブで開く）</span></a></dt>
+          <dd>配信のチャットのコメントから、配信内の話題を探せる検索サービスです。</dd>
+          <dd><a href="https://x.com/kumoridai" target="_blank" rel="noopener noreferrer">日和見くもり<span class="sr-only">（X。外部サイトを新しいタブで開く）</span></a>さんが制作されたサイトです。</dd>
+        </div>
+      </dl>
+    </section>
+
     <section aria-labelledby="ideas">
       <h2 id="ideas">ご提案</h2>
       <p>「こんなページがほしい」「ここが見づらい」といったご提案は、<a href={IDEAS} target="_blank" rel="noopener noreferrer">GitHub の提案窓口<span class="sr-only">（外部サイトを新しいタブで開く）</span></a>へお寄せください。投稿は誰でも見られます。削除・訂正のご依頼は、下の<a href="#contact">お問い合わせ</a>へお願いいたします。</p>
@@ -101,14 +114,17 @@ import '../styles/subpage.css';
       scroll-margin-top: var(--anchor-offset);
     }
 
-    /* クレジットの1件は「場所と物」「作者・販売元」「注記」の3行。件と件の間は行の間より広く空ける。 */
-    .credit-list {
+    /* クレジットの1件は「場所と物」「作者・販売元」「注記」の3行。件と件の間は行の間より広く空ける。
+       関連サイトの1件（「名前」「何ができるか」「制作者」）も同じ組み方。 */
+    .credit-list,
+    .related-list {
       display: flex;
       flex-direction: column;
       gap: var(--space-5);
       margin: 0;
     }
-    .credit-list > div {
+    .credit-list > div,
+    .related-list > div {
       display: flex;
       flex-direction: column;
       gap: var(--space-1);
