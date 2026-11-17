@@ -15,7 +15,7 @@ import { preloadThumbnailScript } from '../components/ScheduleCard.tsx';
 import { getSchedule } from '../data/schedule-oembed';
 import StickerHeading from '../components/StickerHeading.tsx';
 import Base from '../layouts/Base.astro';
-import ScheduleNotify from '../unreleased/_parts/ScheduleNotify.astro';
+import ScheduleNotify from '../components/ScheduleNotify.astro';
 
 // 予定のカード（ScheduleCard.astro）と同じ取得。ビルドの中で1回しか取りに行かない（schedule-oembed.ts）。
 const schedule = await getSchedule();

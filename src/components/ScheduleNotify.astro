@@ -15,7 +15,7 @@ const { className } = Astro.props;
 <ScheduleNotify className={className} />
 
 <script>
-  import { availability, readStatus, subscribe, unsubscribe } from '../../components/notify-subscription';
+  import { availability, readStatus, subscribe, unsubscribe } from './notify-subscription';
 
   type State = 'off' | 'pending' | 'on' | 'denied' | 'ios' | 'unsupported';
 

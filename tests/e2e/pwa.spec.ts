@@ -1,7 +1,5 @@
 import { expect, test } from "@playwright/test";
 
-import { showUnreleased } from "../helpers/dist";
-
 test.beforeEach(async ({ page }) => {
   // 起動位置の検査をYouTubeの応答時間に依存させない。
   await page.route(/^https:\/\/i\.ytimg\.com\//, async (route) => {
@@ -70,18 +68,16 @@ test("ホーム画面の起動先とアイコンが配信される", async ({ pa
     }, icon.src);
     expect(size).toBe(icon.sizes);
   }
-  if (showUnreleased()) {
-    // 通知のスイッチ（ADR-0035）は、開いただけでは購読を確かめるだけで、Service Worker を登録しない（下の 0 件）。
-    // 通知を拒んだブラウザで回すと、OFF ではなく押せない形になる。
-    const toggle = page.getByRole("switch", { name: "更新を通知する" });
-    const denied = await page.evaluate(() => Notification.permission === "denied");
-    await expect(page.locator("[data-schedule-notify]")).toHaveAttribute(
-      "data-state",
-      denied ? "denied" : "off",
-    );
-    await expect(toggle).toBeVisible();
-    await expect(toggle).toHaveAttribute("aria-checked", "false");
-  }
+  // 通知のスイッチ（ADR-0035）は、開いただけでは購読を確かめるだけで、Service Worker を登録しない（下の 0 件）。
+  // 通知を拒んだブラウザで回すと、OFF ではなく押せない形になる。
+  const toggle = page.getByRole("switch", { name: "更新を通知する" });
+  const denied = await page.evaluate(() => Notification.permission === "denied");
+  await expect(page.locator("[data-schedule-notify]")).toHaveAttribute(
+    "data-state",
+    denied ? "denied" : "off",
+  );
+  await expect(toggle).toBeVisible();
+  await expect(toggle).toHaveAttribute("aria-checked", "false");
   expect(
     await page.evaluate(async () => (await navigator.serviceWorker.getRegistrations()).length),
   ).toBe(0);

@@ -7,7 +7,7 @@
   "tsconfig": ".design-sync/tsconfig.sync.json",
   "extraEntries": ["./.design-sync/entry.ts"],
   "componentSrcMap": {
-    "ScheduleNotify": "src/unreleased/_parts/ScheduleNotify.tsx",
+    "ScheduleNotify": "src/components/ScheduleNotify.tsx",
     "SkebWorks": "src/unreleased/_parts/SkebWorks.tsx",
     "Butterfly": "src/components/Butterfly.tsx",
     "Card": "src/components/Card.tsx",
