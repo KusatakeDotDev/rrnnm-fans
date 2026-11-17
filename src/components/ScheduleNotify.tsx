@@ -10,7 +10,7 @@
  */
 import { useId, type HTMLAttributes } from "react";
 
-import { cx } from "../../lib/cx";
+import { cx } from "../lib/cx";
 import styles from "./ScheduleNotify.module.css";
 
 interface ScheduleNotifyProps extends Omit<

@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
 
 import Card from "../src/components/Card.tsx";
-import ScheduleNotify from "../src/unreleased/_parts/ScheduleNotify.tsx";
+import ScheduleNotify from "../src/components/ScheduleNotify.tsx";
 import { pad } from "./shared/layout.ts";
 
 // args は型を満たすためだけに置く。どの story も render で描くので、画面には効かない（Controls も出さない。.storybook/main.ts）。
