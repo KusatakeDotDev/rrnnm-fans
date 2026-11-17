@@ -18,14 +18,12 @@
 //     ボット対策などはダッシュボードの設定で Cookie を付けることがあり、リポジトリからは確かめられない
 //   - クレジットの条件は CONCEPT §3 と ADR-0009「花の3Dモデル」を参照。
 //   - 関連サイト。載せるものと書き方は CONCEPT §4「関連サイト」。**クレジットと同じ節にしない。** 借りている素材ではないため。
-//     相手のサイトの紹介文は書き写さず、何ができるかを当サイトの文で1文にする
-//   - ご提案。削除・訂正の窓口と節を分ける（CONCEPT §2）。フッターの「お問い合わせ」から飛んできた人が最初に読む文は、
-//     削除・訂正の窓口のままにする。
-//     節の中には、投稿が誰でも見られることと、削除・訂正はお問い合わせへ、の2文を置く。削除の依頼が、誰でも見られる
-//     提案窓口に書き込まれないように（CONCEPT §2）。
+//     相手のサイトの紹介文は書き写さず、何ができるかを当サイトの文で1文にする。制作者は文にせず、「制作」のラベルと名前で置く
+//   - ご提案。窓口は制作者個人のマシュマロ（CONCEPT §2）。削除・訂正の窓口と節を分ける。フッターの「お問い合わせ」から
+//     飛んできた人が最初に読む文は、削除・訂正の窓口のままにする。
+//     節の中に、削除・訂正はお問い合わせへ、の文を置く。マシュマロは匿名で、送った人に返事を返せないため（CONCEPT §2）。
 //     例は「こんなページがほしい」「ここが見づらい」。「直してほしいところ」と書くと、同じ節の「訂正のご依頼」と紛れる。
-//     **リンクはリポジトリの最初の画面（README）へ向け、Discussions へ直接は向けない。** GitHub を使わない人向けの
-//     マシュマロは README だけが案内している（CONCEPT §2）
+//     **リンクの文字は「制作者のマシュマロ」にする。** フッターにご本人のマシュマロへのリンクがあり、「マシュマロ」だけでは紛れる
 //   - 削除・訂正の窓口（docs/CONCEPT.md §2）。連絡先を書くのはここだけで、全ページのフッターの
 //     「お問い合わせ」が見出し（#contact）へ飛ぶ。**id を変えるとフッターのリンクが切れる**
 //     （tests/conformance/routes.spec.ts がフッターから押して見る）。最後に置いても、飛んでくる人は迷わない。
@@ -64,9 +62,8 @@ import '../styles/subpage.css';
       <h2 id="credits">クレジット</h2>
       <dl class="credit-list">
         <div>
-          <dt><span class="where">トップページ</span> <a href="https://booth.pm/ja/items/3991171" target="_blank" rel="noopener noreferrer">ネモフィラの3Dモデル<span class="sr-only">（BOOTH の商品ページ。外部サイトを新しいタブで開く）</span></a></dt>
-          <dd>トキワ雑貨店さん</dd>
-          <dd>※ 元のファイルは公開せず、表示用の形式に変換して組み込んでおります。</dd>
+          <dt><a href="https://booth.pm/ja/items/3991171" target="_blank" rel="noopener noreferrer">「ネモフィラ」【3Dモデル】<span class="sr-only">（BOOTH の商品ページ。外部サイトを新しいタブで開く）</span></a></dt>
+          <dd><a href="https://samasama3939.booth.pm/" target="_blank" rel="noopener noreferrer">トキワ雑貨店<span class="sr-only">（BOOTH のショップ。外部サイトを新しいタブで開く）</span></a>さん</dd>
         </div>
       </dl>
     </section>
@@ -76,22 +73,22 @@ import '../styles/subpage.css';
       <dl class="related-list">
         <div>
           <dt><a href="https://rrnnm-search.pages.dev/" target="_blank" rel="noopener noreferrer">あのねもっかい！<span class="sr-only">（外部サイトを新しいタブで開く）</span></a></dt>
-          <dd>配信のチャットのコメントから、配信内の話題を探せる検索サービスです。</dd>
-          <dd><a href="https://x.com/kumoridai" target="_blank" rel="noopener noreferrer">日和見くもり<span class="sr-only">（X。外部サイトを新しいタブで開く）</span></a>さんが制作されたサイトです。</dd>
+          <dd>配信のチャットから話題を探せる検索サービスです。</dd>
+          <dd><span class="where">制作</span> <a href="https://x.com/kumoridai" target="_blank" rel="noopener noreferrer">日和見くもり<span class="sr-only">（X。外部サイトを新しいタブで開く）</span></a>さん</dd>
         </div>
       </dl>
     </section>
 
     <section aria-labelledby="ideas">
       <h2 id="ideas">ご提案</h2>
-      <p>「こんなページがほしい」「ここが見づらい」といったご提案は、<a href={IDEAS} target="_blank" rel="noopener noreferrer">GitHub の提案窓口<span class="sr-only">（外部サイトを新しいタブで開く）</span></a>へお寄せください。投稿は誰でも見られます。削除・訂正のご依頼は、下の<a href="#contact">お問い合わせ</a>へお願いいたします。</p>
+      <p>「こんなページがほしい」「ここが見づらい」といったご提案は、<a href={IDEAS} target="_blank" rel="noopener noreferrer">制作者のマシュマロ<span class="sr-only">（外部サイトを新しいタブで開く）</span></a>へ匿名でお寄せください。削除・訂正のご依頼は、下の<a href="#contact">お問い合わせ</a>へお願いいたします。</p>
     </section>
 
     <section aria-labelledby="contact">
       <h2 id="contact">お問い合わせ</h2>
       {/* ハンドルを括弧で包まない（「制作者の X（@…）」にしない）。読み上げの補足が括弧の中に入り、閉じ括弧が2つ続く。 */}
       <p>削除・訂正のご依頼など、当サイトへのご連絡は、制作者の <span class="account">X アカウント <a href={CONTACT} target="_blank" rel="noopener noreferrer">@{CONTACT_HANDLE}<span class="sr-only">（外部サイトを新しいタブで開く）</span></a></span> へ DM でお願いいたします。</p>
-      <p>ご本人・関係者からのお申し出には、理由を問わず応じます。</p>
+      <p>ご本人・関係者からのご相談には、最優先で対応いたします。</p>
     </section>
   </div>
 </Base>
@@ -133,7 +130,7 @@ import '../styles/subpage.css';
     dd {
       margin: 0;
     }
-    /* 場所は短いラベルなので小さくしてよい（--text-small。注記は本文なので小さくしない）。
+    /* 「制作」は短いラベルなので小さくしてよい（--text-small）。
        補助文の色は白い面の上でだけ使える（tests/unit/palette.test.ts）。ここは紙の上。 */
     .where {
       color: var(--color-text-muted);
