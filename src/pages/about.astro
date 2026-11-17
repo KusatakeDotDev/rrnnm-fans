@@ -18,7 +18,7 @@
 //     ボット対策などはダッシュボードの設定で Cookie を付けることがあり、リポジトリからは確かめられない
 //   - クレジットの条件は CONCEPT §3 と ADR-0009「花の3Dモデル」を参照。
 //   - 関連サイト。載せるものと書き方は CONCEPT §4「関連サイト」。**クレジットと同じ節にしない。** 借りている素材ではないため。
-//     相手のサイトの紹介文は書き写さず、何ができるかと制作者を当サイトの文で1文にする
+//     相手のサイトの紹介文は書き写さず、何ができるかを当サイトの文で1文にする。制作者は文にせず、「制作」のラベルと名前で置く
 //   - ご提案。窓口は制作者個人のマシュマロ（CONCEPT §2）。削除・訂正の窓口と節を分ける。フッターの「お問い合わせ」から
 //     飛んできた人が最初に読む文は、削除・訂正の窓口のままにする。
 //     節の中に、削除・訂正はお問い合わせへ、の文を置く。マシュマロは匿名で、送った人に返事を返せないため（CONCEPT §2）。
@@ -74,7 +74,8 @@ import '../styles/subpage.css';
       <dl class="related-list">
         <div>
           <dt><a href="https://rrnnm-search.pages.dev/" target="_blank" rel="noopener noreferrer">あのねもっかい！<span class="sr-only">（外部サイトを新しいタブで開く）</span></a></dt>
-          <dd><a href="https://x.com/kumoridai" target="_blank" rel="noopener noreferrer">日和見くもり<span class="sr-only">（X。外部サイトを新しいタブで開く）</span></a>さん制作の、配信のチャットから話題を探せる検索サービスです。</dd>
+          <dd>配信のチャットから話題を探せる検索サービスです。</dd>
+          <dd><span class="where">制作</span> <a href="https://x.com/kumoridai" target="_blank" rel="noopener noreferrer">日和見くもり<span class="sr-only">（X。外部サイトを新しいタブで開く）</span></a>さん</dd>
         </div>
       </dl>
     </section>
@@ -130,7 +131,7 @@ import '../styles/subpage.css';
     dd {
       margin: 0;
     }
-    /* 場所は短いラベルなので小さくしてよい（--text-small。注記は本文なので小さくしない）。
+    /* 場所と「制作」は短いラベルなので小さくしてよい（--text-small。注記は本文なので小さくしない）。
        補助文の色は白い面の上でだけ使える（tests/unit/palette.test.ts）。ここは紙の上。 */
     .where {
       color: var(--color-text-muted);
