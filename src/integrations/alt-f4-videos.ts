@@ -1,6 +1,5 @@
 import type { AstroIntegration } from "astro";
 
-import { currentVideoSource, LISTED_VIDEO_IDS } from "../data/alt-f4-videos.ts";
 import { OFFICIAL } from "../data/official.ts";
 import { VIDEOS_PATH } from "../lib/alt-f4.ts";
 import { channelFeedUrl, latestVideoIds } from "../lib/youtube-feed.ts";
@@ -21,9 +20,9 @@ async function feedVideoIds(): Promise<string[] | null> {
 }
 
 /**
- * 開発サーバー（`pnpm dev`）で、Worker（worker/index.ts）の代わりに「配信をとじろ」の動画の一覧を返す。出どころは Worker と
- * 同じ切り替え（src/data/alt-f4-videos.ts）に従う。astro dev は Worker を通さないので、無いと手元でサムネイルが出ない。
- * ビルドには効かない。Astro のエンドポイントにしないのは、ビルドに一覧のファイルが出て、本番で Worker より先に配られてしまうため。
+ * 開発サーバー（`pnpm dev`）で、Worker（worker/index.ts）の代わりに「配信をとじろ」の動画の一覧を返す。
+ * astro dev は Worker を通さないので、無いと手元でサムネイルが出ない。ビルドには効かない。
+ * Astro のエンドポイントにしないのは、ビルドに一覧のファイルが出て、本番で Worker より先に配られてしまうため。
  */
 export default function altF4Videos(): AstroIntegration {
   return {
@@ -32,7 +31,7 @@ export default function altF4Videos(): AstroIntegration {
       "astro:server:setup": ({ server }) => {
         server.middlewares.use(VIDEOS_PATH, (_request, response) => {
           void (async () => {
-            const ids = currentVideoSource() === "list" ? LISTED_VIDEO_IDS : await feedVideoIds();
+            const ids = await feedVideoIds();
             response.statusCode = ids ? 200 : 502;
             response.setHeader("content-type", "application/json; charset=utf-8");
             response.end(JSON.stringify(ids ?? []));

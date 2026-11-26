@@ -1,8 +1,8 @@
 /**
  * 配信のウィンドウに出すサムネイルを、ブラウザで取る（src/pages/play/alt-f4.astro）。
- * 動画は、Worker が返す一覧から回ごとに選ぶ（一覧の出どころは返す側で替える。src/data/alt-f4-videos.ts）。サムネイルの
- * 取り方は再生リストのタイルと同じで、oEmbed の `thumbnail_url` をそのまま使い、`https://i.ytimg.com` の画像だけを受け入れる
- * （ADR-0033 の決定。ADR-0008「名前と表紙は、ブラウザで取る」と同じ形）。サムネイルの出どころを変えるときは、このファイルだけを替える。
+ * 動画は、Worker が中継するチャンネルのフィードの最新から、回ごとに選ぶ。サムネイルの取り方は再生リストのタイルと同じで、
+ * oEmbed の `thumbnail_url` をそのまま使い、`https://i.ytimg.com` の画像だけを受け入れる（ADR-0033 の決定。ADR-0008
+ * 「名前と表紙は、ブラウザで取る」と同じ形）。サムネイルの出どころを変えるときは、このファイルだけを替える。
  */
 import { isOEmbed, isYouTubeThumbnail, oembedUrl } from "../../../lib/youtube";
 import { VIDEOS_PATH, watchUrl } from "../../../lib/alt-f4";

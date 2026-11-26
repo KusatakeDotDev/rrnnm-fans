@@ -10,26 +10,8 @@ import { shuffle } from "./shuffle";
 /**
  * 配信のウィンドウに出す動画の ID の一覧を返すパス。チャンネルのフィードはブラウザから読めないので、同じオリジンで中継する
  * （ADR-0033 の決定）。本番とテストは Worker（worker/index.ts）、開発サーバーは src/integrations/alt-f4-videos.ts が返す。
- * 一覧の出どころ（src/data/alt-f4-videos.ts）は返す側で替え、ページは替えない。
  */
 export const VIDEOS_PATH = "/play/alt-f4/videos.json";
-
-// TODO(RRNNM-114): 特別仕様が終わったら、この時刻と isCelebrating を消す
-/**
- * 登録者10万人の記念の特別仕様（配信のウィンドウに全件の一覧から出し、始める前に記念配信を置く）が終わる時刻。11月限定にして、
- * 一覧を作るのに使った API のデータを、30日より長く使わない（ADR-0033「払うもの」）。
- */
-export const CELEBRATION_ENDS_AT = Date.parse("2026-12-01T00:00:00+09:00");
-
-/** 特別仕様のあいだか。`now` は `Date.now()` と同じ、ミリ秒の時刻。 */
-export function isCelebrating(now: number): boolean {
-  return now < CELEBRATION_ENDS_AT;
-}
-
-/** 一覧の応答を覚えさせる秒数。`ttl` 秒までで、特別仕様が終わる時刻は越えない。 */
-export function maxAgeUntilCelebrationEnds(now: number, ttl: number): number {
-  return Math.max(0, Math.min(ttl, Math.floor((CELEBRATION_ENDS_AT - now) / 1000)));
-}
 
 /** 1回に配信のウィンドウに出す動画の数。遊ぶ回ごとに youtube.com へ出す oEmbed の数でもある（ADR-0033「払うもの」）。 */
 export const VIDEOS_PER_ROUND = 15;
@@ -93,46 +75,6 @@ export function boundsOf(desktop: Size, popup: Size): Bounds {
 export function randomPosition(bounds: Bounds, random: () => number, margin = 0): Point {
   const along = (max: number) => Math.floor(max * margin + random() * max * (1 - 2 * margin));
   return { x: along(bounds.maxX), y: along(bounds.maxY) };
-}
-
-/** 範囲のまん中。px は整数にそろえる。 */
-export function centerPosition(bounds: Bounds): Point {
-  return { x: Math.floor(bounds.maxX / 2), y: Math.floor(bounds.maxY / 2) };
-}
-
-// TODO(RRNNM-114): 特別仕様が終わったら、始める前の1枚を開き直す時間と幅の、ここから openingWidth までを消す
-/** 始める前の1枚を閉じてから、開き直すまでの時間（ミリ秒）。1回めに閉じたとき。 */
-export const OPENING_REOPEN_FIRST_MS = 3_000;
-/** 開き直すまでの時間は、閉じるたびにこの値へ近づける。0 に近づけると、閉じた瞬間に開き直して、閉じたことが見えなくなる。 */
-export const OPENING_REOPEN_MIN_MS = 300;
-/** 閉じるたびに、開き直すまでの時間の、下限を越える分に掛ける割合。 */
-export const OPENING_REOPEN_RATIO = 0.6;
-/** 開き直すたびに、ウィンドウの幅に掛ける割合。 */
-export const OPENING_GROWTH = 1.15;
-
-/** 始める前の1枚を、`closedTimes` 回めに閉じたあと、開き直すまでの時間（ミリ秒）。`closedTimes` は 0 から数える。 */
-export function openingReopenDelay(closedTimes: number): number {
-  return Math.round(
-    OPENING_REOPEN_MIN_MS +
-      (OPENING_REOPEN_FIRST_MS - OPENING_REOPEN_MIN_MS) * OPENING_REOPEN_RATIO ** closedTimes,
-  );
-}
-
-/**
- * ウィンドウを広げられる上限の幅（px）。広げても、画像の枠だけが縦横比を保って大きくなり、タイトルバー・文字・余白は大きさを
- * 変えない。`popup` と `image` は、今の幅で測ったウィンドウと画像の枠の大きさ。題名は広げるほど行が減るので、狭いときに測ると
- * 安全側になる。
- */
-export function maxPopupWidth(desktop: Size, popup: Size, image: Size): number {
-  const fixedWidth = popup.width - image.width;
-  const fixedHeight = popup.height - image.height;
-  const byHeight = ((desktop.height - fixedHeight) * image.width) / image.height + fixedWidth;
-  return Math.floor(Math.max(0, Math.min(desktop.width, byHeight)));
-}
-
-/** 開き直した1枚の幅（px）。元の幅 `base` を、開き直した回数だけ広げ、`limit` を越えない。 */
-export function openingWidth(base: number, reopened: number, limit: number): number {
-  return Math.floor(Math.min(limit, base * OPENING_GROWTH ** reopened));
 }
 
 /** 連鎖の次の1枚。範囲の端に着く（越える）向きは、跳ね返して逆に進める。 */
